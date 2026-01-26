@@ -7,6 +7,7 @@ import Schedule from './components/Schedule/Schedule';
 import Registration from './components/Registration/Registration';
 import Donations from './components/Donations/Donations';
 import About from './components/About/About';
+import TournamentHistory from './components/TournamentHistory/TournamentHistory';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Route path="/registration" element={<Registration />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/about" element={<About />} />
+            <Route path="/history" element={<TournamentHistory />} />
           </Routes>
         </main>
         <Footer />

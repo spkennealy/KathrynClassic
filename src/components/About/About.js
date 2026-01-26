@@ -4,115 +4,62 @@ export default function About() {
   return (
     <div className="bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl lg:mx-0">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">About The Kathryn Classic</h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
-            The Kathryn Classic is an annual charity golf tournament dedicated to bringing the community together
-            while raising funds for important causes.
+        <div className="mx-auto max-w-3xl lg:mx-0 lg:max-w-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl text-center">About The Kathryn Classic</h2>
+          <p className="mt-6 text-lg leading-8 text-gray-600 text-center">
+            An intimate charity golf tournament bringing together family, friends, and community to honor Kathryn's memory
+            and support CJD research and awareness.
           </p>
         </div>
-        
-        <div className="mx-auto mt-10 max-w-2xl lg:mx-0 lg:max-w-none">
-          <div className="grid grid-cols-1 gap-y-16 gap-x-8 lg:grid-cols-2">
-            <div>
-              <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">Our Story</h3>
-              <p className="mt-4 text-base leading-7 text-gray-600">
-                The Kathryn Classic was founded in 2025 to honor Kathryn Johnson, whose passion for golf was matched only by her
-                commitment to community service. After her passing in 2024, her family and friends established this tournament to
-                continue her legacy of bringing people together and giving back.
+
+        <div className="mx-auto mt-16 max-w-3xl border-t border-gray-200 pt-16">
+          <div className="bg-gray-50 rounded-lg p-8 shadow-sm ring-1 ring-gray-900/5">
+            <h3 className="text-2xl font-semibold leading-8 tracking-tight text-gray-900 text-center mb-8">In Loving Memory of Kathryn Rourick</h3>
+            <div className="prose prose-lg text-gray-600 space-y-4">
+              <p>
+                With full hearts and deep gratitude, we honor the life of Kathryn Rourick, who left us on February 6, 2023 due to Creutzfeldt‑Jakob disease. She was a loving mother, wife, sister, grandmother, and friend whose presence made every room warmer and every day brighter.
               </p>
-              <p className="mt-4 text-base leading-7 text-gray-600">
-                What began as a small gathering of golf enthusiasts has grown into a premier annual event that attracts participants
-                from across the region. Each year, we select a charitable cause to support, focusing on organizations that were
-                important to Kathryn.
+              <p>
+                As a mother and grandmother, Kathryn was both soft and strong—encouraging, practical, and endlessly proud. As a sister and friend, she listened deeply, laughed easily, and always showed up.
               </p>
-            </div>
-            
-            <div>
-              <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">Our Mission</h3>
-              <p className="mt-4 text-base leading-7 text-gray-600">
-                The Kathryn Classic aims to create a memorable weekend that celebrates community, competition, and compassion.
-                Our mission is to honor Kathryn's memory by:
+              <p>
+                Kathryn's legacy lives in the way her family gathers, the way her friends care for one another, and the way those who worked beside her carry forward her standard of kindness.
               </p>
-              <ul className="mt-4 space-y-3 text-base leading-7 text-gray-600 list-disc pl-5">
-                <li>Hosting a premier golf tournament that welcomes players of all skill levels</li>
-                <li>Raising funds for meaningful charitable causes</li>
-                <li>Creating opportunities for community building and networking</li>
-                <li>Promoting the game of golf and its values of integrity, perseverance, and sportsmanship</li>
-              </ul>
+              <p className="italic">
+                Forever loved, forever missed—Kathryn remains with us in every shared story, in every celebration, with each phase of the Grandma moon, and in the quiet moments that remind us of her joy. May her memory be a blessing, and may continued research and awareness bring hope to families facing CJD today and in the years to come.
+              </p>
+              <p className="text-right font-medium text-gray-700 mt-6">
+                — With love from her family and friends
+              </p>
             </div>
           </div>
         </div>
-        
-        <div className="mx-auto mt-16 max-w-2xl lg:mx-0 lg:max-w-none">
-          <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">This Year's Charitable Focus</h3>
+
+        <div className="mx-auto mt-16 max-w-3xl lg:mx-0 lg:max-w-4xl">
+          <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">Our Tournament</h3>
           <p className="mt-4 text-base leading-7 text-gray-600">
-            For our inaugural tournament, we are proud to support the Children's Hospital Foundation. The funds raised will
-            help provide critical medical equipment for the pediatric oncology department, a cause that was deeply important to Kathryn
-            during her lifetime.
+            The Kathryn Classic is an intimate annual gathering of approximately 30 golfers and 70-80 total attendees.
+            Our tournament brings together those who knew and loved Kathryn for a weekend of golf, community, and remembrance
+            while raising funds and awareness for the CJD Foundation.
           </p>
           <p className="mt-4 text-base leading-7 text-gray-600">
-            Last year, the Children's Hospital Foundation treated over 5,000 young cancer patients, and our goal is to contribute to
-            their ongoing mission of providing world-class care to every child, regardless of their family's financial situation.
+            What makes our tournament special is its personal nature—every participant has a connection to Kathryn's story,
+            and together we create a meaningful weekend that celebrates her life while supporting critical research into
+            Creutzfeldt-Jakob disease.
           </p>
         </div>
-        
-        <div className="mx-auto mt-16 max-w-2xl lg:mx-0 lg:max-w-none">
-          <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">Organizing Committee</h3>
-          <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 border-t border-gray-200 pt-10 sm:mt-16 sm:pt-16 lg:mx-0 lg:max-w-none lg:grid-cols-3">
-            {[
-              {
-                name: 'Michael Johnson',
-                role: 'Tournament Chair',
-                description: "Kathryn's brother and founder of The Kathryn Classic. Michael is a lifelong golfer and community activist.",
-              },
-              {
-                name: 'Sarah Reynolds',
-                role: 'Event Coordinator',
-                description: "Sarah brings 15 years of event planning experience and was Kathryn's closest friend for over two decades.",
-              },
-              {
-                name: 'David Martinez',
-                role: 'Sponsorship Director',
-                description: 'David leads our fundraising efforts and builds relationships with sponsors and community partners.',
-              },
-              {
-                name: 'Jennifer Wong',
-                role: 'Volunteer Coordinator',
-                description: 'Jennifer manages our team of dedicated volunteers who make the tournament weekend possible.',
-              },
-              {
-                name: 'Robert Thompson',
-                role: 'Golf Director',
-                description: 'PGA professional Robert oversees all aspects of the tournament competition and course setup.',
-              },
-              {
-                name: 'Lisa Chen',
-                role: 'Marketing Director',
-                description: 'Lisa handles our communications, social media presence, and promotional materials.',
-              },
-            ].map((person) => (
-              <div key={person.name} className="flex max-w-xl flex-col items-start">
-                <div className="group relative">
-                  <h3 className="mt-3 text-lg font-semibold leading-6 text-gray-900">{person.name}</h3>
-                  <p className="text-sm text-green-800 font-medium">{person.role}</p>
-                  <p className="mt-3 text-sm leading-6 text-gray-600">{person.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="mx-auto mt-16 max-w-2xl border-t border-gray-900/10 pt-12 lg:mx-0 lg:max-w-none">
-          <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">Contact Us</h3>
+
+        <div className="mx-auto mt-16 max-w-3xl lg:mx-0 lg:max-w-4xl">
+          <h3 className="text-xl font-semibold leading-8 tracking-tight text-gray-900">Supporting CJD Research</h3>
           <p className="mt-4 text-base leading-7 text-gray-600">
-            Have questions about The Kathryn Classic? We'd love to hear from you.
+            All proceeds from The Kathryn Classic benefit the CJD Foundation, which is dedicated to providing support for CJD families,
+            educating healthcare professionals, funding research, and serving as an advocate for families with loved ones who have
+            Creutzfeldt-Jakob disease.
           </p>
-          <div className="mt-4 text-base leading-7 text-gray-600">
-            <p>Email: info@kathrynclassic.org</p>
-            <p>Phone: (555) 123-4567</p>
-            <p>Address: 123 Golf Club Road, Fairway Hills, CA 94123</p>
-          </div>
+          <p className="mt-4 text-base leading-7 text-gray-600">
+            Through this tournament, we hope to raise awareness about CJD and contribute to research that will one day help other
+            families facing this devastating disease.
+          </p>
         </div>
       </div>
     </div>

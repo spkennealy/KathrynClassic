@@ -1,66 +1,58 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Disclosure } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import Logo from '../Home/Logo';
 
 const navigation = [
   { name: 'Home', href: '/' },
   { name: 'Schedule', href: '/schedule' },
   { name: 'Registration', href: '/registration' },
+  { name: 'History', href: '/history' },
   { name: 'Donations', href: '/donations' },
   { name: 'About', href: '/about' },
 ];
 
 export default function Navbar() {
-  const [current, setCurrent] = useState(window.location.pathname);
+  const location = useLocation();
   
   return (
-    <Disclosure as="nav" className="bg-green-800">
+    <Disclosure as="nav" className="bg-primary-600 shadow-md">
       {({ open }) => (
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 items-center justify-between">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Link to="/">
-                    <div className="flex items-center space-x-2">
-                      <Logo width={40} height={40} />
-                      <span className="text-white font-serif text-xl font-bold">The Kathryn Classic</span>
-                    </div>
-                  </Link>
-                </div>
-                <div className="hidden md:block">
-                  <div className="ml-10 flex items-baseline space-x-4">
-                    {navigation.map((item) => (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className={`${
-                          current === item.href
-                            ? 'bg-green-900 text-white'
-                            : 'text-gray-200 hover:bg-green-700 hover:text-white'
-                        } rounded-md px-3 py-2 text-sm font-medium`}
-                        onClick={() => setCurrent(item.href)}
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
-                  </div>
+              <div className="flex-shrink-0">
+                <Link to="/">
+                  <span className="text-white font-sans text-xl font-bold hover:text-primary-50 transition-colors">The Kathryn Classic</span>
+                </Link>
+              </div>
+              <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2">
+                <div className="flex items-baseline space-x-1">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`${
+                        location.pathname === item.href
+                          ? 'bg-primary-700 text-white font-medium'
+                          : 'text-white hover:bg-primary-500 hover:text-white'
+                      } rounded-lg px-3 py-2 text-sm transition-all duration-150`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
                 </div>
               </div>
               <div className="hidden md:block">
-                <div className="ml-4 flex items-center md:ml-6">
-                  <Link
-                    to="/registration"
-                    className="rounded-md bg-yellow-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-                  >
-                    Register Now
-                  </Link>
-                </div>
+                <Link
+                  to="/registration"
+                  className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-primary-600 shadow-sm hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
+                >
+                  Register Now
+                </Link>
               </div>
               <div className="-mr-2 flex md:hidden">
-                <Disclosure.Button className="inline-flex items-center justify-center rounded-md bg-green-900 p-2 text-gray-200 hover:bg-green-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-green-800">
+                <Disclosure.Button className="inline-flex items-center justify-center rounded-lg bg-primary-700 p-2 text-white hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-600 transition-colors">
                   <span className="sr-only">Open main menu</span>
                   {open ? (
                     <XMarkIcon className="block h-6 w-6" aria-hidden="true" />
@@ -72,28 +64,27 @@ export default function Navbar() {
             </div>
           </div>
 
-          <Disclosure.Panel className="md:hidden">
+          <Disclosure.Panel className="md:hidden border-t border-primary-500">
             <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={`${
-                    current === item.href
-                      ? 'bg-green-900 text-white'
-                      : 'text-gray-200 hover:bg-green-700 hover:text-white'
-                  } block rounded-md px-3 py-2 text-base font-medium`}
-                  onClick={() => setCurrent(item.href)}
+                    location.pathname === item.href
+                      ? 'bg-primary-700 text-white font-medium'
+                      : 'text-white hover:bg-primary-500'
+                  } block rounded-lg px-3 py-2 text-base transition-colors`}
                 >
                   {item.name}
                 </Link>
               ))}
             </div>
-            <div className="border-t border-green-700 pb-3 pt-4">
+            <div className="border-t border-primary-500 pb-3 pt-4">
               <div className="flex items-center px-5">
                 <Link
                   to="/registration"
-                  className="block w-full rounded-md bg-yellow-600 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+                  className="block w-full rounded-lg bg-white px-4 py-2.5 text-center text-sm font-semibold text-primary-600 shadow-sm hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors"
                 >
                   Register Now
                 </Link>
