@@ -2,12 +2,132 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentTournamentYear, getTournamentData, formatDateRange } from '../../utils/tournamentUtils';
 
+const photos = [
+  '/kathryn_photos/Kiley-Kyle_Tre-Posti-Wedding_Hannah-Berglund-Photography_Family Photos-15.jpg',
+  '/kathryn_photos/kahtryn_high_school.jpg',
+  '/kathryn_photos/kahtryn_high_school_2.jpg',
+  '/kathryn_photos/kathryn_all_sisters.jpg',
+  '/kathryn_photos/kathryn_emmie_christmas.jpg',
+  '/kathryn_photos/kathryn_jackie.jpg',
+  '/kathryn_photos/kathryn_jackie_jenna_chelsea_kierstryn_winery.jpg',
+  '/kathryn_photos/kathryn_kierstyn_winery.jpg',
+  '/kathryn_photos/kathryn_kyle_kierstyn_jenna_wedding.jpg',
+  '/kathryn_photos/kathryn_terry_kyle_kierstyn.jpg',
+  '/kathryn_photos/type=1&locId=074E31BD-A112-4E15-91D1-3EE7E8A2BDBC_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
+  '/kathryn_photos/type=1&locId=3867D7D7-AAB8-4817-B19D-A9F8736FEE93_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
+  '/kathryn_photos/type=1&locId=5FA5C637-E1E1-4ED2-B827-55B08E960050_L0_001&adj=1&modificationDate=2017-09-07_18-42-24_-0700.jpg',
+  '/kathryn_photos/type=1&locId=6225E66D-4283-44EC-836E-D04EFFACE315_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
+  '/kathryn_photos/type=1&locId=7569FF24-9EC6-431D-BE5F-AAEB01CAAE58_L0_001&adj=1&modificationDate=2022-10-19_03-26-48_-0700.jpg',
+  '/kathryn_photos/type=1&locId=8635F6DA-A00E-4D29-8963-4270E44D3244_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
+  '/kathryn_photos/type=1&locId=C1DDEBB8-CD32-4C6C-95D3-82BDDC7F4F78_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
+  '/kathryn_photos/type=1&locId=C6A59FA6-136E-40FD-B998-3B295429C9E9_L0_001&adj=1&modificationDate=2023-09-15_14-05-48_-0700.jpg',
+  '/kathryn_photos/type=1&locId=F17B6198-88A9-4690-97D7-FF77E71BF947_L0_001&adj=1&modificationDate=2023-09-15_14-05-48_-0700.jpg',
+  '/kathryn_photos/type=1&locId=FD6D315A-B90A-4702-B19D-B52812297F34_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
+];
+
+const FloatingPhoto = ({ photo, position, delay }) => {
+  return (
+    <div
+      className="absolute pointer-events-none z-0"
+      style={{
+        top: position.top,
+        left: position.left,
+        animation: `floatZoomFade 8s ease-in-out ${delay}s infinite`,
+      }}
+    >
+      <img
+        src={photo}
+        alt="Kathryn memory"
+        className="w-20 h-20 sm:w-28 sm:h-28 rounded-lg object-cover shadow-lg"
+      />
+    </div>
+  );
+};
+
+// Fixed positions for photos - 5 on left, 5 on right, vertically centered with less overlap
+const photoPositions = [
+  // Left side positions
+  { top: '15%', left: '5%' },
+  { top: '28%', left: '8%' },
+  { top: '42%', left: '5%' },
+  { top: '56%', left: '10%' },
+  { top: '70%', left: '7%' },
+  // Right side positions
+  { top: '17%', left: '87%' },
+  { top: '30%', left: '90%' },
+  { top: '44%', left: '85%' },
+  { top: '58%', left: '88%' },
+  { top: '72%', left: '92%' },
+];
+
+// Fisher-Yates shuffle algorithm for proper randomization
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export default function Home() {
   const [tournament, setTournament] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Initialize with shuffled photos
+  const [floatingPhotos, setFloatingPhotos] = useState(() => {
+    const shuffled = shuffleArray(photos);
+    return photoPositions.map((position, index) => ({
+      photo: shuffled[index % photos.length],
+      position,
+      delay: index * 0.8,
+      id: index,
+    }));
+  });
+
   useEffect(() => {
     loadTournamentInfo();
+  }, []);
+
+  useEffect(() => {
+    // Set up individual intervals for each position to change photo after each animation cycle
+    const timeouts = [];
+    const intervals = [];
+
+    photoPositions.forEach((_, index) => {
+      const initialDelay = index * 0.8 * 1000; // Convert to milliseconds
+      const animationDuration = 8000; // 8 seconds
+
+      const timeout = setTimeout(() => {
+        // After initial delay, set up repeating interval
+        const interval = setInterval(() => {
+          setFloatingPhotos(prevPhotos => {
+            const newPhotos = [...prevPhotos];
+            // Get a random photo that's different from the current one
+            let newPhoto;
+            do {
+              newPhoto = photos[Math.floor(Math.random() * photos.length)];
+            } while (newPhoto === newPhotos[index].photo && photos.length > 1);
+
+            newPhotos[index] = {
+              ...newPhotos[index],
+              photo: newPhoto,
+            };
+            return newPhotos;
+          });
+        }, animationDuration);
+
+        intervals.push(interval);
+      }, initialDelay + animationDuration);
+
+      timeouts.push(timeout);
+    });
+
+    // Cleanup all timeouts and intervals
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      intervals.forEach(interval => clearInterval(interval));
+    };
   }, []);
 
   const loadTournamentInfo = async () => {
@@ -23,109 +143,92 @@ export default function Home() {
   };
 
   return (
-    <div className="relative isolate overflow-hidden bg-white">
-      <div className="mx-auto max-w-7xl px-6 pb-24 pt-10 sm:pb-32 lg:px-8 lg:py-40">
-        <div className="mx-auto max-w-2xl text-center">
-          <div className="mt-24 sm:mt-32 lg:mt-16">
-            <div className="inline-flex space-x-6">
-              <span className="rounded-full bg-primary-50 px-3 py-1 text-sm font-semibold leading-6 text-primary-700 ring-1 ring-inset ring-primary-200">
-                Annual Tournament
-              </span>
-              {!loading && tournament && (
-                <span className="inline-flex items-center space-x-2 text-sm font-medium leading-6 text-gray-600">
-                  <span>{formatDateRange(tournament.start_date, tournament.end_date)}</span>
-                </span>
-              )}
-            </div>
-          </div>
-          <h1 className="mt-10 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+    <div className="relative isolate overflow-hidden">
+      {/* Hero Section */}
+      <div className="relative bg-primary-600 px-6 py-24 sm:py-32 lg:py-40 overflow-hidden">
+        {/* Floating Photos */}
+        {floatingPhotos.map((item) => (
+          <FloatingPhoto
+            key={item.id}
+            photo={item.photo}
+            position={item.position}
+            delay={item.delay}
+          />
+        ))}
+
+        <div className="mx-auto max-w-4xl text-center relative z-20">
+          <h1 className="text-5xl font-bold tracking-tight text-white sm:text-7xl font-serif">
             The Kathryn Classic
           </h1>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
-            Join us for a weekend of golf, community, and giving back. The annual Kathryn Classic
-            tournament brings together golfers of all skill levels for a memorable experience while
-            supporting our charitable cause.
+          <p className="mt-6 text-xl leading-8 text-white/90">
+            Join us for a weekend of golf, community, and giving back. The annual Kathryn Classic tournament brings together golfers of all skill levels for a memorable experience while supporting CJD research through the CJD Foundation.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link
               to="/registration"
-              className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
+              className="rounded-lg bg-primary-700 px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-primary-800 transition-colors font-serif"
             >
               Register Now
-            </Link>
-            <Link to="/schedule" className="text-sm font-semibold leading-6 text-gray-900 hover:text-primary-600 transition-colors">
-              View Schedule <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
       </div>
-      
-      <div className="bg-gradient-to-b from-white to-gray-50 py-24 sm:py-32">
+
+      <style>{`
+        @keyframes floatZoomFade {
+          0% {
+            opacity: 0;
+            transform: scale(0.3);
+          }
+          15% {
+            opacity: 0.7;
+            transform: scale(1);
+          }
+          70% {
+            opacity: 0.7;
+            transform: scale(1.2);
+          }
+          85% {
+            opacity: 0.4;
+            transform: scale(1.4);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1.5);
+          }
+        }
+      `}</style>
+
+      {/* Features Section */}
+      <div className="bg-primary-50 py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl lg:text-center">
-            <h2 className="text-base font-semibold leading-7 text-primary-600">Tournament Weekend</h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Experience the Kathryn Classic
-            </p>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
-              A weekend filled with golf, community, and fun activities for everyone.
-            </p>
-          </div>
-          <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
-            <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-2 lg:gap-y-16">
-              <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 shadow-sm">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                    </svg>
-                  </div>
-                  Welcome Dinner
-                </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600">
-                  Join us for a welcome dinner on Friday evening to kick off the tournament weekend.
-                </dd>
-              </div>
-              <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 shadow-sm">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12.75 3.03v.568c0 .334.148.65.405.864l1.068.89c.442.369.535 1.01.216 1.49l-.51.766a2.25 2.25 0 01-1.161.886l-.143.048a1.107 1.107 0 00-.57 1.664c.369.555.169 1.307-.427 1.605L9 13.125l.423 1.059a.956.956 0 01-1.652.928l-.679-.906a1.125 1.125 0 00-1.906.172L4.5 15.75l-.612.153M12.75 3.031a9 9 0 00-8.862 12.872M12.75 3.031a9 9 0 016.69 14.036m0 0l-.177-.529A2.25 2.25 0 0017.128 15H16.5l-.324-.324a1.453 1.453 0 00-2.328.377l-.036.073a1.586 1.586 0 01-.982.816l-.99.282c-.55.157-.894.702-.8 1.267l.073.438c.08.474.49.821.97.821.846 0 1.598.542 1.865 1.345l.215.643m5.276-3.67a9.012 9.012 0 01-5.276 3.67m0 0a9 9 0 01-10.275-4.835M15.75 9c0 .896-.393 1.7-1.016 2.25" />
-                    </svg>
-                  </div>
-                  Golf Tournament
-                </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600">
-                  Our signature 18-hole golf tournament takes place on Saturday with prizes and friendly competition.
-                </dd>
-              </div>
-              <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 shadow-sm">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-                    </svg>
-                  </div>
-                  Beach Day
-                </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600">
-                  Non-golfers can enjoy a relaxing day at the beach with organized activities and catered lunch.
-                </dd>
-              </div>
-              <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 shadow-sm">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
-                    </svg>
-                  </div>
-                  Awards Ceremony
-                </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600">
-                  Join us Sunday for an awards ceremony, brunch, and charity recognition.
-                </dd>
-              </div>
-            </dl>
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Honoring Kathryn */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="text-6xl mb-6">⛳</div>
+              <h3 className="text-2xl font-bold text-primary-600 mb-4 font-serif">Honoring Kathryn</h3>
+              <p className="text-base leading-7 text-gray-600 font-serif">
+                An intimate gathering to celebrate Kathryn Rourick's legacy through golf, community, and remembrance.
+              </p>
+            </div>
+
+            {/* Supporting CJD Research */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="text-6xl mb-6">💚</div>
+              <h3 className="text-2xl font-bold text-primary-600 mb-4 font-serif">Supporting CJD Research</h3>
+              <p className="text-base leading-7 text-gray-600 font-serif">
+                100% of proceeds benefit the CJD Foundation, funding research and supporting families affected by Creutzfeldt-Jakob disease.
+              </p>
+            </div>
+
+            {/* Building Community */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="text-6xl mb-6">🏆</div>
+              <h3 className="text-2xl font-bold text-primary-600 mb-4 font-serif">Building Community</h3>
+              <p className="text-base leading-7 text-gray-600 font-serif">
+                A weekend bringing together family and friends who knew and loved Kathryn for golf, connection, and hope.
+              </p>
+            </div>
           </div>
         </div>
       </div>

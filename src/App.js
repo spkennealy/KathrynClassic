@@ -12,7 +12,7 @@ import TournamentHistory from './components/TournamentHistory/TournamentHistory'
 function App() {
   return (
     <Router>
-      <div className="App min-h-screen flex flex-col">
+      <div className="App min-h-screen flex flex-col bg-white">
         <Navbar />
         <main className="flex-grow">
           <Routes>

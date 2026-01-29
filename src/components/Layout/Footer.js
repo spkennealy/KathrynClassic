@@ -39,33 +39,24 @@ const navigation = {
 export default function Footer() {
   return (
     <footer className="bg-primary-600">
-      <div className="mx-auto max-w-7xl overflow-hidden px-6 py-12 sm:py-16 lg:px-8">
-        <nav className="-mb-6 columns-2 sm:flex sm:justify-center sm:space-x-12" aria-label="Footer">
-          {navigation.main.map((item) => (
-            <div key={item.name} className="pb-6">
-              <Link to={item.href} className="text-sm leading-6 text-white hover:text-primary-50 transition-colors">
-                {item.name}
-              </Link>
-            </div>
-          ))}
-        </nav>
-        <div className="mt-10 flex justify-center space-x-10">
+      <div className="mx-auto max-w-7xl overflow-hidden px-6 py-12 lg:px-8">
+        <p className="text-center text-base leading-7 text-white font-serif mb-6">
+          &copy; {new Date().getFullYear()} The Kathryn Classic. Making a difference, one swing at a time.
+        </p>
+        <div className="flex justify-center space-x-10">
           {navigation.social.map((item) => (
             <a
               key={item.name}
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white hover:text-primary-50 transition-colors"
+              className="text-white hover:text-primary-200 transition-colors"
             >
               <span className="sr-only">{item.name}</span>
               <item.icon className="h-6 w-6" aria-hidden="true" />
             </a>
           ))}
         </div>
-        <p className="mt-10 text-center text-sm leading-5 text-white">
-          &copy; {new Date().getFullYear()} The Kathryn Classic. All rights reserved.
-        </p>
       </div>
     </footer>
   );

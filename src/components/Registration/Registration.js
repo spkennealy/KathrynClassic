@@ -8,25 +8,19 @@ const AdultSchema = Yup.object().shape({
   firstName: Yup.string().required('First name is required'),
   lastName: Yup.string().required('Last name is required'),
   email: Yup.string().email('Invalid email').required('Email is required'),
-  phone: Yup.string().required('Phone is required'),
+  phone: Yup.string(),
   events: Yup.array().min(1, 'Select at least one event'),
   golfHandicap: Yup.number().when('events', {
     is: (events) => events && events.includes('golf_tournament'),
     then: () => Yup.number().required('Handicap is required for golf. Put 20 if you don\'t have one.'),
     otherwise: () => Yup.number().notRequired(),
   }),
-});
-
-const KidSchema = Yup.object().shape({
-  firstName: Yup.string().required('First name is required'),
-  lastName: Yup.string().required('Last name is required'),
-  age: Yup.number(),
-  events: Yup.array().min(1, 'Select at least one event'),
+  preferredTeammates: Yup.string(),
+  childCounts: Yup.object(),
 });
 
 const RegistrationSchema = Yup.object().shape({
-  adults: Yup.array().of(AdultSchema).min(1, 'At least one adult is required'),
-  kids: Yup.array().of(KidSchema),
+  adults: Yup.array().of(AdultSchema).min(1, 'At least one attendee is required'),
   agreeTerms: Yup.boolean().oneOf([true], 'You must agree to the terms and conditions'),
 });
 
@@ -66,7 +60,7 @@ export default function Registration() {
           id: event.event_type,
           name: `${event.event_name} - ${formatDate(event.event_date).split(',')[0]}, ${formatDate(event.event_date).split(',')[1].trim()}`,
           adultPrice: parseFloat(event.adult_price),
-          childPrice: parseFloat(event.child_price),
+          childPrice: 0, // Children attend free
           eventId: event.id
         }));
 
@@ -80,20 +74,20 @@ export default function Registration() {
     }
   };
 
-  const calculateTotal = (adults, kids) => {
+  const calculateTotal = (adults) => {
     let total = 0;
 
     adults.forEach(adult => {
       adult.events.forEach(eventId => {
         const event = events.find(e => e.id === eventId);
-        if (event) total += event.adultPrice;
-      });
-    });
+        if (event) {
+          // Add adult price
+          total += event.adultPrice;
 
-    kids.forEach(kid => {
-      kid.events.forEach(eventId => {
-        const event = events.find(e => e.id === eventId);
-        if (event) total += event.childPrice;
+          // Add children prices for this event
+          const childCount = adult.childCounts?.[eventId] || 0;
+          total += childCount * event.childPrice;
+        }
       });
     });
 
@@ -105,39 +99,34 @@ export default function Registration() {
       setError(null);
 
       // Calculate total amount
-      const totalAmount = calculateTotal(values.adults, values.kids);
+      const totalAmount = calculateTotal(values.adults);
+
+      // Check if this is a full golf team (4 adults with golf_tournament selected)
+      const golfAdults = values.adults.filter(adult => adult.events.includes('golf_tournament'));
+      const isFullTeam = golfAdults.length === 4;
+
+      // Generate a team_group_id if this is a full team
+      const teamGroupId = isFullTeam ? crypto.randomUUID() : null;
 
       // Prepare data for database - insert each person as a separate record
       const registrations = [];
 
       // Add adults
       values.adults.forEach(adult => {
+        const isGolfer = adult.events.includes('golf_tournament');
+
         registrations.push({
           first_name: adult.firstName,
           last_name: adult.lastName,
           email: adult.email,
-          phone: adult.phone,
+          phone: adult.phone || null,
           events: adult.events,
           golf_handicap: adult.golfHandicap || null,
+          preferred_teammates: isGolfer && adult.preferredTeammates ? adult.preferredTeammates : null,
+          team_group_id: isGolfer && teamGroupId ? teamGroupId : null,
+          child_counts: adult.childCounts || {},
           is_child: false,
           age: null,
-          tournament_id: tournamentId,
-          payment_status: 'pending',
-          created_at: new Date().toISOString(),
-        });
-      });
-
-      // Add kids
-      values.kids.forEach(kid => {
-        registrations.push({
-          first_name: kid.firstName,
-          last_name: kid.lastName,
-          email: null,
-          phone: null,
-          events: kid.events,
-          golf_handicap: null,
-          is_child: true,
-          age: kid.age,
           tournament_id: tournamentId,
           payment_status: 'pending',
           created_at: new Date().toISOString(),
@@ -155,6 +144,9 @@ export default function Registration() {
       }
 
       console.log('Registration saved successfully:', data);
+      if (isFullTeam) {
+        console.log('Full team registered with team_group_id:', teamGroupId);
+      }
       setSubmittedTotal(totalAmount);
       setIsSubmitted(true);
       resetForm();
@@ -168,7 +160,7 @@ export default function Registration() {
 
   if (isSubmitted) {
     return (
-      <div className="bg-white py-24 sm:py-32">
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-8">
@@ -176,8 +168,8 @@ export default function Registration() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Congratulations!</h2>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">Congratulations!</h2>
+            <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
               You've successfully registered for The Kathryn Classic!
             </p>
 
@@ -201,7 +193,7 @@ export default function Registration() {
               </div>
             </div>
 
-            <p className="mt-8 text-base text-gray-600">
+            <p className="mt-8 text-base text-gray-600 font-serif">
               A confirmation email with event details has been sent to your email address.
             </p>
 
@@ -224,10 +216,10 @@ export default function Registration() {
 
   if (loading) {
     return (
-      <div className="bg-white py-24 sm:py-32">
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="text-center">
-            <p className="text-lg text-gray-600">Loading registration form...</p>
+            <p className="text-lg text-gray-600 font-serif">Loading registration form...</p>
           </div>
         </div>
       </div>
@@ -236,11 +228,11 @@ export default function Registration() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-white py-24 sm:py-32">
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Registration</h2>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">Registration</h2>
+            <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
               Registration is not currently available. Please check back later for upcoming tournament dates.
             </p>
           </div>
@@ -250,12 +242,12 @@ export default function Registration() {
   }
 
   return (
-    <div className="bg-white py-24 sm:py-32">
+    <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Register for The Kathryn Classic {tournamentYear}</h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
-            Join us for a weekend of golf, community, and giving back. Register multiple people at once.
+          <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">Register for The Kathryn Classic {tournamentYear}</h2>
+          <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
+            Join us for a weekend of golf, community, and giving back. Register multiple attendees at once and indicate how many children will attend each event.
           </p>
         </div>
 
@@ -269,8 +261,9 @@ export default function Registration() {
                 phone: '',
                 events: [],
                 golfHandicap: '',
+                preferredTeammates: '',
+                childCounts: {},
               }],
-              kids: [],
               agreeTerms: false,
             }}
             validationSchema={RegistrationSchema}
@@ -284,16 +277,16 @@ export default function Registration() {
                   </div>
                 )}
 
-                {/* Adults Section */}
+                {/* Attendees Section */}
                 <FieldArray name="adults">
                   {({ push, remove }) => (
                     <div className="space-y-6">
-                      <h3 className="text-xl font-semibold text-gray-900">Adults</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Attendees</h3>
 
                       {values.adults.map((adult, index) => (
                         <div key={index} className="rounded-lg bg-gray-50 p-6 shadow-sm ring-1 ring-gray-200">
                           <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-lg font-semibold text-gray-900">Adult {index + 1}</h4>
+                            <h4 className="text-lg font-semibold text-gray-900">Attendee {index + 1}</h4>
                             {values.adults.length > 1 && (
                               <button
                                 type="button"
@@ -324,7 +317,7 @@ export default function Registration() {
                               <ErrorMessage name={`adults.${index}.lastName`} component="div" className="mt-1 text-sm text-red-600" />
                             </div>
 
-                            <div className="sm:col-span-2">
+                            <div>
                               <label className="block text-sm font-semibold leading-6 text-gray-900">Email</label>
                               <Field
                                 type="email"
@@ -334,7 +327,7 @@ export default function Registration() {
                               <ErrorMessage name={`adults.${index}.email`} component="div" className="mt-1 text-sm text-red-600" />
                             </div>
 
-                            <div className="sm:col-span-2">
+                            <div>
                               <label className="block text-sm font-semibold leading-6 text-gray-900">Phone</label>
                               <Field
                                 type="tel"
@@ -347,19 +340,33 @@ export default function Registration() {
                             <div className="sm:col-span-2">
                               <fieldset>
                                 <legend className="block text-sm font-semibold leading-6 text-gray-900">Select Events</legend>
-                                <div className="mt-2 space-y-2">
+                                <div className="mt-2 space-y-3">
                                   {events.map((event) => (
-                                    <div key={event.id} className="flex items-start">
-                                      <Field
-                                        type="checkbox"
-                                        name={`adults.${index}.events`}
-                                        value={event.id}
-                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-1"
-                                      />
-                                      <label className="ml-3 text-sm">
-                                        <span className="font-medium text-gray-900">{event.name}</span>
-                                        <span className="text-gray-500 ml-2">(${event.adultPrice})</span>
-                                      </label>
+                                    <div key={event.id} className="flex items-center gap-4">
+                                      <div className="flex items-start flex-1">
+                                        <Field
+                                          type="checkbox"
+                                          name={`adults.${index}.events`}
+                                          value={event.id}
+                                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-1"
+                                        />
+                                        <label className="ml-3 text-sm">
+                                          <span className="font-medium text-gray-900">{event.name}</span>
+                                          <span className="text-gray-500 ml-2">(${event.adultPrice} per person)</span>
+                                        </label>
+                                      </div>
+                                      {event.id !== 'golf_tournament' && adult.events.includes(event.id) && (
+                                        <div className="flex items-center gap-2 animate-highlight rounded-lg px-2 py-1">
+                                          <Field
+                                            type="number"
+                                            name={`adults.${index}.childCounts.${event.id}`}
+                                            min="0"
+                                            placeholder="0"
+                                            className="w-20 rounded-lg border-0 px-2 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 text-sm"
+                                          />
+                                          <span className="text-xs text-gray-500 whitespace-nowrap">children (free)</span>
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -367,16 +374,29 @@ export default function Registration() {
                               </fieldset>
 
                               {adult.events.includes('golf_tournament') && (
-                                <div className="mt-4">
-                                  <label className="block text-sm font-semibold leading-6 text-gray-900">Golf Handicap</label>
-                                  <Field
-                                    type="number"
-                                    name={`adults.${index}.golfHandicap`}
-                                    placeholder="Enter handicap (or 20 if unknown)"
-                                    className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
-                                  />
-                                  <ErrorMessage name={`adults.${index}.golfHandicap`} component="div" className="mt-1 text-sm text-red-600" />
-                                </div>
+                                <>
+                                  <div className="mt-4">
+                                    <label className="block text-sm font-semibold leading-6 text-gray-900">Golf Handicap</label>
+                                    <Field
+                                      type="number"
+                                      name={`adults.${index}.golfHandicap`}
+                                      placeholder="Enter handicap (or 20 if unknown)"
+                                      className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                                    />
+                                    <ErrorMessage name={`adults.${index}.golfHandicap`} component="div" className="mt-1 text-sm text-red-600" />
+                                  </div>
+                                  <div className="mt-4">
+                                    <label className="block text-sm font-semibold leading-6 text-gray-900">Preferred Teammates</label>
+                                    <Field
+                                      type="text"
+                                      name={`adults.${index}.preferredTeammates`}
+                                      placeholder="Scottie Scheffler, Rory McIlroy, Tiger Woods..."
+                                      className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">Enter the names of players you'd like to play with, separated by commas</p>
+                                    <ErrorMessage name={`adults.${index}.preferredTeammates`} component="div" className="mt-1 text-sm text-red-600" />
+                                  </div>
+                                </>
                               )}
                             </div>
                           </div>
@@ -385,96 +405,10 @@ export default function Registration() {
 
                       <button
                         type="button"
-                        onClick={() => push({ firstName: '', lastName: '', email: '', phone: '', events: [], golfHandicap: '' })}
+                        onClick={() => push({ firstName: '', lastName: '', email: '', phone: '', events: [], golfHandicap: '', preferredTeammates: '', childCounts: {} })}
                         className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
                       >
-                        + Add Adult
-                      </button>
-                    </div>
-                  )}
-                </FieldArray>
-
-                {/* Kids Section */}
-                <FieldArray name="kids">
-                  {({ push, remove }) => (
-                    <div className="space-y-6">
-                      <h3 className="text-xl font-semibold text-gray-900">Children</h3>
-
-                      {values.kids.map((kid, index) => (
-                        <div key={index} className="rounded-lg bg-blue-50 p-6 shadow-sm ring-1 ring-blue-200">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-lg font-semibold text-gray-900">Child {index + 1}</h4>
-                            <button
-                              type="button"
-                              onClick={() => remove(index)}
-                              className="text-red-600 hover:text-red-700 text-sm font-medium"
-                            >
-                              Remove
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                              <label className="block text-sm font-semibold leading-6 text-gray-900">First name</label>
-                              <Field
-                                name={`kids.${index}.firstName`}
-                                className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
-                              />
-                              <ErrorMessage name={`kids.${index}.firstName`} component="div" className="mt-1 text-sm text-red-600" />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-semibold leading-6 text-gray-900">Last name</label>
-                              <Field
-                                name={`kids.${index}.lastName`}
-                                className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
-                              />
-                              <ErrorMessage name={`kids.${index}.lastName`} component="div" className="mt-1 text-sm text-red-600" />
-                            </div>
-
-                            <div className="sm:col-span-2">
-                              <label className="block text-sm font-semibold leading-6 text-gray-900">Age</label>
-                              <Field
-                                type="number"
-                                name={`kids.${index}.age`}
-                                placeholder="0-17"
-                                className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
-                              />
-                              <ErrorMessage name={`kids.${index}.age`} component="div" className="mt-1 text-sm text-red-600" />
-                            </div>
-
-                            <div className="sm:col-span-2">
-                              <fieldset>
-                                <legend className="block text-sm font-semibold leading-6 text-gray-900">Select Events</legend>
-                                <div className="mt-2 space-y-2">
-                                  {events.map((event) => (
-                                    <div key={event.id} className="flex items-start">
-                                      <Field
-                                        type="checkbox"
-                                        name={`kids.${index}.events`}
-                                        value={event.id}
-                                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-1"
-                                      />
-                                      <label className="ml-3 text-sm">
-                                        <span className="font-medium text-gray-900">{event.name}</span>
-                                        <span className="text-gray-500 ml-2">(${event.childPrice} child rate)</span>
-                                      </label>
-                                    </div>
-                                  ))}
-                                </div>
-                                <ErrorMessage name={`kids.${index}.events`} component="div" className="mt-1 text-sm text-red-600" />
-                              </fieldset>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={() => push({ firstName: '', lastName: '', age: '', events: [] })}
-                        className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
-                      >
-                        + Add Child
+                        + Add Attendee
                       </button>
                     </div>
                   )}
@@ -483,13 +417,13 @@ export default function Registration() {
                 {/* Total */}
                 <div className="border-t border-gray-900/10 pt-6">
                   <p className="text-2xl font-bold text-gray-900">
-                    Total: ${calculateTotal(values.adults, values.kids)}
+                    Total: ${calculateTotal(values.adults)}
                   </p>
                 </div>
 
                 {/* Terms & Conditions */}
                 <div className="border-t border-gray-900/10 pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Terms & Conditions</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Terms & Conditions</h3>
                   <div className="rounded-lg bg-gray-50 p-6 ring-1 ring-gray-200 mb-6">
                     <div className="space-y-4 text-sm text-gray-700">
                       <div>
@@ -544,7 +478,7 @@ export default function Registration() {
                     </div>
                   </div>
 
-                  <div className="flex gap-x-3">
+                  <div className="flex justify-center gap-x-3">
                     <Field
                       type="checkbox"
                       name="agreeTerms"

@@ -34,10 +34,36 @@ export default function Schedule() {
     return `${start} - ${end}`;
   };
 
+  const getTimeOfDay = (startTime) => {
+    if (!startTime) return 'All Day';
+    const hour = parseInt(startTime.split(':')[0]);
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
+  };
+
+  const groupEventsByDate = (events) => {
+    const grouped = {};
+    events.forEach(event => {
+      const date = event.event_date;
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(event);
+    });
+    return grouped;
+  };
+
+  const formatDateHeader = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
   if (loading) {
     return (
-      <div className="bg-white py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+        <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="text-center">
             <p className="text-lg text-gray-600">Loading schedule...</p>
           </div>
@@ -48,10 +74,10 @@ export default function Schedule() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-white py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+        <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
               Tournament Schedule
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600">
@@ -63,63 +89,81 @@ export default function Schedule() {
     );
   }
 
+  const groupedEvents = groupEventsByDate(events);
+
   return (
-    <div className="bg-white py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl lg:mx-0">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            {tournamentYear} Tournament Schedule
+    <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+      <div className="mx-auto max-w-5xl px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+            Tournament Schedule
           </h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
-            Join us for a weekend of golf and community. Here's what to expect during The Kathryn Classic tournament weekend.
-          </p>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 border-t border-gray-200 pt-10 sm:mt-16 sm:pt-16 lg:mx-0 lg:max-w-none lg:grid-cols-2">
-          {events.map((event) => (
-            <article key={event.id} className="flex max-w-xl flex-col items-start">
-              <div className="flex items-center gap-x-4 text-xs">
-                <time dateTime={event.event_date} className="text-gray-500">
-                  {formatDate(event.event_date)}
-                </time>
-                <span className="relative z-10 rounded-full bg-primary-100 px-3 py-1.5 font-medium text-primary-700">
-                  {formatEventTime(event.start_time, event.end_time)}
-                </span>
-              </div>
-              <div className="group relative">
-                <h3 className="mt-3 text-lg font-semibold leading-6 text-gray-900 group-hover:text-gray-600">
-                  {event.event_name}
-                </h3>
-                <p className="mt-5 line-clamp-3 text-sm leading-6 text-gray-600">
-                  {event.description}
-                </p>
-              </div>
+        {Object.entries(groupedEvents).map(([date, dateEvents]) => (
+          <div key={date} className="mb-12">
+            {/* Date Header */}
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-primary-600 font-serif">
+                {formatDateHeader(date)}
+              </h3>
+            </div>
 
-              <div className="mt-4 w-full">
-                <h4 className="text-sm font-semibold text-gray-900">Location</h4>
-                <p className="text-sm text-gray-600">{event.location}</p>
+            {/* Events for this date */}
+            <div className="space-y-6">
+              {dateEvents.map((event) => (
+                <div key={event.id} className="bg-white rounded-2xl shadow-lg p-8 flex flex-col sm:flex-row gap-6">
+                  {/* Time Section */}
+                  <div className="sm:w-48 flex-shrink-0 text-center sm:text-left">
+                    <div className="text-4xl font-bold text-primary-600 font-serif">
+                      {formatTime(event.start_time)}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      {getTimeOfDay(event.start_time)}
+                    </div>
+                  </div>
 
-                {event.host && (
-                  <>
-                    <h4 className="mt-4 text-sm font-semibold text-gray-900">Host</h4>
-                    <p className="text-sm text-gray-600">{event.host}</p>
-                  </>
-                )}
+                  {/* Content Section */}
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-primary-600 mb-3 font-serif">
+                      {event.event_name}
+                    </h3>
+                    <p className="text-base leading-7 text-gray-600 font-serif mb-4">
+                      {event.description}
+                    </p>
 
-                {event.details && event.details.length > 0 && (
-                  <>
-                    <h4 className="mt-4 text-sm font-semibold text-gray-900">Details</h4>
-                    <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc pl-5">
-                      {event.details.map((detail, index) => (
-                        <li key={index}>{detail}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
+                    {event.location && (
+                      <div className="mb-2">
+                        <span className="text-sm font-semibold text-gray-900">Location: </span>
+                        <span className="text-sm text-gray-600">{event.location}</span>
+                      </div>
+                    )}
+
+                    {event.host && (
+                      <div className="mb-2">
+                        <span className="text-sm font-semibold text-gray-900">Host: </span>
+                        <span className="text-sm text-gray-600">{event.host}</span>
+                      </div>
+                    )}
+
+                    {event.details && event.details.length > 0 && (
+                      <div className="mt-3">
+                        <ul className="space-y-1 text-sm text-gray-600">
+                          {event.details.map((detail, index) => (
+                            <li key={index} className="flex items-start">
+                              <span className="mr-2">•</span>
+                              <span>{detail}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
