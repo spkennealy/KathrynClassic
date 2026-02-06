@@ -32,7 +32,7 @@ const FloatingPhoto = ({ photo, position, delay }) => {
       style={{
         top: position.top,
         left: position.left,
-        animation: `floatZoomFade 8s ease-in-out ${delay}s infinite`,
+        animation: `floatZoomFade 12s ease-in-out ${delay}s infinite`,
       }}
     >
       <img
@@ -90,20 +90,37 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Set up individual intervals for each position to change photo after each animation cycle
+    // Set up individual intervals for each position to change photo when faded out
     const timeouts = [];
     const intervals = [];
 
     photoPositions.forEach((_, index) => {
       const initialDelay = index * 0.8 * 1000; // Convert to milliseconds
-      const animationDuration = 8000; // 8 seconds
+      const animationDuration = 12000; // 12 seconds
 
+      // Change photo at 95% of animation (when fully faded out)
+      const changePhotoAt = animationDuration * 0.95;
+
+      // First photo change happens after initial delay + changePhotoAt
       const timeout = setTimeout(() => {
-        // After initial delay, set up repeating interval
+        setFloatingPhotos(prevPhotos => {
+          const newPhotos = [...prevPhotos];
+          let newPhoto;
+          do {
+            newPhoto = photos[Math.floor(Math.random() * photos.length)];
+          } while (newPhoto === newPhotos[index].photo && photos.length > 1);
+
+          newPhotos[index] = {
+            ...newPhotos[index],
+            photo: newPhoto,
+          };
+          return newPhotos;
+        });
+
+        // Set up repeating interval for subsequent changes
         const interval = setInterval(() => {
           setFloatingPhotos(prevPhotos => {
             const newPhotos = [...prevPhotos];
-            // Get a random photo that's different from the current one
             let newPhoto;
             do {
               newPhoto = photos[Math.floor(Math.random() * photos.length)];
@@ -118,7 +135,7 @@ export default function Home() {
         }, animationDuration);
 
         intervals.push(interval);
-      }, initialDelay + animationDuration);
+      }, initialDelay + changePhotoAt);
 
       timeouts.push(timeout);
     });

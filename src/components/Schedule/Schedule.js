@@ -112,9 +112,9 @@ export default function Schedule() {
             {/* Events for this date */}
             <div className="space-y-6">
               {dateEvents.map((event) => (
-                <div key={event.id} className="bg-white rounded-2xl shadow-lg p-8 flex flex-col sm:flex-row gap-6">
+                <div key={event.id} className="bg-white rounded-2xl shadow-lg p-8 flex flex-col sm:flex-row gap-6 sm:items-center">
                   {/* Time Section */}
-                  <div className="sm:w-48 flex-shrink-0 text-center sm:text-left">
+                  <div className="sm:w-48 flex-shrink-0 text-center">
                     <div className="text-4xl font-bold text-primary-600 font-serif">
                       {formatTime(event.start_time)}
                     </div>

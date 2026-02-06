@@ -24,6 +24,14 @@ const RegistrationSchema = Yup.object().shape({
   agreeTerms: Yup.boolean().oneOf([true], 'You must agree to the terms and conditions'),
 });
 
+const WaitlistSchema = Yup.object().shape({
+  firstName: Yup.string().required('First name is required'),
+  lastName: Yup.string().required('Last name is required'),
+  email: Yup.string().email('Invalid email').required('Email is required'),
+  phone: Yup.string(),
+  notes: Yup.string(),
+});
+
 export default function Registration() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedTotal, setSubmittedTotal] = useState(0);
@@ -32,6 +40,7 @@ export default function Registration() {
   const [tournamentYear, setTournamentYear] = useState(null);
   const [tournamentId, setTournamentId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [registrationClosed, setRegistrationClosed] = useState(false);
 
   useEffect(() => {
     loadTournamentData();
@@ -51,6 +60,7 @@ export default function Registration() {
 
       if (tournament) {
         setTournamentId(tournament.id);
+        setRegistrationClosed(tournament.registration_closed || false);
 
         // Get events
         const eventData = await getTournamentEvents(year);
@@ -94,54 +104,216 @@ export default function Registration() {
     return total;
   };
 
+  const handleWaitlistSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      setError(null);
+
+      // STEP 1: Check if contact exists or create new one
+      const { data: existingContact, error: lookupError } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('email', values.email)
+        .maybeSingle();
+
+      if (lookupError) throw lookupError;
+
+      let contactId;
+
+      if (existingContact) {
+        contactId = existingContact.id;
+        // Update existing contact
+        await supabase
+          .from('contacts')
+          .update({
+            first_name: values.firstName,
+            last_name: values.lastName,
+            phone: values.phone || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', contactId);
+      } else {
+        // Create new contact
+        const { data: newContact, error: insertError } = await supabase
+          .from('contacts')
+          .insert([{
+            first_name: values.firstName,
+            last_name: values.lastName,
+            email: values.email,
+            phone: values.phone || null
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        contactId = newContact.id;
+      }
+
+      // STEP 2: Add to waitlist
+      const { error: waitlistError } = await supabase
+        .from('waitlist')
+        .insert([{
+          contact_id: contactId,
+          tournament_id: tournamentId,
+          notes: values.notes || null
+        }]);
+
+      if (waitlistError) {
+        // Check if already on waitlist
+        if (waitlistError.code === '23505') {
+          setError('You are already on the waitlist for this tournament.');
+          return;
+        }
+        throw waitlistError;
+      }
+
+      setIsSubmitted(true);
+      resetForm();
+    } catch (err) {
+      console.error('Error submitting waitlist:', err);
+      setError('Failed to join waitlist. Please try again or contact support.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       setError(null);
 
-      // Calculate total amount
+      // Calculate total amount and team info
       const totalAmount = calculateTotal(values.adults);
-
-      // Check if this is a full golf team (4 adults with golf_tournament selected)
-      const golfAdults = values.adults.filter(adult => adult.events.includes('golf_tournament'));
+      const golfAdults = values.adults.filter(adult =>
+        adult.events.includes('golf_tournament')
+      );
       const isFullTeam = golfAdults.length === 4;
-
-      // Generate a team_group_id if this is a full team
       const teamGroupId = isFullTeam ? crypto.randomUUID() : null;
 
-      // Prepare data for database - insert each person as a separate record
-      const registrations = [];
+      // STEP 1: Get unique emails and batch lookup contacts
+      const emails = [...new Set(values.adults.map(a => a.email))];
 
-      // Add adults
-      values.adults.forEach(adult => {
+      const { data: existingContacts, error: lookupError } = await supabase
+        .from('contacts')
+        .select('id, email')
+        .in('email', emails);
+
+      if (lookupError) throw lookupError;
+
+      // Map existing contact_ids
+      const contactMap = new Map(
+        (existingContacts || []).map(c => [c.email, c.id])
+      );
+
+      // STEP 2: Identify new contacts to create
+      const newContactsData = values.adults
+        .filter(a => !contactMap.has(a.email))
+        .reduce((acc, adult) => {
+          // Deduplicate by email
+          if (!acc.find(c => c.email === adult.email)) {
+            acc.push({
+              first_name: adult.firstName,
+              last_name: adult.lastName,
+              email: adult.email,
+              phone: adult.phone || null
+            });
+          }
+          return acc;
+        }, []);
+
+      // Batch insert new contacts
+      if (newContactsData.length > 0) {
+        const { data: insertedContacts, error: insertError } = await supabase
+          .from('contacts')
+          .insert(newContactsData)
+          .select('id, email');
+
+        if (insertError) throw insertError;
+
+        (insertedContacts || []).forEach(c => contactMap.set(c.email, c.id));
+      }
+
+      // STEP 3: Update existing contacts with latest info
+      const contactUpdates = values.adults
+        .filter(a => existingContacts && existingContacts.find(c => c.email === a.email))
+        .reduce((acc, adult) => {
+          // Deduplicate by email
+          const existing = acc.find(u => u.email === adult.email);
+          if (!existing) {
+            acc.push({
+              id: contactMap.get(adult.email),
+              email: adult.email,
+              first_name: adult.firstName,
+              last_name: adult.lastName,
+              phone: adult.phone || null,
+              updated_at: new Date().toISOString()
+            });
+          }
+          return acc;
+        }, []);
+
+      // Update contacts (upsert approach)
+      for (const update of contactUpdates) {
+        const { id, email, ...updateData } = update;
+        await supabase
+          .from('contacts')
+          .update(updateData)
+          .eq('id', id);
+      }
+
+      // STEP 4: Create registrations with contact_id references (without events/child_counts)
+      const registrations = values.adults.map(adult => {
         const isGolfer = adult.events.includes('golf_tournament');
 
-        registrations.push({
-          first_name: adult.firstName,
-          last_name: adult.lastName,
-          email: adult.email,
-          phone: adult.phone || null,
-          events: adult.events,
+        return {
+          contact_id: contactMap.get(adult.email),
           golf_handicap: adult.golfHandicap || null,
-          preferred_teammates: isGolfer && adult.preferredTeammates ? adult.preferredTeammates : null,
+          preferred_teammates: isGolfer && adult.preferredTeammates
+            ? adult.preferredTeammates
+            : null,
           team_group_id: isGolfer && teamGroupId ? teamGroupId : null,
-          child_counts: adult.childCounts || {},
-          is_child: false,
-          age: null,
           tournament_id: tournamentId,
           payment_status: 'pending',
-          created_at: new Date().toISOString(),
-        });
+          created_at: new Date().toISOString()
+        };
       });
 
-      // Insert into Supabase
-      const { data, error: supabaseError } = await supabase
+      // STEP 5: Insert registrations
+      const { data: insertedRegistrations, error: supabaseError } = await supabase
         .from('registrations')
         .insert(registrations)
         .select();
 
-      if (supabaseError) {
-        throw supabaseError;
+      if (supabaseError) throw supabaseError;
+
+      // STEP 6: Create registration_events for each event
+      const registrationEvents = [];
+
+      insertedRegistrations.forEach((registration, index) => {
+        const adult = values.adults[index];
+
+        adult.events.forEach(eventType => {
+          // Find the event to get its UUID
+          const event = events.find(e => e.id === eventType);
+
+          if (event && event.eventId) {
+            registrationEvents.push({
+              registration_id: registration.id,
+              tournament_event_id: event.eventId,
+              child_count: adult.childCounts?.[eventType] || 0
+            });
+          }
+        });
+      });
+
+      // Insert all registration_events
+      if (registrationEvents.length > 0) {
+        const { error: eventsError } = await supabase
+          .from('registration_events')
+          .insert(registrationEvents);
+
+        if (eventsError) throw eventsError;
       }
+
+      const data = insertedRegistrations;
 
       console.log('Registration saved successfully:', data);
       if (isFullTeam) {
@@ -168,34 +340,43 @@ export default function Registration() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">Congratulations!</h2>
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+              {registrationClosed ? 'Added to Waitlist!' : 'Congratulations!'}
+            </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
-              You've successfully registered for The Kathryn Classic!
+              {registrationClosed
+                ? "You've been added to the waitlist for The Kathryn Classic. We'll contact you if a spot becomes available."
+                : "You've successfully registered for The Kathryn Classic!"
+              }
             </p>
 
-            <div className="mt-10 rounded-lg bg-primary-50 p-8 ring-1 ring-primary-200">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
-              <div className="text-left space-y-4">
-                <p className="text-base text-gray-700">
-                  <strong>Total Amount Due:</strong> <span className="text-2xl font-bold text-primary-600">${submittedTotal}</span>
-                </p>
-                <div className="border-t border-primary-200 pt-4">
-                  <p className="text-base font-semibold text-gray-900 mb-3">Please submit payment via:</p>
-                  <div className="space-y-2 text-sm text-gray-700">
-                    <p><strong>Venmo:</strong> Payment details will be provided</p>
-                    <p><strong>Zelle:</strong> Payment details will be provided</p>
+            {!registrationClosed && (
+              <>
+                <div className="mt-10 rounded-lg bg-primary-50 p-8 ring-1 ring-primary-200">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
+                  <div className="text-left space-y-4">
+                    <p className="text-base text-gray-700">
+                      <strong>Total Amount Due:</strong> <span className="text-2xl font-bold text-primary-600">${submittedTotal}</span>
+                    </p>
+                    <div className="border-t border-primary-200 pt-4">
+                      <p className="text-base font-semibold text-gray-900 mb-3">Please submit payment via:</p>
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <p><strong>Venmo:</strong> Payment details will be provided</p>
+                        <p><strong>Zelle:</strong> Payment details will be provided</p>
+                      </div>
+                      <p className="mt-4 text-sm text-gray-600 bg-white p-3 rounded border border-primary-200">
+                        <strong>Note:</strong> Your registration will be confirmed once payment is received.
+                        Please include your name in the payment note.
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-4 text-sm text-gray-600 bg-white p-3 rounded border border-primary-200">
-                    <strong>Note:</strong> Your registration will be confirmed once payment is received.
-                    Please include your name in the payment note.
-                  </p>
                 </div>
-              </div>
-            </div>
 
-            <p className="mt-8 text-base text-gray-600 font-serif">
-              A confirmation email with event details has been sent to your email address.
-            </p>
+                <p className="mt-8 text-base text-gray-600 font-serif">
+                  A confirmation email with event details has been sent to your email address.
+                </p>
+              </>
+            )}
 
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <button
@@ -205,7 +386,7 @@ export default function Registration() {
                 }}
                 className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
               >
-                Register Another Group
+                {registrationClosed ? 'Add Another Person to Waitlist' : 'Register Another Group'}
               </button>
             </div>
           </div>
@@ -235,6 +416,123 @@ export default function Registration() {
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
               Registration is not currently available. Please check back later for upcoming tournament dates.
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waitlist form if registration is closed
+  if (registrationClosed) {
+    return (
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+              Registration Full - Join Waitlist
+            </h2>
+            <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
+              Registration for The Kathryn Classic {tournamentYear} is currently full.
+              Please join our waitlist and we'll contact you if a spot becomes available.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-16 max-w-2xl sm:mt-20">
+            <Formik
+              initialValues={{
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: '',
+                notes: '',
+              }}
+              validationSchema={WaitlistSchema}
+              onSubmit={handleWaitlistSubmit}
+            >
+              {({ isSubmitting }) => (
+                <Form className="space-y-6">
+                  {error && (
+                    <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+                      <p className="text-sm text-red-800">{error}</p>
+                    </div>
+                  )}
+
+                  <div className="rounded-lg bg-white p-8 shadow-lg ring-1 ring-gray-200">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Your Information</h3>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          First name <span className="text-red-500">*</span>
+                        </label>
+                        <Field
+                          name="firstName"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="firstName" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          Last name <span className="text-red-500">*</span>
+                        </label>
+                        <Field
+                          name="lastName"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="lastName" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <Field
+                          type="email"
+                          name="email"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="email" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">Phone</label>
+                        <Field
+                          type="tel"
+                          name="phone"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="phone" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          Additional Notes
+                        </label>
+                        <Field
+                          as="textarea"
+                          name="notes"
+                          rows={3}
+                          placeholder="Let us know which events you're interested in or any other details..."
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="notes" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="block w-full rounded-lg bg-primary-600 px-4 py-3 text-center text-base font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Joining Waitlist...' : 'Join Waitlist'}
+                    </button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
           </div>
         </div>
       </div>
