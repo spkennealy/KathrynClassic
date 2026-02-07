@@ -41,6 +41,8 @@ export default function Registration() {
   const [tournamentId, setTournamentId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registrationStatus, setRegistrationStatus] = useState('open'); // 'open', 'full', 'closed'
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactAlreadyExists, setContactAlreadyExists] = useState(false);
 
   useEffect(() => {
     loadTournamentData();
@@ -178,6 +180,59 @@ export default function Registration() {
     } catch (err) {
       console.error('Error submitting waitlist:', err);
       setError('Failed to join waitlist. Please try again or contact support.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleContactSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      setError(null);
+      setContactAlreadyExists(false);
+
+      // Check if contact already exists
+      const { data: existingContact, error: lookupError } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('email', values.email)
+        .maybeSingle();
+
+      if (lookupError) throw lookupError;
+
+      if (existingContact) {
+        // Contact already exists - update their info and show message
+        await supabase
+          .from('contacts')
+          .update({
+            first_name: values.firstName,
+            last_name: values.lastName,
+            phone: values.phone || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingContact.id);
+
+        setContactAlreadyExists(true);
+        setContactSubmitted(true);
+      } else {
+        // Create new contact
+        const { error: insertError } = await supabase
+          .from('contacts')
+          .insert([{
+            first_name: values.firstName,
+            last_name: values.lastName,
+            email: values.email,
+            phone: values.phone || null
+          }]);
+
+        if (insertError) throw insertError;
+
+        setContactSubmitted(true);
+      }
+
+      resetForm();
+    } catch (err) {
+      console.error('Error submitting contact:', err);
+      setError('Failed to save your information. Please try again or contact support.');
     } finally {
       setSubmitting(false);
     }
@@ -431,6 +486,43 @@ export default function Registration() {
 
   // Show off-season message if registration is closed (no waitlist)
   if (registrationStatus === 'closed') {
+    // Show success message if contact was submitted
+    if (contactSubmitted) {
+      return (
+        <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <div className="mb-8">
+                <svg className="mx-auto h-16 w-16 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+                {contactAlreadyExists ? "You're Already on Our List!" : "Thank You!"}
+              </h2>
+              <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
+                {contactAlreadyExists
+                  ? "Your information has been updated. You're already in our system and will be notified when registration opens in March 2026."
+                  : "You've been added to our mailing list. We'll send you an email when registration opens in March 2026."}
+              </p>
+              <div className="mt-10 flex items-center justify-center gap-x-6">
+                <button
+                  onClick={() => {
+                    setContactSubmitted(false);
+                    setContactAlreadyExists(false);
+                  }}
+                  className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
+                >
+                  Add Another Person
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show form to collect contact info
     return (
       <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -444,20 +536,99 @@ export default function Registration() {
               Registration Currently Closed
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
-              We're currently in the off-season. Registration for the next Kathryn Classic will open closer to the tournament date.
+              We're currently in the off-season. Registration for the next Kathryn Classic will open in March 2026.
             </p>
             <p className="mt-4 text-base text-gray-600 font-serif">
-              We'll send an email to previous participants when registration opens. To be added to our mailing list, please contact us at the information below.
+              Sign up below to be notified when registration opens.
             </p>
-            <div className="mt-10 rounded-lg bg-white p-8 shadow-lg ring-1 ring-gray-200 max-w-md mx-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Stay Updated</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Want to be notified when registration opens? Contact us to join our mailing list.
-              </p>
-              <div className="text-left space-y-2 text-sm text-gray-700">
-                <p><strong>Email:</strong> <a href="mailto:info@kathrynclassic.com" className="text-primary-600 hover:text-primary-700">info@kathrynclassic.com</a></p>
-              </div>
-            </div>
+          </div>
+
+          <div className="mx-auto mt-16 max-w-2xl sm:mt-20">
+            <Formik
+              initialValues={{
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: '',
+              }}
+              validationSchema={Yup.object().shape({
+                firstName: Yup.string().required('First name is required'),
+                lastName: Yup.string().required('Last name is required'),
+                email: Yup.string().email('Invalid email').required('Email is required'),
+                phone: Yup.string(),
+              })}
+              onSubmit={handleContactSubmit}
+            >
+              {({ isSubmitting }) => (
+                <Form className="space-y-6">
+                  {error && (
+                    <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+                      <p className="text-sm text-red-800">{error}</p>
+                    </div>
+                  )}
+
+                  <div className="rounded-lg bg-white p-8 shadow-lg ring-1 ring-gray-200">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-6">Get Notified</h3>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          First name <span className="text-red-500">*</span>
+                        </label>
+                        <Field
+                          name="firstName"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="firstName" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          Last name <span className="text-red-500">*</span>
+                        </label>
+                        <Field
+                          name="lastName"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="lastName" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <Field
+                          type="email"
+                          name="email"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="email" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold leading-6 text-gray-900">Phone</label>
+                        <Field
+                          type="tel"
+                          name="phone"
+                          className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
+                        />
+                        <ErrorMessage name="phone" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="block w-full rounded-lg bg-primary-600 px-4 py-3 text-center text-base font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Notify Me When Registration Opens'}
+                    </button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
           </div>
         </div>
       </div>

@@ -51,6 +51,19 @@ export default function Schedule() {
       }
       grouped[date].push(event);
     });
+
+    // Sort events within each date by start_time
+    Object.keys(grouped).forEach(date => {
+      grouped[date].sort((a, b) => {
+        // Handle null/undefined times (put them at the end)
+        if (!a.start_time) return 1;
+        if (!b.start_time) return -1;
+
+        // Compare times (format: "HH:MM:SS" or "HH:MM")
+        return a.start_time.localeCompare(b.start_time);
+      });
+    });
+
     return grouped;
   };
 
@@ -91,6 +104,11 @@ export default function Schedule() {
 
   const groupedEvents = groupEventsByDate(events);
 
+  // Sort dates chronologically
+  const sortedDates = Object.entries(groupedEvents).sort((a, b) => {
+    return a[0].localeCompare(b[0]); // Compare date strings (YYYY-MM-DD format)
+  });
+
   return (
     <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
@@ -100,7 +118,7 @@ export default function Schedule() {
           </h2>
         </div>
 
-        {Object.entries(groupedEvents).map(([date, dateEvents]) => (
+        {sortedDates.map(([date, dateEvents]) => (
           <div key={date} className="mb-12">
             {/* Date Header */}
             <div className="text-center mb-8">

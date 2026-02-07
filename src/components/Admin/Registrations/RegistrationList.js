@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import RegistrationEditForm from './RegistrationEditForm';
+import ConfirmDialog from '../ConfirmDialog';
 
 const PAGE_SIZE = 50;
 
@@ -12,6 +13,8 @@ export default function RegistrationList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [registrationToDelete, setRegistrationToDelete] = useState(null);
   const [tournaments, setTournaments] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [registrations, setRegistrations] = useState([]);
@@ -73,15 +76,25 @@ export default function RegistrationList() {
 
         // Apply search filter if present
         if (searchTerm) {
-          // Check if search term is a number for tournament year search
-          const isNumeric = !isNaN(searchTerm);
+          // Build search conditions for all searchable text columns
+          const searchConditions = [
+            `first_name.ilike.%${searchTerm}%`,
+            `last_name.ilike.%${searchTerm}%`,
+            `email.ilike.%${searchTerm}%`,
+            `phone.ilike.%${searchTerm}%`,
+            `preferred_teammates.ilike.%${searchTerm}%`,
+          ];
+
+          // If search term is numeric, also search tournament year and golf handicap
+          const isNumeric = !isNaN(searchTerm) && searchTerm.trim() !== '';
           if (isNumeric) {
-            const searchFilter = `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,tournament_year.eq.${parseInt(searchTerm)},payment_status.ilike.%${searchTerm}%`;
-            dataQuery = dataQuery.or(searchFilter);
-          } else {
-            const searchFilter = `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,payment_status.ilike.%${searchTerm}%`;
-            dataQuery = dataQuery.or(searchFilter);
+            searchConditions.push(`tournament_year.eq.${parseInt(searchTerm)}`);
+            searchConditions.push(`golf_handicap.eq.${parseFloat(searchTerm)}`);
           }
+
+          const searchFilter = searchConditions.join(',');
+          dataQuery = dataQuery.or(searchFilter);
+          countQuery = countQuery.or(searchFilter);
         }
 
         // Fetch total count
@@ -126,6 +139,108 @@ export default function RegistrationList() {
     setSelectedRegistration(null);
   };
 
+  const handleDeleteClick = (registration) => {
+    setRegistrationToDelete(registration);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setRegistrationToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setError(null);
+
+      // Soft delete by setting deleted_at timestamp
+      const { error: deleteError } = await supabase
+        .from('registrations')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', registrationToDelete.registration_id);
+
+      if (deleteError) throw deleteError;
+
+      // Close dialog
+      setShowDeleteConfirm(false);
+      setRegistrationToDelete(null);
+
+      // Refresh the list (will automatically exclude soft-deleted records)
+      const fetchData = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          let countQuery = supabase
+            .from('admin_registration_details')
+            .select('registration_id', { count: 'exact', head: true });
+
+          let dataQuery = supabase
+            .from('admin_registration_details')
+            .select('*')
+            .order('registration_date', { ascending: false });
+
+          if (filter.tournamentYear !== 'all') {
+            countQuery = countQuery.eq('tournament_year', parseInt(filter.tournamentYear));
+            dataQuery = dataQuery.eq('tournament_year', parseInt(filter.tournamentYear));
+          }
+
+          if (filter.paymentStatus !== 'all') {
+            countQuery = countQuery.eq('payment_status', filter.paymentStatus);
+            dataQuery = dataQuery.eq('payment_status', filter.paymentStatus);
+          }
+
+          if (searchTerm) {
+            const searchConditions = [
+              `first_name.ilike.%${searchTerm}%`,
+              `last_name.ilike.%${searchTerm}%`,
+              `email.ilike.%${searchTerm}%`,
+              `phone.ilike.%${searchTerm}%`,
+              `preferred_teammates.ilike.%${searchTerm}%`,
+            ];
+
+            const isNumeric = !isNaN(searchTerm) && searchTerm.trim() !== '';
+            if (isNumeric) {
+              searchConditions.push(`tournament_year.eq.${parseInt(searchTerm)}`);
+              searchConditions.push(`golf_handicap.eq.${parseFloat(searchTerm)}`);
+            }
+
+            const searchFilter = searchConditions.join(',');
+            dataQuery = dataQuery.or(searchFilter);
+            countQuery = countQuery.or(searchFilter);
+          }
+
+          const { count, error: countError } = await countQuery;
+          if (countError) throw countError;
+          setTotalCount(count || 0);
+
+          if (searchTerm) {
+            const { data, error: dataError } = await dataQuery.limit(500);
+            if (dataError) throw dataError;
+            setRegistrations(data || []);
+          } else {
+            const offset = (currentPage - 1) * PAGE_SIZE;
+            const { data, error: dataError } = await dataQuery.range(offset, offset + PAGE_SIZE - 1);
+            if (dataError) throw dataError;
+            setRegistrations(data || []);
+          }
+        } catch (err) {
+          console.error('Error fetching registrations:', err);
+          setError(err.message || 'Failed to load registrations');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      await fetchData();
+    } catch (err) {
+      console.error('Error deleting registration:', err);
+      setError(err.message || 'Failed to delete registration');
+      setShowDeleteConfirm(false);
+      setRegistrationToDelete(null);
+    }
+  };
+
   const handleSaveEdit = async () => {
     // Refresh the current page without changing page number
     try {
@@ -151,6 +266,27 @@ export default function RegistrationList() {
       if (filter.paymentStatus !== 'all') {
         countQuery = countQuery.eq('payment_status', filter.paymentStatus);
         dataQuery = dataQuery.eq('payment_status', filter.paymentStatus);
+      }
+
+      // Apply search filter if present
+      if (searchTerm) {
+        const searchConditions = [
+          `first_name.ilike.%${searchTerm}%`,
+          `last_name.ilike.%${searchTerm}%`,
+          `email.ilike.%${searchTerm}%`,
+          `phone.ilike.%${searchTerm}%`,
+          `preferred_teammates.ilike.%${searchTerm}%`,
+        ];
+
+        const isNumeric = !isNaN(searchTerm) && searchTerm.trim() !== '';
+        if (isNumeric) {
+          searchConditions.push(`tournament_year.eq.${parseInt(searchTerm)}`);
+          searchConditions.push(`golf_handicap.eq.${parseFloat(searchTerm)}`);
+        }
+
+        const searchFilter = searchConditions.join(',');
+        dataQuery = dataQuery.or(searchFilter);
+        countQuery = countQuery.or(searchFilter);
       }
 
       // Fetch total count
@@ -357,12 +493,18 @@ export default function RegistrationList() {
                     {reg.payment_status}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleEdit(reg)}
                     className="text-primary-600 hover:text-primary-900 font-medium"
                   >
                     Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(reg)}
+                    className="text-red-600 hover:text-red-900 font-medium"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -467,6 +609,17 @@ export default function RegistrationList() {
           onSave={handleSaveEdit}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Registration"
+        message={`Are you sure you want to delete the registration for ${registrationToDelete?.first_name} ${registrationToDelete?.last_name}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }
