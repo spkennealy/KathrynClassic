@@ -13,7 +13,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
     golfer_count: '',
     total_attendees: '',
     notes: '',
-    registration_closed: false,
+    registration_status: 'open',
     tournament_summary: '',
     is_finalized: false,
   });
@@ -33,7 +33,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
         golfer_count: tournament.golfer_count || '',
         total_attendees: tournament.total_attendees || '',
         notes: tournament.notes || '',
-        registration_closed: tournament.registration_closed || false,
+        registration_status: tournament.registration_status || 'open',
         tournament_summary: tournament.tournament_summary || '',
         is_finalized: tournament.is_finalized || false,
       });
@@ -57,7 +57,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
         golfer_count: formData.golfer_count ? parseInt(formData.golfer_count) : null,
         total_attendees: formData.total_attendees ? parseInt(formData.total_attendees) : null,
         notes: formData.notes || null,
-        registration_closed: formData.registration_closed,
+        registration_status: formData.registration_status,
         tournament_summary: formData.tournament_summary || null,
         is_finalized: formData.is_finalized,
       };
@@ -279,24 +279,20 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
             </div>
 
             <div className="border-t border-gray-200 pt-4 space-y-4">
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="registration_closed"
-                    type="checkbox"
-                    checked={formData.registration_closed}
-                    onChange={(e) => setFormData({ ...formData, registration_closed: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="registration_closed" className="font-medium text-gray-700">
-                    Close Registration
-                  </label>
-                  <p className="text-gray-500">
-                    When checked, new registrations will be added to a waitlist instead
-                  </p>
-                </div>
+              <div>
+                <label htmlFor="registration_status" className="block text-sm font-medium text-gray-700 mb-2">
+                  Registration Status
+                </label>
+                <select
+                  id="registration_status"
+                  value={formData.registration_status}
+                  onChange={(e) => setFormData({ ...formData, registration_status: e.target.value })}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                >
+                  <option value="open">Open - New registrations accepted</option>
+                  <option value="full">Full - Waitlist only</option>
+                  <option value="closed">Closed - Off-season (contact form only)</option>
+                </select>
               </div>
 
               <div className="flex items-start">

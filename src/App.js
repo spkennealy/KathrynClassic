@@ -26,6 +26,7 @@ import TeeTimesManagement from './components/Admin/TeeTimes/TeeTimesManagement';
 import LeaderboardManagement from './components/Admin/Leaderboard/LeaderboardManagement';
 import TeamList from './components/Admin/Teams/TeamList';
 import ChangePassword from './components/Admin/ChangePassword';
+import RecycleBin from './components/Admin/RecycleBin/RecycleBin';
 import ProtectedRoute from './components/Admin/ProtectedRoute';
 
 // Component for external redirects (can't use Navigate for full URLs)
@@ -119,6 +120,7 @@ function App() {
                 <Route path="leaderboard" element={<LeaderboardManagement />} />
                 <Route path="teams" element={<TeamList />} />
                 <Route path="awards" element={<AwardList />} />
+                <Route path="recycle-bin" element={<RecycleBin />} />
                 <Route path="change-password" element={<ChangePassword />} />
               </Route>
 

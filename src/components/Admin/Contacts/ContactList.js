@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import ContactEditForm from './ContactEditForm';
+import ConfirmDialog from '../ConfirmDialog';
 
 const PAGE_SIZE = 50;
 
@@ -8,6 +9,8 @@ export default function ContactList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,6 +136,107 @@ export default function ContactList() {
   const handleCloseEdit = () => {
     setShowEditForm(false);
     setSelectedContact(null);
+  };
+
+  const handleDeleteClick = (contact) => {
+    setContactToDelete(contact);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setContactToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setError(null);
+
+      // Soft delete by setting deleted_at timestamp
+      const { error: deleteError } = await supabase
+        .from('contacts')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', contactToDelete.contact_id);
+
+      if (deleteError) throw deleteError;
+
+      // Close dialog and refresh list
+      setShowDeleteConfirm(false);
+      setContactToDelete(null);
+
+      // Refresh the list
+      const fetchData = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+
+          let query = supabase.from('admin_contact_activity').select('*', { count: 'exact' });
+
+          if (searchTerm) {
+            query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+          }
+
+          // Apply filters
+          if (filters.hasEmail === 'yes') {
+            query = query.not('email', 'is', null);
+          } else if (filters.hasEmail === 'no') {
+            query = query.is('email', null);
+          }
+
+          if (filters.hasPhone === 'yes') {
+            query = query.not('phone', 'is', null);
+          } else if (filters.hasPhone === 'no') {
+            query = query.is('phone', null);
+          }
+
+          if (filters.hasRegistrations === 'yes') {
+            query = query.gt('total_registrations', 0);
+          } else if (filters.hasRegistrations === 'no') {
+            query = query.eq('total_registrations', 0);
+          }
+
+          if (filters.hasTournaments === 'yes') {
+            query = query.gt('tournaments_attended', 0);
+          } else if (filters.hasTournaments === 'no') {
+            query = query.eq('tournaments_attended', 0);
+          }
+
+          if (filters.hasAwards === 'yes') {
+            query = query.gt('awards_won', 0);
+          } else if (filters.hasAwards === 'no') {
+            query = query.eq('awards_won', 0);
+          }
+
+          if (filters.tournamentYear !== 'all') {
+            query = query.contains('tournament_years', [parseInt(filters.tournamentYear)]);
+          }
+
+          const { count, error: countError } = await query;
+          if (countError) throw countError;
+          setTotalCount(count || 0);
+
+          const offset = (currentPage - 1) * PAGE_SIZE;
+          const { data, error: dataError } = await query
+            .order('last_registration_date', { ascending: false, nullsFirst: false })
+            .range(offset, offset + PAGE_SIZE - 1);
+
+          if (dataError) throw dataError;
+          setContacts(data || []);
+        } catch (err) {
+          console.error('Error fetching contacts:', err);
+          setError('Failed to load contacts');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      await fetchData();
+    } catch (err) {
+      console.error('Error deleting contact:', err);
+      setError(err.message || 'Failed to delete contact');
+      setShowDeleteConfirm(false);
+      setContactToDelete(null);
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -600,12 +704,18 @@ export default function ContactList() {
                     '-'
                   )}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleEdit(contact)}
                     className="text-primary-600 hover:text-primary-900 font-medium"
                   >
                     Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(contact)}
+                    className="text-red-600 hover:text-red-900 font-medium"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -710,6 +820,17 @@ export default function ContactList() {
           onSave={handleSaveEdit}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Contact"
+        message={`Are you sure you want to delete ${contactToDelete?.first_name} ${contactToDelete?.last_name}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

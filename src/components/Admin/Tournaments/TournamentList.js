@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import TournamentForm from './TournamentForm';
+import ConfirmDialog from '../ConfirmDialog';
 
 export default function TournamentList() {
   const [tournaments, setTournaments] = useState([]);
@@ -8,6 +9,8 @@ export default function TournamentList() {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tournamentToDelete, setTournamentToDelete] = useState(null);
 
   useEffect(() => {
     fetchTournaments();
@@ -65,6 +68,36 @@ export default function TournamentList() {
 
   const handleSave = () => {
     fetchTournaments();
+  };
+
+  const handleDeleteClick = (tournament) => {
+    setTournamentToDelete(tournament);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setTournamentToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('tournaments')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', tournamentToDelete.id);
+
+      if (deleteError) throw deleteError;
+
+      setShowDeleteConfirm(false);
+      setTournamentToDelete(null);
+      fetchTournaments();
+    } catch (err) {
+      console.error('Error deleting tournament:', err);
+      alert('Failed to delete tournament');
+      setShowDeleteConfirm(false);
+      setTournamentToDelete(null);
+    }
   };
 
   const handleRegistrationStatusChange = async (tournamentId, newStatus) => {
@@ -204,12 +237,18 @@ export default function TournamentList() {
                     <option value="closed">Closed (Off-Season)</option>
                   </select>
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleEdit(tournament)}
                     className="text-primary-600 hover:text-primary-900 font-medium"
                   >
                     Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(tournament)}
+                    className="text-red-600 hover:text-red-900 font-medium"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -232,6 +271,17 @@ export default function TournamentList() {
           onSave={handleSave}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Tournament"
+        message={`Are you sure you want to delete the ${tournamentToDelete?.year} tournament? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

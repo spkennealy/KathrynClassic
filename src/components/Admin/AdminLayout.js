@@ -23,6 +23,7 @@ export default function AdminLayout() {
     { name: 'Tee Times', href: '/admin/tee-times', icon: '🕐' },
     { name: 'Leaderboard', href: '/admin/leaderboard', icon: '⛳' },
     { name: 'Awards', href: '/admin/awards', icon: '🏅' },
+    { name: 'Recycle Bin', href: '/admin/recycle-bin', icon: '🗑️' },
   ];
 
   const isActive = (path) => {
