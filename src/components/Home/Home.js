@@ -28,7 +28,7 @@ const photos = [
 const FloatingPhoto = ({ photo, position, delay }) => {
   return (
     <div
-      className="absolute pointer-events-none z-0"
+      className="absolute pointer-events-none z-0 hidden md:block"
       style={{
         top: position.top,
         left: position.left,
