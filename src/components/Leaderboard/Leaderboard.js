@@ -189,13 +189,13 @@ export default function Leaderboard() {
                     >
                       {/* Position */}
                       <div className="col-span-1 flex items-center justify-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-lg font-bold text-gray-900 font-serif">
-                            {formatPosition(team.position, team.is_tied)}
-                          </span>
+                        <div className="flex flex-row items-center justify-end gap-2 min-w-[4rem]">
                           {getPlaceEmoji(team.position) && (
                             <span className="text-2xl">{getPlaceEmoji(team.position)}</span>
                           )}
+                          <span className="text-lg font-bold text-gray-900 font-serif w-8 text-center">
+                            {formatPosition(team.position, team.is_tied)}
+                          </span>
                         </div>
                       </div>
 

@@ -179,7 +179,7 @@ export default function Home() {
           </h1>
           <p className="mt-6 text-xl leading-8 text-white/90">
             Join us for a weekend of golf, community, and giving back. The annual Kathryn Classic tournament brings together golfers of all skill levels for a memorable experience while supporting CJD research through the CJD Foundation.<br /><br />
-            Event if you don't play golf, we would love to have you join us for the welcome dinner, beach day, or other family activities.
+            Even if you don't play golf, we would love to have you join us for the welcome dinner, beach day, or other family activities.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link
