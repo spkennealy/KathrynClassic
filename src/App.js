@@ -45,21 +45,27 @@ function ExternalRedirect({ url }) {
 }
 
 function App() {
-  // Detect if we're on the admin subdomain
-  const [isAdminSite, setIsAdminSite] = useState(false);
+  // Detect if we're on the admin subdomain - initialize immediately to avoid race condition
+  const [isAdminSite, setIsAdminSite] = useState(() => {
+    // Check on initial load
+    return window.location.hostname.startsWith('admin.');
+  });
 
   useEffect(() => {
     const hostname = window.location.hostname;
-    // Check for admin subdomain
-    // Supports: admin.kathrynclassic.com, admin.localhost, etc.
-    setIsAdminSite(hostname.startsWith('admin.'));
+    const isAdmin = hostname.startsWith('admin.');
+
+    // Update state if needed
+    if (isAdmin !== isAdminSite) {
+      setIsAdminSite(isAdmin);
+    }
 
     // Optional: Log for debugging during development
     if (process.env.NODE_ENV === 'development') {
       console.log('Current hostname:', hostname);
-      console.log('Is admin site:', hostname.startsWith('admin.'));
+      console.log('Is admin site:', isAdmin);
     }
-  }, []);
+  }, [isAdminSite]);
   return (
     <AuthProvider>
       <Router>
@@ -81,7 +87,7 @@ function App() {
                       <Route path="/history" element={<TournamentHistory />} />
                       {/* Redirect admin attempts to admin subdomain */}
                       <Route path="/admin/*" element={
-                        <ExternalRedirect url={`${window.location.protocol}//admin.${window.location.hostname.replace('www.', '')}${window.location.pathname}`} />
+                        <ExternalRedirect url={`${window.location.protocol}//admin.${window.location.hostname.replace('www.', '').replace('admin.', '')}${window.location.pathname}`} />
                       } />
                     </Routes>
                   </main>
@@ -121,7 +127,7 @@ function App() {
 
               {/* Redirect any other public routes to main site */}
               <Route path="/*" element={
-                <ExternalRedirect url={`${window.location.protocol}//${window.location.hostname.replace('admin.', 'www.')}${window.location.pathname}`} />
+                <ExternalRedirect url={`${window.location.protocol}//${window.location.hostname.replace('admin.', '').replace(/^(?!www\.)/, 'www.')}${window.location.pathname}`} />
               } />
             </>
           )}
