@@ -40,7 +40,7 @@ export default function Registration() {
   const [tournamentYear, setTournamentYear] = useState(null);
   const [tournamentId, setTournamentId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [registrationClosed, setRegistrationClosed] = useState(false);
+  const [registrationStatus, setRegistrationStatus] = useState('open'); // 'open', 'full', 'closed'
 
   useEffect(() => {
     loadTournamentData();
@@ -60,7 +60,14 @@ export default function Registration() {
 
       if (tournament) {
         setTournamentId(tournament.id);
-        setRegistrationClosed(tournament.registration_closed || false);
+        // Handle both old (boolean) and new (enum) registration status
+        if (tournament.registration_status) {
+          setRegistrationStatus(tournament.registration_status);
+        } else if (tournament.registration_closed) {
+          setRegistrationStatus('full');
+        } else {
+          setRegistrationStatus('open');
+        }
 
         // Get events
         const eventData = await getTournamentEvents(year);
@@ -341,16 +348,16 @@ export default function Registration() {
               </svg>
             </div>
             <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
-              {registrationClosed ? 'Added to Waitlist!' : 'Congratulations!'}
+              {registrationStatus === 'full' ? 'Added to Waitlist!' : 'Congratulations!'}
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
-              {registrationClosed
+              {registrationStatus === 'full'
                 ? "You've been added to the waitlist for The Kathryn Classic. We'll contact you if a spot becomes available."
                 : "You've successfully registered for The Kathryn Classic!"
               }
             </p>
 
-            {!registrationClosed && (
+            {registrationStatus !== 'full' && (
               <>
                 <div className="mt-10 rounded-lg bg-primary-50 p-8 ring-1 ring-primary-200">
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
@@ -386,7 +393,7 @@ export default function Registration() {
                 }}
                 className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
               >
-                {registrationClosed ? 'Add Another Person to Waitlist' : 'Register Another Group'}
+                {registrationStatus === 'full' ? 'Add Another Person to Waitlist' : 'Register Another Group'}
               </button>
             </div>
           </div>
@@ -422,8 +429,43 @@ export default function Registration() {
     );
   }
 
-  // Show waitlist form if registration is closed
-  if (registrationClosed) {
+  // Show off-season message if registration is closed (no waitlist)
+  if (registrationStatus === 'closed') {
+    return (
+      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-8">
+              <svg className="mx-auto h-16 w-16 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+              </svg>
+            </div>
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+              Registration Currently Closed
+            </h2>
+            <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
+              We're currently in the off-season. Registration for the next Kathryn Classic will open closer to the tournament date.
+            </p>
+            <p className="mt-4 text-base text-gray-600 font-serif">
+              We'll send an email to previous participants when registration opens. To be added to our mailing list, please contact us at the information below.
+            </p>
+            <div className="mt-10 rounded-lg bg-white p-8 shadow-lg ring-1 ring-gray-200 max-w-md mx-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Stay Updated</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Want to be notified when registration opens? Contact us to join our mailing list.
+              </p>
+              <div className="text-left space-y-2 text-sm text-gray-700">
+                <p><strong>Email:</strong> <a href="mailto:info@kathrynclassic.com" className="text-primary-600 hover:text-primary-700">info@kathrynclassic.com</a></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waitlist form if registration is full
+  if (registrationStatus === 'full') {
     return (
       <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">

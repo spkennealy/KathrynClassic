@@ -67,6 +67,51 @@ export default function TournamentList() {
     fetchTournaments();
   };
 
+  const handleRegistrationStatusChange = async (tournamentId, newStatus) => {
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ registration_status: newStatus })
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+
+      // Update local state
+      setTournaments(tournaments.map(t =>
+        t.id === tournamentId ? { ...t, registration_status: newStatus } : t
+      ));
+    } catch (err) {
+      console.error('Error updating registration status:', err);
+      alert('Failed to update registration status');
+    }
+  };
+
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'open':
+        return 'bg-green-100 text-green-800';
+      case 'full':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'closed':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'open':
+        return 'Open';
+      case 'full':
+        return 'Full (Waitlist)';
+      case 'closed':
+        return 'Closed (Off-Season)';
+      default:
+        return status || 'Open';
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -122,6 +167,9 @@ export default function TournamentList() {
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                 Location
               </th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                Registration Status
+              </th>
               <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
                 Actions
               </th>
@@ -144,6 +192,17 @@ export default function TournamentList() {
                 </td>
                 <td className="px-3 py-4 text-sm text-gray-500">
                   {tournament.location || '-'}
+                </td>
+                <td className="px-3 py-4 text-sm">
+                  <select
+                    value={tournament.registration_status || 'open'}
+                    onChange={(e) => handleRegistrationStatusChange(tournament.id, e.target.value)}
+                    className={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusBadgeColor(tournament.registration_status || 'open')} border-0 focus:ring-2 focus:ring-primary-500`}
+                  >
+                    <option value="open">Open</option>
+                    <option value="full">Full (Waitlist)</option>
+                    <option value="closed">Closed (Off-Season)</option>
+                  </select>
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                   <button
