@@ -22,10 +22,10 @@ export default function Navbar() {
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-20 items-center justify-between">
-              <div className="flex-shrink-0">
+              <div className="flex-1 md:flex-none text-center md:text-left">
                 <Link to="/" className="block">
                   <h1 className="text-primary-600 font-serif text-3xl font-bold leading-tight">The Kathryn Classic</h1>
-                  <p className="text-primary-600 text-sm font-medium">A weekend of golf & giving</p>
+                  <p className="text-primary-600 text-sm font-medium md:text-center">A weekend of family, golf & giving</p>
                 </Link>
               </div>
               <div className="hidden md:block">
