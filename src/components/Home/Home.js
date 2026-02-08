@@ -164,7 +164,7 @@ export default function Home() {
       <div className="relative bg-primary-600 px-4 sm:px-6 py-16 sm:py-32 lg:py-40 overflow-hidden">
         {/* Floating Photos - masked to fade out before reaching center text */}
         <div
-          className="absolute inset-0 z-0 hidden md:block"
+          className="absolute inset-0 z-0 hidden lg:block"
           style={{
             maskImage: 'linear-gradient(to right, black 0%, black 12%, transparent 22%, transparent 78%, black 88%, black 100%)',
             WebkitMaskImage: 'linear-gradient(to right, black 0%, black 12%, transparent 22%, transparent 78%, black 88%, black 100%)',
@@ -184,8 +184,8 @@ export default function Home() {
           <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif">
             The Kathryn Classic
           </h1>
-          {/* Mobile-only hero photo */}
-          <div className="mt-6 flex justify-center md:hidden">
+          {/* Hero photo - shown when floating photos aren't visible */}
+          <div className="mt-6 flex justify-center lg:hidden">
             <img
               src="/kathryn_photos/kathryn_jackie_pml.JPG"
               alt="Kathryn and Jackie"
