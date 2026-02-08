@@ -114,14 +114,14 @@ export default function Leaderboard() {
   return (
     <div className="bg-primary-50 min-h-screen">
       {/* Main Content */}
-      <div className="py-24 sm:py-32">
-        <div className="mx-auto max-w-6xl px-6 lg:px-8">
+      <div className="py-12 sm:py-24 lg:py-32">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif mb-4">
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif mb-3 sm:mb-4">
               Leaderboard
             </h1>
-            <p className="text-lg text-gray-600 font-serif">
+            <p className="text-base sm:text-lg text-gray-600 font-serif">
               Official tournament standings
             </p>
 
@@ -157,8 +157,8 @@ export default function Leaderboard() {
             </div>
           ) : leaderboard.length > 0 ? (
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              {/* Table Header */}
-              <div className="bg-primary-600 text-white">
+              {/* Desktop Table Header - hidden on mobile */}
+              <div className="bg-primary-600 text-white hidden md:block">
                 <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-sm uppercase tracking-wide">
                   <div className="col-span-1 flex items-center justify-center">Pos</div>
                   <div className="col-span-3 flex items-center">Team</div>
@@ -167,6 +167,11 @@ export default function Leaderboard() {
                   <div className="col-span-1 flex items-center justify-center">Total</div>
                   <div className="col-span-1 flex items-center justify-center">Thru</div>
                 </div>
+              </div>
+
+              {/* Mobile Header */}
+              <div className="bg-primary-600 text-white md:hidden px-4 py-3">
+                <p className="font-semibold text-sm uppercase tracking-wide text-center">Tournament Standings</p>
               </div>
 
               {/* Table Body */}
@@ -181,71 +186,134 @@ export default function Leaderboard() {
                   }
 
                   return (
-                    <div
-                      key={team.team_id}
-                      className={`grid grid-cols-12 gap-4 px-6 py-4 hover:bg-primary-50 transition-colors ${
-                        index === 0 ? 'bg-yellow-50' : ''
-                      }`}
-                    >
-                      {/* Position */}
-                      <div className="col-span-1 flex items-center justify-center">
-                        <div className="flex flex-row items-center justify-end gap-2 min-w-[4rem]">
-                          {getPlaceEmoji(team.position) && (
-                            <span className="text-2xl">{getPlaceEmoji(team.position)}</span>
+                    <div key={team.team_id}>
+                      {/* Desktop Row */}
+                      <div
+                        className={`hidden md:grid grid-cols-12 gap-4 px-6 py-4 hover:bg-primary-50 transition-colors ${
+                          index === 0 ? 'bg-yellow-50' : ''
+                        }`}
+                      >
+                        {/* Position */}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <div className="flex flex-row items-center justify-end gap-2 min-w-[4rem]">
+                            {getPlaceEmoji(team.position) && (
+                              <span className="text-2xl">{getPlaceEmoji(team.position)}</span>
+                            )}
+                            <span className="text-lg font-bold text-gray-900 font-serif w-8 text-center">
+                              {formatPosition(team.position, team.is_tied)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Team Name */}
+                        <div className="col-span-3 flex items-center">
+                          {team.team_name && (
+                            <div className="text-sm font-semibold text-primary-600 uppercase tracking-wide">
+                              {team.team_name}
+                            </div>
                           )}
-                          <span className="text-lg font-bold text-gray-900 font-serif w-8 text-center">
-                            {formatPosition(team.position, team.is_tied)}
+                        </div>
+
+                        {/* Players (2 per line) */}
+                        <div className="col-span-4 flex items-center">
+                          <div className="space-y-1 w-full">
+                            {playerPairs.map((pair, pairIdx) => (
+                              <div key={pairIdx} className="text-sm text-gray-900 font-serif">
+                                {pair.map((player, idx) => (
+                                  <span key={idx}>
+                                    {player.name}
+                                    {player.handicap && (
+                                      <span className="text-xs text-gray-500"> ({player.handicap})</span>
+                                    )}
+                                    {idx < pair.length - 1 && <span className="text-gray-400 mx-2">•</span>}
+                                  </span>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Score to Par */}
+                        <div className="col-span-2 flex items-center justify-center">
+                          <span className={`text-2xl font-bold font-serif ${getScoreColor(team.score_to_par)}`}>
+                            {formatScore(team.score_to_par)}
+                          </span>
+                        </div>
+
+                        {/* Total Score */}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <span className="text-lg text-gray-900 font-serif">
+                            {team.total_score}
+                          </span>
+                        </div>
+
+                        {/* Status */}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <span className="text-base text-gray-600 font-serif font-semibold">
+                            {team.status || 'F'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Team Name */}
-                      <div className="col-span-3 flex items-center">
-                        {team.team_name && (
-                          <div className="text-sm font-semibold text-primary-600 uppercase tracking-wide">
-                            {team.team_name}
+                      {/* Mobile Card */}
+                      <div
+                        className={`md:hidden px-4 py-4 ${
+                          index === 0 ? 'bg-yellow-50' : ''
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Fixed-width position column for alignment */}
+                          <div className="w-14 flex-shrink-0 flex items-center justify-center gap-1 pt-0.5">
+                            {getPlaceEmoji(team.position) && (
+                              <span className="text-lg">{getPlaceEmoji(team.position)}</span>
+                            )}
+                            <span className="text-lg font-bold text-gray-900 font-serif">
+                              {formatPosition(team.position, team.is_tied)}
+                            </span>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Players (2 per line) */}
-                      <div className="col-span-4 flex items-center">
-                        <div className="space-y-1 w-full">
-                          {playerPairs.map((pair, pairIdx) => (
-                            <div key={pairIdx} className="text-sm text-gray-900 font-serif">
-                              {pair.map((player, idx) => (
-                                <span key={idx}>
-                                  {player.name}
-                                  {player.handicap && (
-                                    <span className="text-xs text-gray-500"> ({player.handicap})</span>
-                                  )}
-                                  {idx < pair.length - 1 && <span className="text-gray-400 mx-2">•</span>}
-                                </span>
-                              ))}
+                          {/* Center: Team + Players */}
+                          <div className="flex-1 min-w-0 text-center">
+                            {team.team_name && (
+                              <div className="text-xs font-semibold text-primary-600 uppercase tracking-wide">
+                                {team.team_name}
+                              </div>
+                            )}
+                            <div className="mt-1">
+                              {team.players && (() => {
+                                const pairs = [];
+                                for (let i = 0; i < team.players.length; i += 2) {
+                                  pairs.push(team.players.slice(i, i + 2));
+                                }
+                                return pairs.map((pair, pairIdx) => (
+                                  <div key={pairIdx} className="text-xs text-gray-700 font-serif leading-5">
+                                    {pair.map((player, idx) => (
+                                      <span key={idx}>
+                                        {player.name}
+                                        {player.handicap && (
+                                          <span className="text-xs text-gray-400"> ({player.handicap})</span>
+                                        )}
+                                        {idx < pair.length - 1 && <span className="text-gray-300 mx-1">•</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ));
+                              })()}
                             </div>
-                          ))}
+                          </div>
+
+                          {/* Right: Score */}
+                          <div className="flex flex-col items-end flex-shrink-0">
+                            <span className={`text-2xl font-bold font-serif ${getScoreColor(team.score_to_par)}`}>
+                              {formatScore(team.score_to_par)}
+                            </span>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-xs text-gray-500 font-serif">{team.total_score}</span>
+                              <span className="text-xs text-gray-400">•</span>
+                              <span className="text-xs text-gray-500 font-serif font-semibold">{team.status || 'F'}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-
-                      {/* Score to Par */}
-                      <div className="col-span-2 flex items-center justify-center">
-                        <span className={`text-2xl font-bold font-serif ${getScoreColor(team.score_to_par)}`}>
-                          {formatScore(team.score_to_par)}
-                        </span>
-                      </div>
-
-                      {/* Total Score */}
-                      <div className="col-span-1 flex items-center justify-center">
-                        <span className="text-lg text-gray-900 font-serif">
-                          {team.total_score}
-                        </span>
-                      </div>
-
-                      {/* Status */}
-                      <div className="col-span-1 flex items-center justify-center">
-                        <span className="text-base text-gray-600 font-serif font-semibold">
-                          {team.status || 'F'}
-                        </span>
                       </div>
                     </div>
                   );
@@ -253,13 +321,13 @@ export default function Leaderboard() {
               </div>
 
               {/* Footer Note */}
-              <div className="bg-gray-50 px-6 py-4 text-sm text-gray-600 text-center font-serif border-t border-gray-200">
+              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 text-center font-serif border-t border-gray-200">
                 <p>Scramble format • F = Finished • T = Tied</p>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-              <p className="text-xl text-gray-600 font-serif">
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-12 text-center">
+              <p className="text-lg sm:text-xl text-gray-600 font-serif">
                 No leaderboard data available for {tournamentYear}
               </p>
               <p className="text-sm text-gray-500 mt-2 font-serif">
@@ -270,7 +338,7 @@ export default function Leaderboard() {
 
           {/* Legend */}
           {leaderboard.length > 0 && (
-            <div className="mt-8 bg-white rounded-xl shadow p-6">
+            <div className="mt-6 sm:mt-8 bg-white rounded-xl shadow p-4 sm:p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3 font-serif">
                 Scoring Legend
               </h3>

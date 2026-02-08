@@ -88,7 +88,20 @@ export const getTournamentEvents = async (year) => {
 
     if (eventsError) throw eventsError;
 
-    return events || [];
+    // Sort by date, then by time within each date
+    const sortedEvents = (events || []).sort((a, b) => {
+      // First sort by date
+      const dateCompare = new Date(a.event_date) - new Date(b.event_date);
+      if (dateCompare !== 0) return dateCompare;
+
+      // If dates are equal, sort by start_time
+      if (a.start_time && b.start_time) {
+        return a.start_time.localeCompare(b.start_time);
+      }
+      return 0;
+    });
+
+    return sortedEvents;
   } catch (error) {
     console.error('Error fetching tournament events:', error);
     return [];

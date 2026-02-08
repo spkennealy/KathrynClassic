@@ -18,7 +18,7 @@ export default function Navbar() {
 
   return (
     <Disclosure as="nav" className="bg-white border-b border-gray-200">
-      {({ open }) => (
+      {({ open, close }) => (
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-20 items-center justify-between">
@@ -64,6 +64,7 @@ export default function Navbar() {
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={() => close()}
                   className={`${
                     location.pathname === item.href
                       ? 'bg-primary-50 text-primary-600 font-medium'

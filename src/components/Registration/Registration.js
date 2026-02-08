@@ -394,15 +394,15 @@ export default function Registration() {
 
   if (isSubmitted) {
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-12 sm:py-24 lg:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-8">
               <svg className="mx-auto h-16 w-16 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">
               {registrationStatus === 'full' ? 'Added to Waitlist!' : 'Congratulations!'}
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
@@ -414,7 +414,7 @@ export default function Registration() {
 
             {registrationStatus !== 'full' && (
               <>
-                <div className="mt-10 rounded-lg bg-primary-50 p-8 ring-1 ring-primary-200">
+                <div className="mt-6 sm:mt-10 rounded-lg bg-primary-50 p-4 sm:p-8 ring-1 ring-primary-200">
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
                   <div className="text-left space-y-4">
                     <p className="text-base text-gray-700">
@@ -459,8 +459,8 @@ export default function Registration() {
 
   if (loading) {
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-12 sm:py-24 lg:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <p className="text-lg text-gray-600 font-serif">Loading registration form...</p>
           </div>
@@ -471,10 +471,10 @@ export default function Registration() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-12 sm:py-24 lg:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">Registration</h2>
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">Registration</h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
               Registration is not currently available. Please check back later for upcoming tournament dates.
             </p>
@@ -497,7 +497,7 @@ export default function Registration() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">
                 {contactAlreadyExists ? "You're Already on Our List!" : "Thank You!"}
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
@@ -524,15 +524,15 @@ export default function Registration() {
 
     // Show form to collect contact info
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-12 sm:py-24 lg:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mb-8">
               <svg className="mx-auto h-16 w-16 text-primary-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
               </svg>
             </div>
-            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">
               Registration Currently Closed
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
@@ -567,10 +567,10 @@ export default function Registration() {
                     </div>
                   )}
 
-                  <div className="rounded-lg bg-white p-8 shadow-lg ring-1 ring-gray-200">
+                  <div className="rounded-lg bg-white p-4 sm:p-8 shadow-lg ring-1 ring-gray-200">
                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Get Notified</h3>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold leading-6 text-gray-900">
                           First name <span className="text-red-500">*</span>
@@ -638,10 +638,10 @@ export default function Registration() {
   // Show waitlist form if registration is full
   if (registrationStatus === 'full') {
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="bg-primary-50 py-12 sm:py-24 lg:py-32 min-h-screen">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">
               Registration Full - Join Waitlist
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
@@ -670,10 +670,10 @@ export default function Registration() {
                     </div>
                   )}
 
-                  <div className="rounded-lg bg-white p-8 shadow-lg ring-1 ring-gray-200">
+                  <div className="rounded-lg bg-white p-4 sm:p-8 shadow-lg ring-1 ring-gray-200">
                     <h3 className="text-xl font-semibold text-gray-900 mb-6">Your Information</h3>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold leading-6 text-gray-900">
                           First name <span className="text-red-500">*</span>
@@ -753,16 +753,16 @@ export default function Registration() {
   }
 
   return (
-    <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+    <div className="bg-primary-50 py-12 sm:py-24 lg:py-32 min-h-screen">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">Register for The Kathryn Classic {tournamentYear}</h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">Register for The Kathryn Classic {tournamentYear}</h2>
+          <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-gray-600 font-serif">
             Join us for a weekend of golf, community, and giving back. Register multiple attendees at once and indicate how many children will attend each event.
           </p>
         </div>
 
-        <div className="mx-auto mt-16 max-w-4xl sm:mt-20">
+        <div className="mx-auto mt-8 sm:mt-16 max-w-4xl lg:mt-20">
           <Formik
             initialValues={{
               adults: [{
@@ -795,7 +795,7 @@ export default function Registration() {
                       <h3 className="text-xl font-semibold text-gray-900">Attendees</h3>
 
                       {values.adults.map((adult, index) => (
-                        <div key={index} className="rounded-lg bg-gray-50 p-6 shadow-sm ring-1 ring-gray-200">
+                        <div key={index} className="rounded-lg bg-gray-50 p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="text-lg font-semibold text-gray-900">Attendee {index + 1}</h4>
                             {values.adults.length > 1 && (
@@ -809,7 +809,7 @@ export default function Registration() {
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-semibold leading-6 text-gray-900">First name</label>
                               <Field
@@ -853,21 +853,21 @@ export default function Registration() {
                                 <legend className="block text-sm font-semibold leading-6 text-gray-900">Select Events</legend>
                                 <div className="mt-2 space-y-3">
                                   {events.map((event) => (
-                                    <div key={event.id} className="flex items-center gap-4">
-                                      <div className="flex items-start flex-1">
+                                    <div key={event.id} className="space-y-2">
+                                      <div className="flex items-start">
                                         <Field
                                           type="checkbox"
                                           name={`adults.${index}.events`}
                                           value={event.id}
-                                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-1"
+                                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mt-1 flex-shrink-0"
                                         />
                                         <label className="ml-3 text-sm">
                                           <span className="font-medium text-gray-900">{event.name}</span>
-                                          <span className="text-gray-500 ml-2">(${event.adultPrice} per person)</span>
+                                          <span className="text-gray-500 block sm:inline sm:ml-2">(${event.adultPrice} per person)</span>
                                         </label>
                                       </div>
                                       {event.id !== 'golf_tournament' && adult.events.includes(event.id) && (
-                                        <div className="flex items-center gap-2 animate-highlight rounded-lg px-2 py-1">
+                                        <div className="flex items-center gap-2 animate-highlight rounded-lg px-2 py-1 ml-7">
                                           <Field
                                             type="number"
                                             name={`adults.${index}.childCounts.${event.id}`}
@@ -935,7 +935,7 @@ export default function Registration() {
                 {/* Terms & Conditions */}
                 <div className="border-t border-gray-900/10 pt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Terms & Conditions</h3>
-                  <div className="rounded-lg bg-gray-50 p-6 ring-1 ring-gray-200 mb-6">
+                  <div className="rounded-lg bg-gray-50 p-4 sm:p-6 ring-1 ring-gray-200 mb-6">
                     <div className="space-y-4 text-sm text-gray-700">
                       <div>
                         <h4 className="font-semibold text-gray-900 mb-2">Payment Commitment</h4>

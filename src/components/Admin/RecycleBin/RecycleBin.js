@@ -99,7 +99,7 @@ export default function RecycleBin() {
       // Fetch deleted awards
       const { data: awards, error: awardsError } = await supabase
         .from('tournament_awards')
-        .select('id, award_category, award_name, deleted_at, tournaments(year)')
+        .select('id, award_category, winner_name, details, deleted_at, tournaments(year), contacts(first_name, last_name)')
         .not('deleted_at', 'is', null)
         .order('deleted_at', { ascending: false });
 
@@ -227,7 +227,7 @@ export default function RecycleBin() {
                 {selectedTab === 'tournaments' && 'Year'}
                 {selectedTab === 'events' && 'Event Name'}
                 {selectedTab === 'teams' && 'Team Name'}
-                {selectedTab === 'awards' && 'Award'}
+                {selectedTab === 'awards' && 'Winner / Category'}
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                 Details
@@ -390,34 +390,43 @@ export default function RecycleBin() {
               </tr>
             ))}
 
-            {selectedTab === 'awards' && records.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="py-4 pl-4 pr-3 text-sm">
-                  <div className="font-medium text-gray-900">{record.award_name}</div>
-                  <div className="text-gray-500">{record.award_category}</div>
-                </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
-                  {record.tournaments?.year}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                  {formatDate(record.deleted_at)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
-                  <button
-                    onClick={() => handleRestoreClick(record, 'awards')}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
-                  >
-                    Restore
-                  </button>
-                  <button
-                    onClick={() => handlePermanentDeleteClick(record, 'awards')}
-                    className="text-red-600 hover:text-red-900 font-medium"
-                  >
-                    Delete Forever
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {selectedTab === 'awards' && records.map((record) => {
+              const winnerName = record.contacts
+                ? `${record.contacts.first_name} ${record.contacts.last_name}`
+                : record.winner_name;
+
+              return (
+                <tr key={record.id} className="hover:bg-gray-50">
+                  <td className="py-4 pl-4 pr-3 text-sm">
+                    <div className="font-medium text-gray-900">{winnerName || 'Unknown'}</div>
+                    <div className="text-gray-500">
+                      {record.award_category?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </div>
+                  </td>
+                  <td className="px-3 py-4 text-sm text-gray-500">
+                    {record.tournaments?.year}
+                    {record.details && ` • ${record.details}`}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    {formatDate(record.deleted_at)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
+                    <button
+                      onClick={() => handleRestoreClick(record, 'awards')}
+                      className="text-primary-600 hover:text-primary-900 font-medium"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={() => handlePermanentDeleteClick(record, 'awards')}
+                      className="text-red-600 hover:text-red-900 font-medium"
+                    >
+                      Delete Forever
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

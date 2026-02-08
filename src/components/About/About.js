@@ -45,8 +45,7 @@ export default function About() {
               About the Kathryn Classic
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 font-serif">
-              An intimate charity golf tournament bringing together family, friends, and community to honor Kathryn's memory
-              and support CJD research and awareness.
+              A weekend filled with family and friends coming together to honor Kathryn's memory and support CJD research and awareness, featuring a charity golf tournament and other activities.
             </p>
           </div>
 
@@ -124,7 +123,7 @@ export default function About() {
                   </h2>
                   <p className="text-sm text-gray-500 mb-4">2025</p>
                   <p className="text-base leading-7 text-gray-600 font-serif">
-                    The inaugural Kathryn Classic brought together family, friends, and community to honor Kathryn's memory and launch what would become an annual tradition of golf, remembrance, and support for CJD research.
+                    The inaugural Kathryn Classic brought together family, friends, and community to honor Kathryn's memory and launch what would become an annual tradition of family gatherings, golf, remembrance, and support for CJD research.
                   </p>
                 </div>
               </div>
