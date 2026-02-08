@@ -22,8 +22,10 @@
     "yup": "^1.6.1"
   },
   "scripts": {
+    "prestart": "node scripts/generate-photo-manifest.js",
     "start": "react-scripts start",
     "dev": "react-scripts start",
+    "prebuild": "node scripts/generate-photo-manifest.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

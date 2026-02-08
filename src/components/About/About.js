@@ -1,38 +1,25 @@
 import React, { useState, useEffect } from 'react';
 
-const photos = [
-  '/kathryn_photos/Kiley-Kyle_Tre-Posti-Wedding_Hannah-Berglund-Photography_Family Photos-15.jpg',
-  '/kathryn_photos/kahtryn_high_school.jpg',
-  '/kathryn_photos/kahtryn_high_school_2.jpg',
-  '/kathryn_photos/kathryn_all_sisters.jpg',
-  '/kathryn_photos/kathryn_emmie_christmas.jpg',
-  '/kathryn_photos/kathryn_jackie.jpg',
-  '/kathryn_photos/kathryn_jackie_jenna_chelsea_kierstryn_winery.jpg',
-  '/kathryn_photos/kathryn_kierstyn_winery.jpg',
-  '/kathryn_photos/kathryn_kyle_kierstyn_jenna_wedding.jpg',
-  '/kathryn_photos/kathryn_terry_kyle_kierstyn.jpg',
-  '/kathryn_photos/type=1&locId=074E31BD-A112-4E15-91D1-3EE7E8A2BDBC_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
-  '/kathryn_photos/type=1&locId=3867D7D7-AAB8-4817-B19D-A9F8736FEE93_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
-  '/kathryn_photos/type=1&locId=5FA5C637-E1E1-4ED2-B827-55B08E960050_L0_001&adj=1&modificationDate=2017-09-07_18-42-24_-0700.jpg',
-  '/kathryn_photos/type=1&locId=6225E66D-4283-44EC-836E-D04EFFACE315_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
-  '/kathryn_photos/type=1&locId=7569FF24-9EC6-431D-BE5F-AAEB01CAAE58_L0_001&adj=1&modificationDate=2022-10-19_03-26-48_-0700.jpg',
-  '/kathryn_photos/type=1&locId=8635F6DA-A00E-4D29-8963-4270E44D3244_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
-  '/kathryn_photos/type=1&locId=C1DDEBB8-CD32-4C6C-95D3-82BDDC7F4F78_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
-  '/kathryn_photos/type=1&locId=C6A59FA6-136E-40FD-B998-3B295429C9E9_L0_001&adj=1&modificationDate=2023-09-15_14-05-48_-0700.jpg',
-  '/kathryn_photos/type=1&locId=F17B6198-88A9-4690-97D7-FF77E71BF947_L0_001&adj=1&modificationDate=2023-09-15_14-05-48_-0700.jpg',
-  '/kathryn_photos/type=1&locId=FD6D315A-B90A-4702-B19D-B52812297F34_L0_001&adj=1&modificationDate=2023-09-15_13-41-28_-0700.jpg',
-];
-
 export default function About() {
+  const [photos, setPhotos] = useState([]);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   useEffect(() => {
+    fetch('/about_photos/manifest.json')
+      .then(res => res.json())
+      .then(setPhotos)
+      .catch(err => console.error('Error loading about photos:', err));
+  }, []);
+
+  useEffect(() => {
+    if (photos.length === 0) return;
+
     const interval = setInterval(() => {
       setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % photos.length);
-    }, 4000); // Change photo every 4 seconds
+    }, 4000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [photos.length]);
 
   return (
     <div className="bg-primary-50 min-h-screen">
