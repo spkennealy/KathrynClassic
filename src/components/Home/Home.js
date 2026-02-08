@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentTournamentYear, getTournamentData, formatDateRange } from '../../utils/tournamentUtils';
 
@@ -12,6 +12,9 @@ const shuffleArray = (array) => {
   return shuffled;
 };
 
+const videoExtensions = ['.mov', '.mp4', '.webm'];
+const isVideo = (src) => videoExtensions.some(ext => src.toLowerCase().endsWith(ext));
+
 export default function Home() {
   const [tournament, setTournament] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,16 +26,23 @@ export default function Home() {
     loadPhotos();
   }, []);
 
-  // Slideshow rotation
+  const timerRef = useRef(null);
+
+  const advanceSlide = useCallback(() => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+  }, [photos.length]);
+
+  // Slideshow rotation — images use a 4s timer, videos advance via onEnded
   useEffect(() => {
     if (photos.length === 0) return;
+    clearTimeout(timerRef.current);
 
-    const interval = setInterval(() => {
-      setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-    }, 4000);
+    if (!isVideo(photos[currentPhotoIndex])) {
+      timerRef.current = setTimeout(advanceSlide, 4000);
+    }
 
-    return () => clearInterval(interval);
-  }, [photos.length]);
+    return () => clearTimeout(timerRef.current);
+  }, [currentPhotoIndex, photos, advanceSlide]);
 
   const loadPhotos = async () => {
     try {
@@ -91,11 +101,21 @@ export default function Home() {
           {/* Mobile-only hero photo */}
           {photos.length > 0 && (
             <div className="mt-8 flex justify-center md:hidden">
-              <img
-                src={photos[0]}
-                alt="Kathryn memory"
-                className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
-              />
+              {isVideo(photos[0]) ? (
+                <video
+                  src={photos[0]}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
+                />
+              ) : (
+                <img
+                  src={photos[0]}
+                  alt="Kathryn memory"
+                  className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
+                />
+              )}
             </div>
           )}
         </div>
@@ -112,11 +132,22 @@ export default function Home() {
                   className="absolute inset-0 transition-opacity duration-1000 flex items-center justify-center"
                   style={{ opacity: index === currentPhotoIndex ? 1 : 0 }}
                 >
-                  <img
-                    src={photo}
-                    alt={`Kathryn memory ${index + 1}`}
-                    className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-                  />
+                  {isVideo(photo) ? (
+                    <video
+                      src={index === currentPhotoIndex ? photo : undefined}
+                      autoPlay={index === currentPhotoIndex}
+                      muted
+                      playsInline
+                      onEnded={advanceSlide}
+                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                    />
+                  ) : (
+                    <img
+                      src={photo}
+                      alt={`Kathryn memory ${index + 1}`}
+                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                    />
+                  )}
                 </div>
               ))}
             </div>

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mov', '.mp4', '.webm'];
 
 const photoDirs = ['home_photos', 'about_photos'];
 

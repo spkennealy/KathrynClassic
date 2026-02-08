@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+const videoExtensions = ['.mov', '.mp4', '.webm'];
+const isVideo = (src) => videoExtensions.some(ext => src.toLowerCase().endsWith(ext));
 
 export default function About() {
   const [photos, setPhotos] = useState([]);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     fetch('/about_photos/manifest.json')
@@ -11,15 +15,20 @@ export default function About() {
       .catch(err => console.error('Error loading about photos:', err));
   }, []);
 
+  const advanceSlide = useCallback(() => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+  }, [photos.length]);
+
   useEffect(() => {
     if (photos.length === 0) return;
+    clearTimeout(timerRef.current);
 
-    const interval = setInterval(() => {
-      setCurrentPhotoIndex((prevIndex) => (prevIndex + 1) % photos.length);
-    }, 4000);
+    if (!isVideo(photos[currentPhotoIndex])) {
+      timerRef.current = setTimeout(advanceSlide, 4000);
+    }
 
-    return () => clearInterval(interval);
-  }, [photos.length]);
+    return () => clearTimeout(timerRef.current);
+  }, [currentPhotoIndex, photos, advanceSlide]);
 
   return (
     <div className="bg-primary-50 min-h-screen">
@@ -47,11 +56,22 @@ export default function About() {
                     opacity: index === currentPhotoIndex ? 1 : 0,
                   }}
                 >
-                  <img
-                    src={photo}
-                    alt={`Kathryn memory ${index + 1}`}
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                  />
+                  {isVideo(photo) ? (
+                    <video
+                      src={index === currentPhotoIndex ? photo : undefined}
+                      autoPlay={index === currentPhotoIndex}
+                      muted
+                      playsInline
+                      onEnded={advanceSlide}
+                      className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    />
+                  ) : (
+                    <img
+                      src={photo}
+                      alt={`Kathryn memory ${index + 1}`}
+                      className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    />
+                  )}
                 </div>
               ))}
               {/* Slideshow indicators */}
