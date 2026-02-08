@@ -83,6 +83,14 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative bg-primary-600 px-4 sm:px-6 py-12 sm:py-24 lg:py-30 overflow-hidden">
         <div className="mx-auto max-w-4xl text-center relative z-20">
+          {/* Mobile-only hero photo */}
+          <div className="mb-6 flex justify-center md:hidden">
+            <img
+              src="/home_photos/kathryn_jackie_pml.JPG"
+              alt="Kathryn and Jackie"
+              className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
+            />
+          </div>
           <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif">
             The Kathryn Classic
           </h1>
@@ -98,26 +106,6 @@ export default function Home() {
               {getButtonText()}
             </Link>
           </div>
-          {/* Mobile-only hero photo */}
-          {photos.length > 0 && (
-            <div className="mt-8 flex justify-center md:hidden">
-              {isVideo(photos[0]) ? (
-                <video
-                  src={photos[0]}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
-                />
-              ) : (
-                <img
-                  src={photos[0]}
-                  alt="Kathryn memory"
-                  className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
-                />
-              )}
-            </div>
-          )}
         </div>
       </div>
 
