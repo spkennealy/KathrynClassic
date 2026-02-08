@@ -152,14 +152,20 @@ export default function Schedule() {
 
                     {event.location && (
                       <div className="mb-2">
-                        <span className="text-sm font-semibold text-gray-900">Location: </span>
-                        <span className="text-sm text-gray-600">{event.location}</span>
+                        <span className="text-sm font-semibold text-gray-900">📍 Location: </span>
+                        {event.map_link ? (
+                          <a href={event.map_link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 hover:text-primary-800 underline">
+                            {event.location}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-600">{event.location}</span>
+                        )}
                       </div>
                     )}
 
                     {event.host && (
                       <div className="mb-2">
-                        <span className="text-sm font-semibold text-gray-900">Host: </span>
+                        <span className="text-sm font-semibold text-gray-900">👤 Host: </span>
                         <span className="text-sm text-gray-600">{event.host}</span>
                       </div>
                     )}

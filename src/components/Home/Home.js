@@ -88,6 +88,16 @@ export default function Home() {
               {getButtonText()}
             </Link>
           </div>
+          {/* Mobile-only hero photo */}
+          {photos.length > 0 && (
+            <div className="mt-8 flex justify-center md:hidden">
+              <img
+                src={photos[0]}
+                alt="Kathryn memory"
+                className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
+              />
+            </div>
+          )}
         </div>
       </div>
 
