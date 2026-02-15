@@ -67,6 +67,14 @@ export default function Schedule() {
     return grouped;
   };
 
+  const getEventPhoto = (location) => {
+    if (!location) return null;
+    const loc = location.toLowerCase();
+    if (loc.includes('golf') || loc.includes('course')) return '/shedule_photos/pml_golf_course.jpg';
+    if (loc.includes('lodge')) return '/shedule_photos/pml_lodge.jpg';
+    return null;
+  };
+
   const formatDateHeader = (dateString) => {
     const date = new Date(dateString + 'T00:00:00');
     const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
@@ -130,10 +138,10 @@ export default function Schedule() {
             {/* Events for this date */}
             <div className="space-y-6">
               {dateEvents.map((event) => (
-                <div key={event.id} className="bg-white rounded-2xl shadow-lg p-8 flex flex-col sm:flex-row gap-6 sm:items-center">
+                <div key={event.id} className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col sm:flex-row gap-4 sm:gap-6 sm:items-center">
                   {/* Time Section */}
-                  <div className="sm:w-48 flex-shrink-0 text-center">
-                    <div className="text-4xl font-bold text-primary-600 font-serif">
+                  <div className="sm:w-40 flex-shrink-0 text-center">
+                    <div className="text-3xl sm:text-4xl font-bold text-primary-600 font-serif">
                       {formatTime(event.start_time)}
                     </div>
                     <div className="text-sm text-gray-500 mt-1">
@@ -142,11 +150,11 @@ export default function Schedule() {
                   </div>
 
                   {/* Content Section */}
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold text-primary-600 mb-3 font-serif">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl sm:text-2xl font-bold text-primary-600 mb-2 sm:mb-3 font-serif">
                       {event.event_name}
                     </h3>
-                    <p className="text-base leading-7 text-gray-600 font-serif mb-4">
+                    <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 font-serif mb-3 sm:mb-4">
                       {event.description}
                     </p>
 
@@ -183,6 +191,17 @@ export default function Schedule() {
                       </div>
                     )}
                   </div>
+
+                  {/* Photo Section */}
+                  {getEventPhoto(event.location) && (
+                    <div className="flex-shrink-0 hidden sm:block">
+                      <img
+                        src={getEventPhoto(event.location)}
+                        alt={event.location}
+                        className="w-36 h-36 rounded-xl object-cover shadow-md"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
