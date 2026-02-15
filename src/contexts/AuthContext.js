@@ -46,11 +46,19 @@ export const AuthProvider = ({ children }) => {
     return { error };
   };
 
+  const resetPassword = async (email) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/admin/set-password`,
+    });
+    return { data, error };
+  };
+
   const value = {
     user,
     loading,
     signIn,
     signOut,
+    resetPassword,
   };
 
   return (

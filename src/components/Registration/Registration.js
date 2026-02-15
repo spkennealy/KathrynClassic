@@ -43,6 +43,7 @@ export default function Registration() {
   const [registrationStatus, setRegistrationStatus] = useState('open'); // 'open', 'full', 'closed'
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactAlreadyExists, setContactAlreadyExists] = useState(false);
+  const [skippedDuplicates, setSkippedDuplicates] = useState([]);
 
   useEffect(() => {
     loadTournamentData();
@@ -241,14 +242,7 @@ export default function Registration() {
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       setError(null);
-
-      // Calculate total amount and team info
-      const totalAmount = calculateTotal(values.adults);
-      const golfAdults = values.adults.filter(adult =>
-        adult.events.includes('golf_tournament')
-      );
-      const isFullTeam = golfAdults.length === 4;
-      const teamGroupId = isFullTeam ? crypto.randomUUID() : null;
+      setSkippedDuplicates([]);
 
       // STEP 1: Get unique emails and batch lookup contacts
       const emails = [...new Set(values.adults.map(a => a.email))];
@@ -321,8 +315,49 @@ export default function Registration() {
           .eq('id', id);
       }
 
+      // STEP 3.5: Check for duplicate registrations
+      const allContactIds = values.adults.map(a => contactMap.get(a.email));
+
+      const { data: existingRegIds, error: dupCheckError } = await supabase
+        .rpc('check_existing_registrations', {
+          p_contact_ids: allContactIds,
+          p_tournament_id: tournamentId
+        });
+
+      if (dupCheckError) throw dupCheckError;
+
+      const existingRegSet = new Set(existingRegIds || []);
+
+      const duplicateAdults = values.adults.filter(a => existingRegSet.has(contactMap.get(a.email)));
+      const newAdults = values.adults.filter(a => !existingRegSet.has(contactMap.get(a.email)));
+
+      // If ALL attendees are already registered, show error and return
+      if (newAdults.length === 0) {
+        const names = duplicateAdults.map(a => `${a.firstName} ${a.lastName}`).join(', ');
+        setError(`All attendees are already registered for this tournament: ${names}`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // If some are duplicates, track them for the success page
+      if (duplicateAdults.length > 0) {
+        setSkippedDuplicates(duplicateAdults.map(a => ({
+          firstName: a.firstName,
+          lastName: a.lastName,
+          email: a.email
+        })));
+      }
+
+      // Calculate total amount and team info using only new adults
+      const totalAmount = calculateTotal(newAdults);
+      const golfAdults = newAdults.filter(adult =>
+        adult.events.includes('golf_tournament')
+      );
+      const isFullTeam = golfAdults.length === 4;
+      const teamGroupId = newAdults.length > 1 ? crypto.randomUUID() : null;
+
       // STEP 4: Create registrations with contact_id references (without events/child_counts)
-      const registrations = values.adults.map(adult => {
+      const registrations = newAdults.map(adult => {
         const isGolfer = adult.events.includes('golf_tournament');
 
         return {
@@ -331,7 +366,7 @@ export default function Registration() {
           preferred_teammates: isGolfer && adult.preferredTeammates
             ? adult.preferredTeammates
             : null,
-          team_group_id: isGolfer && teamGroupId ? teamGroupId : null,
+          registration_group_id: teamGroupId,
           tournament_id: tournamentId,
           payment_status: 'pending',
           created_at: new Date().toISOString()
@@ -350,7 +385,7 @@ export default function Registration() {
       const registrationEvents = [];
 
       insertedRegistrations.forEach((registration, index) => {
-        const adult = values.adults[index];
+        const adult = newAdults[index];
 
         adult.events.forEach(eventType => {
           // Find the event to get its UUID
@@ -379,14 +414,16 @@ export default function Registration() {
 
       console.log('Registration saved successfully:', data);
       if (isFullTeam) {
-        console.log('Full team registered with team_group_id:', teamGroupId);
+        console.log('Full team registered with registration_group_id:', teamGroupId);
       }
       setSubmittedTotal(totalAmount);
       setIsSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       resetForm();
     } catch (err) {
       console.error('Error saving registration:', err);
       setError('Failed to submit registration. Please try again or contact support.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
     }
@@ -411,6 +448,30 @@ export default function Registration() {
                 : "You've successfully registered for The Kathryn Classic!"
               }
             </p>
+
+            {skippedDuplicates.length > 0 && (
+              <div className="mt-6 rounded-lg bg-yellow-50 p-4 sm:p-6 ring-1 ring-yellow-200 text-left">
+                <div className="flex">
+                  <svg className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-semibold text-yellow-800">Some attendees were already registered</h3>
+                    <p className="mt-1 text-sm text-yellow-700">
+                      The following attendees were skipped because they are already registered for this tournament:
+                    </p>
+                    <ul className="mt-2 list-disc list-inside text-sm text-yellow-700">
+                      {skippedDuplicates.map((dup, i) => (
+                        <li key={i}>{dup.firstName} {dup.lastName} ({dup.email})</li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-sm text-yellow-700">
+                      The total below reflects only the newly registered attendees.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {registrationStatus !== 'full' && (
               <>
@@ -445,6 +506,7 @@ export default function Registration() {
                 onClick={() => {
                   setIsSubmitted(false);
                   setSubmittedTotal(0);
+                  setSkippedDuplicates([]);
                 }}
                 className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
               >

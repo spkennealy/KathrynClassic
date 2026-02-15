@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../supabaseClient';
 import RegistrationEditForm from './RegistrationEditForm';
+import ContactEditForm from '../Contacts/ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
 
 const PAGE_SIZE = 50;
@@ -15,6 +16,8 @@ export default function RegistrationList() {
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [registrationToDelete, setRegistrationToDelete] = useState(null);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
   const [tournaments, setTournaments] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [registrations, setRegistrations] = useState([]);
@@ -152,6 +155,14 @@ export default function RegistrationList() {
   const handleDeleteConfirm = async () => {
     try {
       setError(null);
+
+      // Delete associated registration_events first
+      const { error: eventsDeleteError } = await supabase
+        .from('registration_events')
+        .delete()
+        .eq('registration_id', registrationToDelete.registration_id);
+
+      if (eventsDeleteError) throw eventsDeleteError;
 
       // Soft delete by setting deleted_at timestamp
       const { error: deleteError } = await supabase
@@ -313,6 +324,42 @@ export default function RegistrationList() {
   // When not searching, show all registrations from the current page
   const filteredRegistrations = registrations;
 
+  // Build a map of registration_group_id → list of member names for group indicators
+  const groupMap = useMemo(() => {
+    const map = {};
+    registrations.forEach((reg) => {
+      if (reg.registration_group_id) {
+        if (!map[reg.registration_group_id]) map[reg.registration_group_id] = [];
+        map[reg.registration_group_id].push({
+          id: reg.registration_id,
+          name: `${reg.first_name} ${reg.last_name}`,
+        });
+      }
+    });
+    return map;
+  }, [registrations]);
+
+  // Assign a distinct color to each registration group
+  const GROUP_COLORS = [
+    { bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-700' },
+    { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-700' },
+    { bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-700' },
+    { bg: 'bg-rose-50', border: 'border-rose-400', text: 'text-rose-700' },
+    { bg: 'bg-emerald-50', border: 'border-emerald-400', text: 'text-emerald-700' },
+  ];
+
+  const groupColorMap = useMemo(() => {
+    const map = {};
+    let colorIndex = 0;
+    registrations.forEach((reg) => {
+      if (reg.registration_group_id && !map[reg.registration_group_id]) {
+        map[reg.registration_group_id] = GROUP_COLORS[colorIndex % GROUP_COLORS.length];
+        colorIndex++;
+      }
+    });
+    return map;
+  }, [registrations]);
+
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   if (loading && registrations.length === 0) {
@@ -430,9 +477,6 @@ export default function RegistrationList() {
                 Name
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                Email
-              </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                 Tournament
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -440,6 +484,9 @@ export default function RegistrationList() {
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                 Children
+              </th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                Preferred Teammates
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                 Payment
@@ -450,65 +497,107 @@ export default function RegistrationList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {filteredRegistrations.map((reg) => (
-              <tr key={reg.registration_id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500">
-                  {new Date(reg.registration_date).toLocaleDateString()}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                  {reg.first_name} {reg.last_name}
-                </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
-                  {reg.email || 'No email'}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                  {reg.tournament_year}
-                </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
-                  <div className="max-w-xs truncate">
-                    {reg.events?.join(', ') || 'None'}
-                  </div>
-                </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
-                  {reg.children_by_event && Object.keys(reg.children_by_event).length > 0 ? (
-                    <div className="space-y-1">
-                      {Object.entries(reg.children_by_event).map(([eventType, count]) => (
-                        count > 0 && (
-                          <div key={eventType} className="text-xs">
-                            <span className="font-medium">{count}</span> × {eventType.replace(/_/g, ' ')}
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">None</span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm">
-                  <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                    reg.payment_status === 'paid'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {reg.payment_status}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
-                  <button
-                    onClick={() => handleEdit(reg)}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(reg)}
-                    className="text-red-600 hover:text-red-900 font-medium"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {(() => {
+              const seenGroups = new Set();
+              return filteredRegistrations.flatMap((reg) => {
+                const rows = [];
+                // Insert a colored group header row before the first member of each group
+                if (reg.registration_group_id && groupMap[reg.registration_group_id] && !seenGroups.has(reg.registration_group_id)) {
+                  seenGroups.add(reg.registration_group_id);
+                  const color = groupColorMap[reg.registration_group_id];
+                  rows.push(
+                    <tr key={`group-${reg.registration_group_id}`} className={color.bg}>
+                      <td colSpan={8} className={`px-4 py-1.5 text-xs font-medium ${color.text} border-l-4 ${color.border}`}>
+                        Registered together: {groupMap[reg.registration_group_id].map((m) => m.name).join(', ')}
+                      </td>
+                    </tr>
+                  );
+                }
+                const groupColor = reg.registration_group_id && groupColorMap[reg.registration_group_id];
+                rows.push(
+                  <tr key={reg.registration_id} className={`hover:bg-gray-50${groupColor ? ` border-l-4 ${groupColor.border}` : ''}`}>
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500">
+                      {new Date(reg.registration_date).toLocaleDateString()}
+                    </td>
+                    <td className="px-3 py-4 text-sm">
+                      <button
+                        onClick={() => {
+                          setSelectedContact({ contact_id: reg.contact_id, first_name: reg.first_name, last_name: reg.last_name, email: reg.email, phone: reg.phone });
+                          setShowContactForm(true);
+                        }}
+                        className="font-medium text-primary-600 hover:text-primary-900 hover:underline text-left"
+                      >
+                        {reg.first_name} {reg.last_name}
+                      </button>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      {reg.tournament_year}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      {reg.events && reg.events.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {reg.events.map((event, i) => (
+                            <div key={i}>{event}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">None</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      {reg.children_by_event && Object.keys(reg.children_by_event).length > 0 ? (
+                        <div className="space-y-1">
+                          {Object.entries(reg.children_by_event).map(([eventType, count]) => (
+                            count > 0 && (
+                              <div key={eventType} className="text-xs">
+                                <span className="font-medium">{count}</span> × {eventType.replace(/_/g, ' ')}
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">None</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      {reg.preferred_teammates ? (
+                        <div>
+                          {reg.preferred_teammates.split(',').map((name, i) => (
+                            <div key={i}>{name.trim()}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-300">&mdash;</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm">
+                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                        reg.payment_status === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {reg.payment_status}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
+                      <button
+                        onClick={() => handleEdit(reg)}
+                        className="text-primary-600 hover:text-primary-900 font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(reg)}
+                        className="text-red-600 hover:text-red-900 font-medium"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+                return rows;
+              });
+            })()}
           </tbody>
         </table>
 
@@ -606,6 +695,15 @@ export default function RegistrationList() {
         <RegistrationEditForm
           registration={selectedRegistration}
           onClose={handleCloseEdit}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Contact Edit Modal */}
+      {showContactForm && (
+        <ContactEditForm
+          contact={selectedContact}
+          onClose={() => { setShowContactForm(false); setSelectedContact(null); }}
           onSave={handleSaveEdit}
         />
       )}

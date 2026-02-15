@@ -88,7 +88,7 @@ export default function Home() {
             <img
               src="/home_photos/kathryn_jackie_pml.JPG"
               alt="Kathryn and Jackie"
-              className="w-48 h-48 rounded-xl object-cover object-top shadow-lg ring-2 ring-white/30"
+              className="w-48 h-48 rounded-xl object-cover object-[50%_0%] shadow-lg ring-2 ring-white/30"
             />
           </div>
           <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif">
@@ -99,12 +99,18 @@ export default function Home() {
             Even if you don't play golf, we would love to have you join us for the welcome dinner, beach day, or other family activities.
           </p>
           <div className="mt-8 sm:mt-10 flex items-center justify-center gap-x-6">
-            <Link
-              to="/registration"
-              className="rounded-lg bg-primary-700 px-6 py-3 text-base sm:text-lg font-semibold text-white shadow-sm hover:bg-primary-800 transition-colors font-serif"
-            >
-              {getButtonText()}
-            </Link>
+            {loading ? (
+              <div className="rounded-lg px-6 py-3 text-base sm:text-lg font-semibold invisible font-serif">
+                Register Now
+              </div>
+            ) : (
+              <Link
+                to="/registration"
+                className="rounded-lg bg-primary-700 px-6 py-3 text-base sm:text-lg font-semibold text-white shadow-sm hover:bg-primary-800 transition-colors font-serif"
+              >
+                {getButtonText()}
+              </Link>
+            )}
           </div>
         </div>
       </div>
