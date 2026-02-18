@@ -25,6 +25,7 @@ import AwardList from './components/Admin/Awards/AwardList';
 import TeeTimesManagement from './components/Admin/TeeTimes/TeeTimesManagement';
 import LeaderboardManagement from './components/Admin/Leaderboard/LeaderboardManagement';
 import TeamList from './components/Admin/Teams/TeamList';
+import TeamBuilder from './components/Admin/TeamBuilder/TeamBuilder';
 import ChangePassword from './components/Admin/ChangePassword';
 import RecycleBin from './components/Admin/RecycleBin/RecycleBin';
 import ProtectedRoute from './components/Admin/ProtectedRoute';
@@ -119,6 +120,7 @@ function App() {
                 <Route path="tee-times" element={<TeeTimesManagement />} />
                 <Route path="leaderboard" element={<LeaderboardManagement />} />
                 <Route path="teams" element={<TeamList />} />
+                <Route path="team-builder" element={<TeamBuilder />} />
                 <Route path="awards" element={<AwardList />} />
                 <Route path="recycle-bin" element={<RecycleBin />} />
                 <Route path="change-password" element={<ChangePassword />} />

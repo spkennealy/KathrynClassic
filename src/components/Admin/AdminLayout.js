@@ -20,6 +20,7 @@ export default function AdminLayout() {
     { name: 'Registrations', href: '/admin/registrations', icon: '✍️' },
     { name: 'Contacts', href: '/admin/contacts', icon: '👥' },
     { name: 'Teams', href: '/admin/teams', icon: '👫' },
+    { name: 'Team Builder', href: '/admin/team-builder', icon: '🧩' },
     { name: 'Tee Times', href: '/admin/tee-times', icon: '🕐' },
     { name: 'Leaderboard', href: '/admin/leaderboard', icon: '⛳' },
     { name: 'Awards', href: '/admin/awards', icon: '🏅' },
