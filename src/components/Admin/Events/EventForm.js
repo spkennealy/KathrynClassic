@@ -9,6 +9,8 @@ export default function EventForm({ event, onClose, onSave }) {
     event_date: '',
     start_time: '',
     location: '',
+    map_link: '',
+    host: '',
     adult_price: '',
     child_price: '',
     description: '',
@@ -32,6 +34,8 @@ export default function EventForm({ event, onClose, onSave }) {
         event_date: event.event_date || '',
         start_time: event.start_time || '',
         location: event.location || '',
+        map_link: event.map_link || '',
+        host: event.host || '',
         adult_price: event.adult_price || '',
         child_price: event.child_price || '',
         description: event.description || '',
@@ -71,6 +75,8 @@ export default function EventForm({ event, onClose, onSave }) {
         event_date: formData.event_date,
         start_time: formData.start_time || null,
         location: formData.location || null,
+        map_link: formData.map_link || null,
+        host: formData.host || null,
         adult_price: formData.price_tbd ? 0 : (formData.adult_price ? parseFloat(formData.adult_price) : 0),
         child_price: formData.price_tbd ? 0 : (formData.child_price ? parseFloat(formData.child_price) : 0),
         description: formData.description || null,
@@ -219,16 +225,46 @@ export default function EventForm({ event, onClose, onSave }) {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="e.g., Cape May National Golf Club"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="host" className="block text-sm font-medium text-gray-700">
+                  Host
+                </label>
+                <input
+                  type="text"
+                  id="host"
+                  value={formData.host}
+                  onChange={(e) => setFormData({ ...formData, host: e.target.value })}
+                  placeholder="e.g., Jane Smith"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                />
+              </div>
+            </div>
+
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                Location
+              <label htmlFor="map_link" className="block text-sm font-medium text-gray-700">
+                Google Maps Link
               </label>
               <input
-                type="text"
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g., Cape May National Golf Club"
+                type="url"
+                id="map_link"
+                value={formData.map_link}
+                onChange={(e) => setFormData({ ...formData, map_link: e.target.value })}
+                placeholder="https://maps.google.com/..."
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
