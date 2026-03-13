@@ -12,6 +12,11 @@ export default function EventForm({ event, onClose, onSave }) {
     adult_price: '',
     child_price: '',
     description: '',
+    price_tbd: false,
+    adult_price_min: '',
+    adult_price_max: '',
+    child_price_min: '',
+    child_price_max: '',
   });
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +35,11 @@ export default function EventForm({ event, onClose, onSave }) {
         adult_price: event.adult_price || '',
         child_price: event.child_price || '',
         description: event.description || '',
+        price_tbd: event.price_tbd || false,
+        adult_price_min: event.adult_price_min || '',
+        adult_price_max: event.adult_price_max || '',
+        child_price_min: event.child_price_min || '',
+        child_price_max: event.child_price_max || '',
       });
     }
   }, [event]);
@@ -61,9 +71,14 @@ export default function EventForm({ event, onClose, onSave }) {
         event_date: formData.event_date,
         start_time: formData.start_time || null,
         location: formData.location || null,
-        adult_price: formData.adult_price ? parseFloat(formData.adult_price) : 0,
-        child_price: formData.child_price ? parseFloat(formData.child_price) : 0,
+        adult_price: formData.price_tbd ? 0 : (formData.adult_price ? parseFloat(formData.adult_price) : 0),
+        child_price: formData.price_tbd ? 0 : (formData.child_price ? parseFloat(formData.child_price) : 0),
         description: formData.description || null,
+        price_tbd: formData.price_tbd,
+        adult_price_min: formData.price_tbd && formData.adult_price_min ? parseFloat(formData.adult_price_min) : null,
+        adult_price_max: formData.price_tbd && formData.adult_price_max ? parseFloat(formData.adult_price_max) : null,
+        child_price_min: formData.price_tbd && formData.child_price_min ? parseFloat(formData.child_price_min) : null,
+        child_price_max: formData.price_tbd && formData.child_price_max ? parseFloat(formData.child_price_max) : null,
       };
 
       if (event) {
@@ -218,41 +233,114 @@ export default function EventForm({ event, onClose, onSave }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="adult_price" className="block text-sm font-medium text-gray-700">
-                  Adult Price ($) <span className="text-red-500">*</span>
-                </label>
+            <div>
+              <div className="flex items-center">
                 <input
-                  type="number"
-                  id="adult_price"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.adult_price}
-                  onChange={(e) => setFormData({ ...formData, adult_price: e.target.value })}
-                  placeholder="0.00"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  type="checkbox"
+                  id="price_tbd"
+                  checked={formData.price_tbd}
+                  onChange={(e) => setFormData({ ...formData, price_tbd: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
-              </div>
-
-              <div>
-                <label htmlFor="child_price" className="block text-sm font-medium text-gray-700">
-                  Child Price ($) <span className="text-red-500">*</span>
+                <label htmlFor="price_tbd" className="ml-2 text-sm font-medium text-gray-700">
+                  Price TBD — we will contact registrants with final cost
                 </label>
-                <input
-                  type="number"
-                  id="child_price"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.child_price}
-                  onChange={(e) => setFormData({ ...formData, child_price: e.target.value })}
-                  placeholder="0.00"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
               </div>
             </div>
+
+            {!formData.price_tbd ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="adult_price" className="block text-sm font-medium text-gray-700">
+                    Adult Price ($) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="adult_price"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.adult_price}
+                    onChange={(e) => setFormData({ ...formData, adult_price: e.target.value })}
+                    placeholder="0.00"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="child_price" className="block text-sm font-medium text-gray-700">
+                    Child Price ($) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="child_price"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.child_price}
+                    onChange={(e) => setFormData({ ...formData, child_price: e.target.value })}
+                    placeholder="0.00"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md bg-amber-50 border border-amber-200 p-4 space-y-4">
+                <p className="text-sm text-amber-800 font-medium">Optional: Estimate range shown to registrants</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Adult Price Min ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.adult_price_min}
+                      onChange={(e) => setFormData({ ...formData, adult_price_min: e.target.value })}
+                      placeholder="0.00"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Adult Price Max ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.adult_price_max}
+                      onChange={(e) => setFormData({ ...formData, adult_price_max: e.target.value })}
+                      placeholder="0.00"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Child Price Min ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.child_price_min}
+                      onChange={(e) => setFormData({ ...formData, child_price_min: e.target.value })}
+                      placeholder="0.00"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Child Price Max ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.child_price_max}
+                      onChange={(e) => setFormData({ ...formData, child_price_max: e.target.value })}
+                      placeholder="0.00"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">

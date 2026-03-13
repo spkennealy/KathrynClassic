@@ -219,10 +219,10 @@ export default function EventList() {
                     {event.start_time && <span className="text-gray-400"> • {formatTime(event.start_time)}</span>}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
-                    {formatCurrency(event.adult_price)}
+                    {event.price_tbd ? <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">TBD</span> : formatCurrency(event.adult_price)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
-                    {formatCurrency(event.child_price)}
+                    {event.price_tbd ? <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">TBD</span> : formatCurrency(event.child_price)}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-500">
                     {event.location || '-'}

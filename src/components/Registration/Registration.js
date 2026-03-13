@@ -35,6 +35,7 @@ const WaitlistSchema = Yup.object().shape({
 export default function Registration() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedTotal, setSubmittedTotal] = useState(0);
+  const [submittedTotals, setSubmittedTotals] = useState(null);
   const [error, setError] = useState(null);
   const [events, setEvents] = useState([]);
   const [tournamentYear, setTournamentYear] = useState(null);
@@ -81,7 +82,12 @@ export default function Registration() {
           name: `${event.event_name} - ${formatDate(event.event_date).split(',')[0]}, ${formatDate(event.event_date).split(',')[1].trim()}`,
           adultPrice: parseFloat(event.adult_price),
           childPrice: 0, // Children attend free
-          eventId: event.id
+          eventId: event.id,
+          priceTbd: event.price_tbd || false,
+          adultPriceMin: event.adult_price_min != null ? parseFloat(event.adult_price_min) : null,
+          adultPriceMax: event.adult_price_max != null ? parseFloat(event.adult_price_max) : null,
+          childPriceMin: event.child_price_min != null ? parseFloat(event.child_price_min) : null,
+          childPriceMax: event.child_price_max != null ? parseFloat(event.child_price_max) : null,
         }));
 
         setEvents(formattedEvents);
@@ -100,7 +106,7 @@ export default function Registration() {
     adults.forEach(adult => {
       adult.events.forEach(eventId => {
         const event = events.find(e => e.id === eventId);
-        if (event) {
+        if (event && !event.priceTbd) {
           // Add adult price
           total += event.adultPrice;
 
@@ -112,6 +118,42 @@ export default function Registration() {
     });
 
     return total;
+  };
+
+  const calculateTotals = (adults) => {
+    let confirmed = 0;
+    let estimatedMin = 0;
+    let estimatedMax = 0;
+    let hasTbd = false;
+    let hasUnestimatedTbd = false;
+
+    adults.forEach(adult => {
+      adult.events.forEach(eventId => {
+        const event = events.find(e => e.id === eventId);
+        if (!event) return;
+
+        if (!event.priceTbd) {
+          confirmed += event.adultPrice;
+          const childCount = adult.childCounts?.[eventId] || 0;
+          confirmed += childCount * event.childPrice;
+        } else {
+          hasTbd = true;
+          if (event.adultPriceMin != null && event.adultPriceMax != null) {
+            estimatedMin += event.adultPriceMin;
+            estimatedMax += event.adultPriceMax;
+            const childCount = adult.childCounts?.[eventId] || 0;
+            if (childCount > 0 && event.childPriceMin != null && event.childPriceMax != null) {
+              estimatedMin += childCount * event.childPriceMin;
+              estimatedMax += childCount * event.childPriceMax;
+            }
+          } else {
+            hasUnestimatedTbd = true;
+          }
+        }
+      });
+    });
+
+    return { confirmed, estimatedMin, estimatedMax, hasTbd, hasUnestimatedTbd };
   };
 
   const handleWaitlistSubmit = async (values, { setSubmitting, resetForm }) => {
@@ -350,6 +392,7 @@ export default function Registration() {
 
       // Calculate total amount and team info using only new adults
       const totalAmount = calculateTotal(newAdults);
+      const totals = calculateTotals(newAdults);
       const golfAdults = newAdults.filter(adult =>
         adult.events.includes('golf_tournament')
       );
@@ -417,6 +460,7 @@ export default function Registration() {
         console.log('Full team registered with registration_group_id:', teamGroupId);
       }
       setSubmittedTotal(totalAmount);
+      setSubmittedTotals(totals);
       setIsSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       resetForm();
@@ -478,9 +522,24 @@ export default function Registration() {
                 <div className="mt-6 sm:mt-10 rounded-lg bg-primary-50 p-4 sm:p-8 ring-1 ring-primary-200">
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
                   <div className="text-left space-y-4">
-                    <p className="text-base text-gray-700">
-                      <strong>Total Amount Due:</strong> <span className="text-2xl font-bold text-primary-600">${submittedTotal}</span>
-                    </p>
+                    <div>
+                      <p className="text-base text-gray-700">
+                        <strong>Total Amount Due:</strong> <span className="text-2xl font-bold text-primary-600">{submittedTotals?.hasTbd && submittedTotal === 0 ? 'TBD' : `$${submittedTotal}`}</span>
+                      </p>
+                      {submittedTotals?.hasTbd && (
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-sm text-amber-700">
+                            {submittedTotals.hasUnestimatedTbd && submittedTotals.estimatedMin === 0
+                              ? '+ TBD'
+                              : submittedTotals.hasUnestimatedTbd
+                              ? `+ est. $${submittedTotals.estimatedMin}–$${submittedTotals.estimatedMax} and additional TBD costs`
+                              : `+ est. $${submittedTotals.estimatedMin}–$${submittedTotals.estimatedMax} for TBD event(s)`
+                            }
+                          </p>
+                          <p className="text-sm text-gray-500">We will reach out to you with the final cost for TBD events.</p>
+                        </div>
+                      )}
+                    </div>
                     <div className="border-t border-primary-200 pt-4">
                       <p className="text-base font-semibold text-gray-900 mb-3">Please submit payment via:</p>
                       <div className="space-y-2 text-sm text-gray-700">
@@ -506,6 +565,7 @@ export default function Registration() {
                 onClick={() => {
                   setIsSubmitted(false);
                   setSubmittedTotal(0);
+                  setSubmittedTotals(null);
                   setSkippedDuplicates([]);
                 }}
                 className="rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
@@ -925,7 +985,16 @@ export default function Registration() {
                                         />
                                         <label className="ml-3 text-sm">
                                           <span className="font-medium text-gray-900">{event.name}</span>
-                                          <span className="text-gray-500 block sm:inline sm:ml-2">(${event.adultPrice} per person)</span>
+                                          {event.priceTbd ? (
+                                            <>
+                                              <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Price TBD</span>
+                                              {event.adultPriceMin != null && event.adultPriceMax != null && (
+                                                <span className="text-gray-500 ml-1.5 text-xs">(est. ${event.adultPriceMin}–${event.adultPriceMax} per person)</span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <span className="text-gray-500 ml-2">(${event.adultPrice} per person)</span>
+                                          )}
                                         </label>
                                       </div>
                                       {event.id !== 'golf_tournament' && adult.events.includes(event.id) && (
@@ -989,65 +1058,87 @@ export default function Registration() {
 
                 {/* Total */}
                 <div className="border-t border-gray-900/10 pt-6">
-                  <p className="text-2xl font-bold text-gray-900">
-                    Total: ${calculateTotal(values.adults)}
-                  </p>
+                  {(() => {
+                    const totals = calculateTotals(values.adults);
+                    return (
+                      <>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {totals.hasTbd && totals.confirmed === 0 ? 'Total: TBD' : `Total: $${totals.confirmed}`}
+                        </p>
+                        {totals.hasTbd && (
+                          <div className="mt-2 space-y-0.5">
+                            <p className="text-sm text-amber-700">
+                              {totals.hasUnestimatedTbd && totals.estimatedMin === 0
+                                ? '+ TBD'
+                                : totals.hasUnestimatedTbd
+                                ? `+ est. $${totals.estimatedMin}–$${totals.estimatedMax} and additional TBD costs`
+                                : `+ est. $${totals.estimatedMin}–$${totals.estimatedMax} for TBD event(s)`
+                              }
+                            </p>
+                            <p className="text-sm text-gray-500">We will reach out to you with the final cost for TBD events.</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Terms & Conditions */}
                 <div className="border-t border-gray-900/10 pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Terms & Conditions</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">A Few Things to Know</h3>
                   <div className="rounded-lg bg-gray-50 p-4 sm:p-6 ring-1 ring-gray-200 mb-6">
                     <div className="space-y-4 text-sm text-gray-700">
                       <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Payment Commitment</h4>
+                        <h4 className="font-semibold text-gray-900 mb-2">Payment</h4>
                         <p>
-                          By registering, you commit to submitting payment at least <strong>two weeks before the tournament</strong>.
-                          If payment is not received by this date, your spot(s) may be reopened to other attendees.
+                          Please submit payment at least <strong>two weeks before the tournament</strong> — if we don't
+                          hear from you by then, we may need to open your spot to someone else.
                         </p>
                       </div>
 
                       <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Cancellation Policy</h4>
+                        <h4 className="font-semibold text-gray-900 mb-2">Cancellations</h4>
                         <p>
-                          Cancellations made more than two weeks before the tournament are eligible for a full refund.
-                          Cancellations within two weeks of the tournament may receive a refund at the organizer's discretion,
-                          depending on whether the spot can be filled.
+                          If you need to cancel, please reach out at least two weeks before the tournament at{' '}
+                          <a href="mailto:info@kathrynclassic.com" className="text-primary-600 hover:underline">info@kathrynclassic.com</a>.
+                        </p>
+                      </div>
+
+                      {/* Saved for future use:
+
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Walk-ups</h4>
+                        <p>
+                          We ask that everyone register ahead of time so we can plan accordingly. Walk-ups may be possible
+                          depending on space, but we can't guarantee it. Kids need to be with a registered adult at all times.
                         </p>
                       </div>
 
                       <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Event Participation</h4>
+                        <h4 className="font-semibold text-gray-900 mb-2">Safety & Liability</h4>
                         <p>
-                          All participants must register in advance. Walk-ups may be accommodated space permitting, but cannot be guaranteed.
-                          Children must be supervised by a registered adult at all times during events.
+                          Participation is at your own risk. Please follow the rules at each venue and use appropriate equipment.
+                          The tournament organizers aren't liable for injuries, accidents, or lost property.
                         </p>
                       </div>
 
                       <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Assumption of Risk</h4>
+                        <h4 className="font-semibold text-gray-900 mb-2">Weather</h4>
                         <p>
-                          Participation in tournament activities is at your own risk. Please use appropriate safety equipment
-                          and follow all posted rules at event venues. The tournament organizers are not liable for injuries,
-                          accidents, or loss of personal property.
+                          Events may be affected by weather or other circumstances beyond our control. If anything changes,
+                          we'll let you know by email as soon as we can.
                         </p>
                       </div>
 
                       <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Weather & Schedule Changes</h4>
+                        <h4 className="font-semibold text-gray-900 mb-2">Photos & Video</h4>
                         <p>
-                          Events are subject to weather conditions and unforeseen circumstances. In the event of cancellation
-                          or significant schedule changes, registered participants will be notified via email as soon as possible.
+                          By participating, you're okay with us using photos and video from the event to promote
+                          The Kathryn Classic and the CJD Foundation.
                         </p>
                       </div>
 
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Photo & Media Release</h4>
-                        <p>
-                          By participating, you consent to the use of photographs and video taken during the tournament
-                          for promotional purposes related to The Kathryn Classic and the CJD Foundation.
-                        </p>
-                      </div>
+                      */}
                     </div>
                   </div>
 
