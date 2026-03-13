@@ -67,9 +67,10 @@ export default function Schedule() {
     return grouped;
   };
 
-  const getEventPhoto = (location) => {
-    if (!location) return null;
-    const loc = location.toLowerCase();
+  const getEventPhoto = (event) => {
+    if (event.photo_url) return event.photo_url;
+    if (!event.location) return null;
+    const loc = event.location.toLowerCase();
     if (loc.includes('golf') || loc.includes('course')) return '/shedule_photos/pml_golf_course.jpg';
     if (loc.includes('lodge')) return '/shedule_photos/pml_lodge.jpg';
     return null;
@@ -193,10 +194,10 @@ export default function Schedule() {
                   </div>
 
                   {/* Photo Section */}
-                  {getEventPhoto(event.location) && (
+                  {getEventPhoto(event) && (
                     <div className="flex-shrink-0 hidden sm:block">
                       <img
-                        src={getEventPhoto(event.location)}
+                        src={getEventPhoto(event)}
                         alt={event.location}
                         className="w-36 h-36 rounded-xl object-cover shadow-md"
                       />

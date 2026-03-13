@@ -19,10 +19,15 @@ export default function EventForm({ event, onClose, onSave }) {
     adult_price_max: '',
     child_price_min: '',
     child_price_max: '',
+    photo_url: '',
   });
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState(null);
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
+  const [existingPhotos, setExistingPhotos] = useState([]);
 
   useEffect(() => {
     fetchTournaments();
@@ -44,6 +49,7 @@ export default function EventForm({ event, onClose, onSave }) {
         adult_price_max: event.adult_price_max || '',
         child_price_min: event.child_price_min || '',
         child_price_max: event.child_price_max || '',
+        photo_url: event.photo_url || '',
       });
     }
   }, [event]);
@@ -62,6 +68,60 @@ export default function EventForm({ event, onClose, onSave }) {
     }
   };
 
+  const LOCAL_PHOTOS = [
+    { url: '/shedule_photos/pml_golf_course.jpg', label: 'PML Golf Course' },
+    { url: '/shedule_photos/pml_lodge.jpg', label: 'PML Lodge' },
+  ];
+
+  const loadExistingPhotos = async () => {
+    setShowPhotoPicker(true);
+    if (existingPhotos.length > 0) return;
+
+    try {
+      const { data, error } = await supabase.storage.from('event-photos').list();
+      const uploaded = error || !data ? [] : data
+        .filter(f => f.name !== '.emptyFolderPlaceholder')
+        .map(f => ({
+          url: supabase.storage.from('event-photos').getPublicUrl(f.name).data.publicUrl,
+          label: f.name,
+        }));
+
+      setExistingPhotos([...LOCAL_PHOTOS, ...uploaded]);
+    } catch {
+      setExistingPhotos(LOCAL_PHOTOS);
+    }
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setPhotoUploading(true);
+    setPhotoError(null);
+
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `event-${Date.now()}.${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from('event-photos')
+        .upload(fileName, file, { upsert: true });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('event-photos')
+        .getPublicUrl(data.path);
+
+      setFormData(prev => ({ ...prev, photo_url: publicUrl }));
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setPhotoError('Failed to upload photo. Make sure the "event-photos" storage bucket exists in Supabase.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -77,6 +137,7 @@ export default function EventForm({ event, onClose, onSave }) {
         location: formData.location || null,
         map_link: formData.map_link || null,
         host: formData.host || null,
+        photo_url: formData.photo_url || null,
         adult_price: formData.price_tbd ? 0 : (formData.adult_price ? parseFloat(formData.adult_price) : 0),
         child_price: formData.price_tbd ? 0 : (formData.child_price ? parseFloat(formData.child_price) : 0),
         description: formData.description || null,
@@ -377,6 +438,98 @@ export default function EventForm({ event, onClose, onSave }) {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Event Photo</label>
+              <div className="mt-1 flex items-start gap-4">
+                {formData.photo_url && (
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={formData.photo_url}
+                      alt="Event"
+                      className="w-24 h-24 rounded-lg object-cover border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, photo_url: '' }))}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                      <span>{photoUploading ? 'Uploading...' : 'Upload New'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        disabled={photoUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={loadExistingPhotos}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                    >
+                      Choose Existing
+                    </button>
+                  </div>
+                  {photoError && <p className="text-xs text-red-600">{photoError}</p>}
+                  {!formData.photo_url && !photoError && (
+                    <p className="text-xs text-gray-500">JPG, PNG, or WebP recommended</p>
+                  )}
+                </div>
+              </div>
+
+              {showPhotoPicker && (
+                <div className="mt-3 border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-600">Select a photo</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPhotoPicker(false)}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  {existingPhotos.length === 0 ? (
+                    <p className="text-xs text-gray-500">Loading...</p>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                      {existingPhotos.map((photo) => (
+                        <button
+                          key={photo.url}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, photo_url: photo.url }));
+                            setShowPhotoPicker(false);
+                          }}
+                          className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
+                            formData.photo_url === photo.url
+                              ? 'border-primary-500'
+                              : 'border-transparent hover:border-primary-300'
+                          }`}
+                        >
+                          <img
+                            src={photo.url}
+                            alt={photo.label}
+                            className="w-full h-20 object-cover"
+                          />
+                          <span className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-40 text-white text-xs px-1 py-0.5 truncate">
+                            {photo.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">
