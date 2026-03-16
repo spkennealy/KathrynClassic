@@ -17,36 +17,44 @@ export default function TeamList() {
     try {
       setLoading(true);
 
-      // Fetch golf_teams with their players
       const { data: teamsData, error: teamsError } = await supabase
-        .from('golf_teams')
+        .from('teams')
         .select(`
-          *,
-          tournaments(year),
-          golf_team_players(
-            player_name,
-            handicap,
-            player_order,
-            registration_id
+          id,
+          name,
+          golf_teams (
+            id,
+            team_number,
+            total_score,
+            score_to_par,
+            position,
+            tournaments ( year ),
+            golf_team_players ( player_name, handicap, player_order )
           )
         `)
-        .order('team_name');
+        .order('name');
 
       if (teamsError) throw teamsError;
 
-      // Transform data to match expected format
-      const transformedTeams = teamsData.map(team => ({
-        team_id: team.id,
-        team_name: team.team_name || `Team ${team.team_number}`,
-        tournament_year: team.tournaments?.year,
-        member_count: team.golf_team_players?.length || 0,
-        members: team.golf_team_players?.sort((a, b) => a.player_order - b.player_order).map(p => ({
-          player_name: p.player_name,
-          handicap: p.handicap,
-          position: p.player_order,
-          registration_id: p.registration_id,
-        })) || [],
-      }));
+      const transformedTeams = (teamsData || []).map(team => {
+        const participations = (team.golf_teams || []).sort(
+          (a, b) => (b.tournaments?.year || 0) - (a.tournaments?.year || 0)
+        );
+        const mostRecent = participations[0];
+        return {
+          team_id: team.id,
+          team_name: team.name,
+          tournament_years: participations.map(p => p.tournaments?.year).filter(Boolean),
+          member_count: mostRecent?.golf_team_players?.length || 0,
+          members: mostRecent?.golf_team_players
+            ?.sort((a, b) => a.player_order - b.player_order)
+            .map(p => ({
+              player_name: p.player_name,
+              handicap: p.handicap,
+              position: p.player_order,
+            })) || [],
+        };
+      });
 
       setTeams(transformedTeams);
     } catch (err) {
@@ -68,13 +76,13 @@ export default function TeamList() {
   };
 
   const handleDelete = async (teamId, teamName) => {
-    if (!window.confirm(`Are you sure you want to delete team "${teamName}"? This will also remove the team from any assigned tee times.`)) {
+    if (!window.confirm(`Are you sure you want to delete team "${teamName}"? This will also remove all of their tournament scores and leaderboard entries.`)) {
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('golf_teams')
+        .from('teams')
         .delete()
         .eq('id', teamId);
 
@@ -145,8 +153,10 @@ export default function TeamList() {
                 </span>
               </div>
 
-              {team.tournament_year && (
-                <p className="text-sm text-gray-500 mb-4">Tournament: {team.tournament_year}</p>
+              {team.tournament_years && team.tournament_years.length > 0 && (
+                <p className="text-sm text-gray-500 mb-4">
+                  Tournaments: {team.tournament_years.join(', ')}
+                </p>
               )}
 
               {/* Team Members */}

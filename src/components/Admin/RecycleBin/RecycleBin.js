@@ -87,7 +87,7 @@ export default function RecycleBin() {
       // Fetch deleted teams
       const { data: teams, error: teamsError } = await supabase
         .from('golf_teams')
-        .select('id, team_name, total_score, deleted_at, tournaments(year)')
+        .select('id, total_score, deleted_at, tournaments(year), teams(name)')
         .not('deleted_at', 'is', null)
         .order('deleted_at', { ascending: false });
 
@@ -365,7 +365,7 @@ export default function RecycleBin() {
             {selectedTab === 'teams' && records.map((record) => (
               <tr key={record.id} className="hover:bg-gray-50">
                 <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                  {record.team_name}
+                  {record.teams?.name || 'Unknown Team'}
                 </td>
                 <td className="px-3 py-4 text-sm text-gray-500">
                   {record.tournaments?.year} • Score: {record.total_score}

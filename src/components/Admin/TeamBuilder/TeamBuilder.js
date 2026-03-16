@@ -10,23 +10,44 @@ export default function TeamBuilder() {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Data
+  // Saved data
   const [golfers, setGolfers] = useState([]);
   const [existingTeamContactIds, setExistingTeamContactIds] = useState(new Set());
-  const [suggestedTeams, setSuggestedTeams] = useState([]);
-  const [unassigned, setUnassigned] = useState([]);
+  const [existingTeams, setExistingTeams] = useState([]);
 
-  // UI state
-  const [selectedUnassigned, setSelectedUnassigned] = useState(new Set());
-  const [editingTeamIdx, setEditingTeamIdx] = useState(null);
-  const [swapPosition, setSwapPosition] = useState(null); // { teamIdx, memberIdx }
+  // Pending (unsaved) teams — includes manually created and algorithm-suggested
+  const [pendingTeams, setPendingTeams] = useState([]);
+
+  // Drag state
+  const [draggedGolfer, setDraggedGolfer] = useState(null);
+  const [dragOver, setDragOver] = useState(null); // 'unassigned' | 'existing-{id}' | 'pending-{idx}'
+
+  // Edit mode for existing teams
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingTeamData, setEditingTeamData] = useState(null); // { name, members }
+
+  // UI
   const [showConfirmAll, setShowConfirmAll] = useState(false);
 
-  // Stats
-  const totalGolfers = golfers.length;
-  const onTeams = existingTeamContactIds.size;
-  const suggestedCount = suggestedTeams.length;
-  const unassignedCount = unassigned.length;
+  // Computed unassigned: golfers not saved to a team and not in any pending team
+  const pendingMemberIds = new Set(
+    pendingTeams.flatMap(t => t.members.map(m => m.contact_id).filter(Boolean))
+  );
+  // While editing an existing team, its removed members become available in the pool
+  const editingMemberIds = new Set(
+    (editingTeamData?.members || []).map(m => m.contact_id).filter(Boolean)
+  );
+  const unassignedGolfers = golfers.filter(g => {
+    if (pendingMemberIds.has(g.contact_id)) return false;
+    if (editingTeamId) {
+      // Exclude members of OTHER saved teams; include if removed from editing team
+      const inOtherSavedTeam = existingTeamContactIds.has(g.contact_id) && !editingMemberIds.has(g.contact_id);
+      // Also exclude if still in the editing team's current member list (not removed)
+      const stillInEditingTeam = editingMemberIds.has(g.contact_id);
+      return !inOtherSavedTeam && !stillInEditingTeam;
+    }
+    return !existingTeamContactIds.has(g.contact_id);
+  });
 
   useEffect(() => {
     fetchTournaments();
@@ -38,13 +59,9 @@ export default function TeamBuilder() {
         .from('tournaments')
         .select('id, year')
         .order('year', { ascending: false });
-
       if (error) throw error;
       setTournaments(data || []);
-
-      if (data && data.length > 0) {
-        setSelectedTournament(data[0].id);
-      }
+      if (data && data.length > 0) setSelectedTournament(data[0].id);
     } catch (err) {
       console.error('Error fetching tournaments:', err);
     }
@@ -52,57 +69,50 @@ export default function TeamBuilder() {
 
   const fetchData = useCallback(async () => {
     if (!selectedTournament) return;
-
     try {
       setLoading(true);
       setError(null);
-      setSuggestedTeams([]);
-      setUnassigned([]);
-      setSelectedUnassigned(new Set());
+      setPendingTeams([]);
 
-      // 1. Find the golf_tournament event for this tournament
       const { data: golfEvent, error: eventError } = await supabase
         .from('tournament_events')
         .select('id')
         .eq('tournament_id', selectedTournament)
         .eq('event_type', 'golf_tournament')
         .maybeSingle();
-
       if (eventError) throw eventError;
 
       if (!golfEvent) {
         setGolfers([]);
         setExistingTeamContactIds(new Set());
+        setExistingTeams([]);
         setError('No golf tournament event found for this tournament.');
         return;
       }
 
-      // 2. Get registration_ids registered for that event
       const { data: regEvents, error: regEventsError } = await supabase
         .from('registration_events')
         .select('registration_id')
         .eq('tournament_event_id', golfEvent.id);
-
       if (regEventsError) throw regEventsError;
 
       if (!regEvents || regEvents.length === 0) {
         setGolfers([]);
         setExistingTeamContactIds(new Set());
+        setExistingTeams([]);
         return;
       }
 
-      const registrationIds = [...new Set(regEvents.map((re) => re.registration_id))];
+      const registrationIds = [...new Set(regEvents.map(re => re.registration_id))];
 
-      // 3. Fetch registrations with contact data
       const { data: registrations, error: regError } = await supabase
         .from('registrations')
         .select('id, contact_id, golf_handicap, preferred_teammates, registration_group_id, contacts(id, first_name, last_name, email)')
         .in('id', registrationIds)
         .not('contact_id', 'is', null);
-
       if (regError) throw regError;
 
-      const golferList = (registrations || []).map((reg) => ({
+      const golferList = (registrations || []).map(reg => ({
         id: reg.id,
         contact_id: reg.contact_id,
         first_name: reg.contacts?.first_name || '',
@@ -112,36 +122,58 @@ export default function TeamBuilder() {
         preferred_teammates: reg.preferred_teammates,
         registration_group_id: reg.registration_group_id,
       }));
-
       setGolfers(golferList);
 
-      // 4. Fetch existing team player contact_ids for this tournament
       const { data: teams, error: teamsError } = await supabase
         .from('golf_teams')
-        .select('id, golf_team_players(player_name)')
-        .eq('tournament_id', selectedTournament);
-
+        .select(`
+          id,
+          team_number,
+          teams ( name ),
+          golf_team_players ( player_name, contact_id, handicap, player_order )
+        `)
+        .eq('tournament_id', selectedTournament)
+        .order('teams(name)');
       if (teamsError) throw teamsError;
 
-      // Match team player names to contact_ids
       const teamContactIds = new Set();
-      if (teams) {
-        for (const team of teams) {
-          if (team.golf_team_players) {
-            for (const player of team.golf_team_players) {
-              // Match by name to golfer list
-              const match = golferList.find(
-                (g) =>
-                  `${g.first_name} ${g.last_name}`.toLowerCase() ===
-                  player.player_name?.toLowerCase()
-              );
-              if (match) teamContactIds.add(match.contact_id);
-            }
+      for (const team of (teams || [])) {
+        for (const player of (team.golf_team_players || [])) {
+          if (player.contact_id) {
+            teamContactIds.add(player.contact_id);
+            continue;
           }
+          const playerName = player.player_name?.trim().toLowerCase() || '';
+          // Exact full name
+          let match = golferList.find(
+            g => `${g.first_name} ${g.last_name}`.toLowerCase() === playerName
+          );
+          // Last name only (when unique among registered golfers)
+          if (!match) {
+            const nameParts = playerName.split(/\s+/);
+            const lastName = nameParts[nameParts.length - 1];
+            const candidates = golferList.filter(g => g.last_name.toLowerCase() === lastName);
+            if (candidates.length === 1) match = candidates[0];
+          }
+          // First name only (when unique)
+          if (!match) {
+            const firstName = playerName.split(/\s+/)[0];
+            const candidates = golferList.filter(g => g.first_name.toLowerCase() === firstName);
+            if (candidates.length === 1) match = candidates[0];
+          }
+          if (match) teamContactIds.add(match.contact_id);
         }
       }
-
       setExistingTeamContactIds(teamContactIds);
+      setExistingTeams(
+        (teams || []).map(team => ({
+          id: team.id,
+          name: team.teams?.name || `Team ${team.team_number || ''}`,
+          members: (team.golf_team_players || [])
+            .sort((a, b) => a.player_order - b.player_order)
+            .map(p => ({ player_name: p.player_name, handicap: p.handicap, contact_id: p.contact_id })),
+        }))
+      );
     } catch (err) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Failed to load data');
@@ -151,283 +183,333 @@ export default function TeamBuilder() {
   }, [selectedTournament]);
 
   useEffect(() => {
-    if (selectedTournament) {
-      fetchData();
-    }
+    if (selectedTournament) fetchData();
   }, [selectedTournament, fetchData]);
 
+  // --- Generate algorithm suggestions ---
   const handleGenerate = () => {
-    const { suggestedTeams: teams, unassigned: left } = buildTeamSuggestions(
-      golfers,
-      existingTeamContactIds
-    );
-    setSuggestedTeams(teams);
-    setUnassigned(left);
-    setSelectedUnassigned(new Set());
-    setEditingTeamIdx(null);
-    setSwapPosition(null);
+    const { suggestedTeams } = buildTeamSuggestions(golfers, existingTeamContactIds);
+    setPendingTeams(suggestedTeams);
   };
 
-  // --- Accept a single team ---
-  const handleAcceptTeam = async (teamIdx) => {
-    const team = suggestedTeams[teamIdx];
+  // --- Add a blank team manually ---
+  const handleAddNewTeam = () => {
+    setPendingTeams(prev => [
+      ...prev,
+      { name: `Team ${prev.length + existingTeams.length + 1}`, members: [] },
+    ]);
+  };
+
+  // --- Drag & Drop ---
+  const handleDragStart = (golfer) => setDraggedGolfer(golfer);
+  const handleDragEnd = () => { setDraggedGolfer(null); setDragOver(null); };
+
+  const handleDropOnPending = (teamIdx) => {
+    if (!draggedGolfer) return;
+    if (pendingTeams[teamIdx].members.length >= 4) return;
+    setPendingTeams(prev => {
+      const updated = [...prev];
+      updated[teamIdx] = {
+        ...updated[teamIdx],
+        members: [...updated[teamIdx].members, { ...draggedGolfer, reasons: [] }],
+      };
+      return updated;
+    });
+    setDraggedGolfer(null);
+    setDragOver(null);
+  };
+
+  const handleDropOnExisting = async (teamId) => {
+    if (!draggedGolfer) return;
+    const team = existingTeams.find(t => t.id === teamId);
+    if (!team || team.members.length >= 4) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('golf_team_players').insert({
+        team_id: teamId,
+        player_name: `${draggedGolfer.first_name} ${draggedGolfer.last_name}`,
+        contact_id: draggedGolfer.contact_id,
+        handicap: draggedGolfer.golf_handicap || null,
+        player_order: team.members.length + 1,
+      });
+      if (error) throw error;
+
+      setExistingTeamContactIds(prev => new Set([...prev, draggedGolfer.contact_id]));
+      setExistingTeams(prev => prev.map(t =>
+        t.id === teamId
+          ? { ...t, members: [...t.members, { player_name: `${draggedGolfer.first_name} ${draggedGolfer.last_name}`, handicap: draggedGolfer.golf_handicap, contact_id: draggedGolfer.contact_id }] }
+          : t
+      ));
+    } catch (err) {
+      setError(err.message || 'Failed to add player');
+    } finally {
+      setSaving(false);
+    }
+    setDraggedGolfer(null);
+    setDragOver(null);
+  };
+
+  // --- Edit existing saved team ---
+  const handleStartEdit = (team) => {
+    setEditingTeamId(team.id);
+    setEditingTeamData({ name: team.name, members: [...team.members] });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTeamId(null);
+    setEditingTeamData(null);
+  };
+
+  const handleDropOnEditing = () => {
+    if (!draggedGolfer || !editingTeamData) return;
+    if (editingTeamData.members.length >= 4) return;
+    setEditingTeamData(prev => ({
+      ...prev,
+      members: [...prev.members, {
+        player_name: `${draggedGolfer.first_name} ${draggedGolfer.last_name}`,
+        handicap: draggedGolfer.golf_handicap ?? null,
+        contact_id: draggedGolfer.contact_id,
+      }],
+    }));
+    setDraggedGolfer(null);
+    setDragOver(null);
+  };
+
+  const handleRemoveFromEditing = (contactId) => {
+    setEditingTeamData(prev => ({
+      ...prev,
+      members: prev.members.filter(m => m.contact_id !== contactId),
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTeamData || !editingTeamId) return;
     setSaving(true);
     setError(null);
-
     try {
-      // Create golf_team
-      const { data: newTeam, error: teamError } = await supabase
-        .from('golf_teams')
-        .insert({
-          tournament_id: selectedTournament,
-          team_name: team.name,
-          team_number: 0,
-        })
-        .select()
-        .single();
+      // Update team name in teams table
+      const originalTeam = existingTeams.find(t => t.id === editingTeamId);
+      if (editingTeamData.name !== originalTeam?.name) {
+        const { data: gt } = await supabase
+          .from('golf_teams')
+          .select('team_id')
+          .eq('id', editingTeamId)
+          .single();
+        if (gt?.team_id) {
+          const { error: nameErr } = await supabase
+            .from('teams')
+            .update({ name: editingTeamData.name })
+            .eq('id', gt.team_id);
+          if (nameErr) throw nameErr;
+        }
+      }
 
-      if (teamError) throw teamError;
-
-      // Insert golf_team_players
-      const playerInserts = team.members.map((m, i) => ({
-        team_id: newTeam.id,
-        player_name: `${m.first_name} ${m.last_name}`,
-        handicap: m.golf_handicap || null,
-        player_order: i + 1,
-      }));
-
-      const { error: playersError } = await supabase
+      // Replace all players: delete then re-insert
+      const { error: delErr } = await supabase
         .from('golf_team_players')
-        .insert(playerInserts);
+        .delete()
+        .eq('team_id', editingTeamId);
+      if (delErr) throw delErr;
 
-      if (playersError) throw playersError;
+      if (editingTeamData.members.length > 0) {
+        const inserts = editingTeamData.members.map((m, i) => ({
+          team_id: editingTeamId,
+          player_name: m.player_name,
+          contact_id: m.contact_id || null,
+          handicap: m.handicap ?? null,
+          player_order: i + 1,
+        }));
+        const { error: insErr } = await supabase.from('golf_team_players').insert(inserts);
+        if (insErr) throw insErr;
+      }
 
-      // Update local state: remove from suggestions, add to existing team ids
-      const newExisting = new Set(existingTeamContactIds);
-      team.members.forEach((m) => newExisting.add(m.contact_id));
-      setExistingTeamContactIds(newExisting);
-
-      setSuggestedTeams((prev) => prev.filter((_, i) => i !== teamIdx));
+      // Rebuild existingTeamContactIds from scratch after edit
+      await fetchData();
+      setEditingTeamId(null);
+      setEditingTeamData(null);
     } catch (err) {
-      console.error('Error creating team:', err);
-      setError(err.message || 'Failed to create team');
+      console.error(err);
+      setError(err.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
   };
 
-  // --- Accept all teams ---
+  const handleRemoveFromPending = (teamIdx, contactId) => {
+    setPendingTeams(prev => {
+      const updated = [...prev];
+      updated[teamIdx] = {
+        ...updated[teamIdx],
+        members: updated[teamIdx].members.filter(m => m.contact_id !== contactId),
+      };
+      return updated;
+    });
+  };
+
+  // --- Save a single pending team ---
+  const handleAcceptTeam = async (teamIdx) => {
+    const team = pendingTeams[teamIdx];
+    if (!team.name.trim()) { setError('Team name is required'); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      let teamsId;
+      const { data: existing } = await supabase.from('teams').select('id').ilike('name', team.name).maybeSingle();
+      if (existing) {
+        teamsId = existing.id;
+      } else {
+        const { data: newRow, error: e } = await supabase.from('teams').insert({ name: team.name }).select().single();
+        if (e) throw e;
+        teamsId = newRow.id;
+      }
+
+      const { data: newTeam, error: teamError } = await supabase
+        .from('golf_teams')
+        .insert({ tournament_id: selectedTournament, team_id: teamsId, team_number: 0 })
+        .select().single();
+      if (teamError) throw teamError;
+
+      if (team.members.length > 0) {
+        const playerInserts = team.members.map((m, i) => ({
+          team_id: newTeam.id,
+          player_name: m.first_name ? `${m.first_name} ${m.last_name}` : (m.player_name || ''),
+          contact_id: m.contact_id || null,
+          handicap: m.golf_handicap ?? m.handicap ?? null,
+          player_order: i + 1,
+        }));
+        const { error: pe } = await supabase.from('golf_team_players').insert(playerInserts);
+        if (pe) throw pe;
+      }
+
+      const newIds = new Set(existingTeamContactIds);
+      team.members.forEach(m => { if (m.contact_id) newIds.add(m.contact_id); });
+      setExistingTeamContactIds(newIds);
+      setExistingTeams(prev => [...prev, {
+        id: newTeam.id,
+        name: team.name,
+        members: team.members.map(m => ({
+          player_name: m.first_name ? `${m.first_name} ${m.last_name}` : (m.player_name || ''),
+          handicap: m.golf_handicap ?? m.handicap ?? null,
+          contact_id: m.contact_id || null,
+        })),
+      }]);
+      setPendingTeams(prev => prev.filter((_, i) => i !== teamIdx));
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to save team');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // --- Save all pending teams ---
   const handleAcceptAll = async () => {
     setShowConfirmAll(false);
     setSaving(true);
     setError(null);
-
+    // Work through a snapshot since indices shift on each accept
+    const snapshot = [...pendingTeams];
     try {
-      for (let i = 0; i < suggestedTeams.length; i++) {
-        const team = suggestedTeams[i];
+      for (const team of snapshot) {
+        if (!team.name.trim()) continue;
+        let teamsId;
+        const { data: existing } = await supabase.from('teams').select('id').ilike('name', team.name).maybeSingle();
+        if (existing) {
+          teamsId = existing.id;
+        } else {
+          const { data: newRow, error: e } = await supabase.from('teams').insert({ name: team.name }).select().single();
+          if (e) throw e;
+          teamsId = newRow.id;
+        }
 
         const { data: newTeam, error: teamError } = await supabase
           .from('golf_teams')
-          .insert({
-            tournament_id: selectedTournament,
-            team_name: team.name,
-            team_number: 0,
-          })
-          .select()
-          .single();
-
+          .insert({ tournament_id: selectedTournament, team_id: teamsId, team_number: 0 })
+          .select().single();
         if (teamError) throw teamError;
 
-        const playerInserts = team.members.map((m, j) => ({
-          team_id: newTeam.id,
-          player_name: `${m.first_name} ${m.last_name}`,
-          handicap: m.golf_handicap || null,
-          player_order: j + 1,
-        }));
-
-        const { error: playersError } = await supabase
-          .from('golf_team_players')
-          .insert(playerInserts);
-
-        if (playersError) throw playersError;
+        if (team.members.length > 0) {
+          const playerInserts = team.members.map((m, i) => ({
+            team_id: newTeam.id,
+            player_name: m.first_name ? `${m.first_name} ${m.last_name}` : (m.player_name || ''),
+            contact_id: m.contact_id || null,
+            handicap: m.golf_handicap ?? m.handicap ?? null,
+            player_order: i + 1,
+          }));
+          const { error: pe } = await supabase.from('golf_team_players').insert(playerInserts);
+          if (pe) throw pe;
+        }
       }
-
-      // Update local state
-      const newExisting = new Set(existingTeamContactIds);
-      suggestedTeams.forEach((team) => {
-        team.members.forEach((m) => newExisting.add(m.contact_id));
-      });
-      setExistingTeamContactIds(newExisting);
-      setSuggestedTeams([]);
+      // Refresh all data
+      await fetchData();
     } catch (err) {
-      console.error('Error creating teams:', err);
-      setError(err.message || 'Failed to create teams');
+      console.error(err);
+      setError(err.message || 'Failed to save teams');
     } finally {
       setSaving(false);
     }
   };
 
-  // --- Dismiss a suggestion ---
-  const handleDismiss = (teamIdx) => {
-    const team = suggestedTeams[teamIdx];
-    // Move members back to unassigned
-    const dismissed = team.members.map((m) => ({
-      id: m.id,
-      contact_id: m.contact_id,
-      first_name: m.first_name,
-      last_name: m.last_name,
-      email: m.email,
-      golf_handicap: m.golf_handicap,
-      preferred_teammates: m.preferred_teammates,
-      registration_group_id: m.registration_group_id,
-    }));
-    setUnassigned((prev) => [...prev, ...dismissed]);
-    setSuggestedTeams((prev) => prev.filter((_, i) => i !== teamIdx));
-  };
-
-  // --- Edit mode: swap member with unassigned ---
-  const handleStartSwap = (teamIdx, memberIdx) => {
-    setEditingTeamIdx(teamIdx);
-    setSwapPosition({ teamIdx, memberIdx });
-  };
-
-  const handleSwap = (unassignedGolfer) => {
-    if (!swapPosition) return;
-    const { teamIdx, memberIdx } = swapPosition;
-
-    setSuggestedTeams((prev) => {
-      const updated = [...prev];
-      const team = { ...updated[teamIdx] };
-      const members = [...team.members];
-      const removed = members[memberIdx];
-
-      // Replace with unassigned golfer
-      members[memberIdx] = {
-        ...unassignedGolfer,
-        reasons: ['Manually assigned'],
-      };
-      team.members = members;
-      updated[teamIdx] = team;
-
-      // Move removed member back to unassigned
-      setUnassigned((prevU) => {
-        const filtered = prevU.filter(
-          (g) => g.contact_id !== unassignedGolfer.contact_id
-        );
-        return [
-          ...filtered,
-          {
-            id: removed.id,
-            contact_id: removed.contact_id,
-            first_name: removed.first_name,
-            last_name: removed.last_name,
-            email: removed.email,
-            golf_handicap: removed.golf_handicap,
-            preferred_teammates: removed.preferred_teammates,
-            registration_group_id: removed.registration_group_id,
-          },
-        ];
-      });
-
-      return updated;
-    });
-
-    setSwapPosition(null);
-    setEditingTeamIdx(null);
-  };
-
-  const handleCancelSwap = () => {
-    setSwapPosition(null);
-    setEditingTeamIdx(null);
-  };
-
-  // --- Update team name ---
   const handleTeamNameChange = (teamIdx, name) => {
-    setSuggestedTeams((prev) => {
+    setPendingTeams(prev => {
       const updated = [...prev];
       updated[teamIdx] = { ...updated[teamIdx], name };
       return updated;
     });
   };
 
-  // --- Create team from selected unassigned ---
-  const handleCreateFromSelected = () => {
-    if (selectedUnassigned.size < 2 || selectedUnassigned.size > 4) return;
-
-    const members = unassigned.filter((g) =>
-      selectedUnassigned.has(g.contact_id)
-    );
-
-    setSuggestedTeams((prev) => [
-      ...prev,
-      {
-        members: members.map((m) => ({ ...m, reasons: ['Manually assigned'] })),
-        name: `Team ${prev.length + 1}`,
-      },
-    ]);
-
-    setUnassigned((prev) =>
-      prev.filter((g) => !selectedUnassigned.has(g.contact_id))
-    );
-    setSelectedUnassigned(new Set());
+  const handleDismiss = (teamIdx) => {
+    setPendingTeams(prev => prev.filter((_, i) => i !== teamIdx));
   };
 
-  // --- Toggle unassigned selection ---
-  const toggleUnassigned = (contactId) => {
-    setSelectedUnassigned((prev) => {
-      const next = new Set(prev);
-      if (next.has(contactId)) {
-        next.delete(contactId);
-      } else {
-        next.add(contactId);
-      }
-      return next;
-    });
-  };
+  const totalGolfers = golfers.length;
+  const onTeams = existingTeamContactIds.size;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Team Builder</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Auto-generate golf team suggestions from registration data
+          <p className="mt-1 text-sm text-gray-600">
+            Drag golfers from the pool on the left onto team cards on the right.
           </p>
         </div>
-        {suggestedTeams.length > 0 && (
+        {pendingTeams.length > 0 && (
           <button
             onClick={() => setShowConfirmAll(true)}
             disabled={saving}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Accept All'}
+            {saving ? 'Saving...' : `Save All (${pendingTeams.length})`}
           </button>
         )}
       </div>
 
-      {/* Tournament selector + Generate */}
-      <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row sm:items-end gap-4">
+      {/* Tournament selector + actions */}
+      <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tournament
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tournament</label>
           <select
             value={selectedTournament}
-            onChange={(e) => setSelectedTournament(e.target.value)}
+            onChange={e => setSelectedTournament(e.target.value)}
             className="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           >
-            {tournaments.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.year}
-              </option>
-            ))}
+            {tournaments.map(t => <option key={t.id} value={t.id}>{t.year}</option>)}
           </select>
         </div>
         <button
+          onClick={handleAddNewTeam}
+          disabled={loading}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+        >
+          + Add Team
+        </button>
+        <button
           onClick={handleGenerate}
           disabled={loading || golfers.length === 0}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
         >
           Generate Suggestions
         </button>
@@ -442,31 +524,18 @@ export default function TeamBuilder() {
 
       {/* Stats */}
       {!loading && golfers.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-            <dt className="truncate text-sm font-medium text-gray-500">Total Golfers</dt>
-            <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-              {totalGolfers}
-            </dd>
-          </div>
-          <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-            <dt className="truncate text-sm font-medium text-gray-500">On Teams</dt>
-            <dd className="mt-1 text-3xl font-semibold tracking-tight text-green-600">
-              {onTeams}
-            </dd>
-          </div>
-          <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-            <dt className="truncate text-sm font-medium text-gray-500">Suggested Teams</dt>
-            <dd className="mt-1 text-3xl font-semibold tracking-tight text-primary-600">
-              {suggestedCount}
-            </dd>
-          </div>
-          <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-            <dt className="truncate text-sm font-medium text-gray-500">Unassigned</dt>
-            <dd className="mt-1 text-3xl font-semibold tracking-tight text-yellow-600">
-              {unassignedCount}
-            </dd>
-          </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Total Golfers', value: totalGolfers, color: 'text-gray-900' },
+            { label: 'On Teams', value: onTeams, color: 'text-green-600' },
+            { label: 'Pending Teams', value: pendingTeams.length, color: 'text-primary-600' },
+            { label: 'Unassigned', value: unassignedGolfers.length, color: 'text-yellow-600' },
+          ].map(stat => (
+            <div key={stat.label} className="overflow-hidden rounded-lg bg-white px-4 py-4 shadow">
+              <dt className="truncate text-sm font-medium text-gray-500">{stat.label}</dt>
+              <dd className={`mt-1 text-3xl font-semibold tracking-tight ${stat.color}`}>{stat.value}</dd>
+            </div>
+          ))}
         </div>
       )}
 
@@ -478,232 +547,289 @@ export default function TeamBuilder() {
         </div>
       )}
 
-      {/* Suggested Teams */}
-      {suggestedTeams.length > 0 && (
-        <div>
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Suggested Teams ({suggestedTeams.length})
-          </h2>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {suggestedTeams.map((team, teamIdx) => (
-              <div
-                key={teamIdx}
-                className="bg-white overflow-hidden shadow rounded-lg"
-              >
-                <div className="px-4 py-5 sm:p-6">
-                  {/* Team name input */}
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      value={team.name}
-                      onChange={(e) => handleTeamNameChange(teamIdx, e.target.value)}
-                      className="block w-full text-lg font-medium text-gray-900 border-0 border-b border-gray-200 focus:border-primary-500 focus:ring-0 px-0 py-1"
-                      placeholder="Team name"
-                    />
-                  </div>
-
-                  {/* Members */}
-                  <div className="space-y-2 mb-4">
-                    {team.members.map((member, memberIdx) => (
-                      <div
-                        key={member.contact_id}
-                        className="flex items-start justify-between gap-2"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900">
-                            {member.first_name} {member.last_name}
-                            {member.golf_handicap != null && (
-                              <span className="text-gray-400 font-normal ml-2">
-                                ({member.golf_handicap})
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            {member.reasons?.map((reason, ri) => (
-                              <span
-                                key={ri}
-                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                  reason.startsWith('Registered')
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : reason.startsWith('Preferred') || reason.startsWith('Prefers')
-                                    ? 'bg-purple-100 text-purple-700'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                {reason}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        {/* Swap button */}
-                        {swapPosition?.teamIdx === teamIdx &&
-                        swapPosition?.memberIdx === memberIdx ? (
-                          <button
-                            onClick={handleCancelSwap}
-                            className="text-xs text-red-600 hover:text-red-800 font-medium whitespace-nowrap"
-                          >
-                            Cancel
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleStartSwap(teamIdx, memberIdx)}
-                            className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap"
-                          >
-                            Swap
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Swap picker */}
-                  {swapPosition?.teamIdx === teamIdx && (
-                    <div className="mb-4 p-3 bg-yellow-50 rounded-md border border-yellow-200">
-                      <p className="text-xs font-medium text-yellow-800 mb-2">
-                        Select replacement from unassigned:
-                      </p>
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {unassigned.map((g) => (
-                          <button
-                            key={g.contact_id}
-                            onClick={() => handleSwap(g)}
-                            className="w-full text-left px-2 py-1 text-sm rounded hover:bg-yellow-100"
-                          >
-                            {g.first_name} {g.last_name}
-                            {g.golf_handicap != null && (
-                              <span className="text-gray-400 ml-1">
-                                ({g.golf_handicap})
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                        {unassigned.length === 0 && (
-                          <p className="text-xs text-gray-500">No unassigned golfers</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAcceptTeam(teamIdx)}
-                      disabled={saving}
-                      className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleDismiss(teamIdx)}
-                      className="inline-flex justify-center items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Unassigned Golfers */}
-      {!loading && (suggestedTeams.length > 0 || unassigned.length > 0) && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900">
-              Unassigned Golfers ({unassigned.length})
-            </h2>
-            {selectedUnassigned.size >= 2 && selectedUnassigned.size <= 4 && (
-              <button
-                onClick={handleCreateFromSelected}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Create Team from Selected ({selectedUnassigned.size})
-              </button>
-            )}
-          </div>
-
-          {unassigned.length > 0 ? (
+      {/* Main two-panel layout */}
+      {!loading && golfers.length > 0 && (
+        <div className="flex gap-4 items-start">
+          {/* Left: Unassigned pool */}
+          <div className="w-64 flex-shrink-0">
             <div className="bg-white shadow rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 w-10">
-                      <span className="sr-only">Select</span>
-                    </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Name
-                    </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Handicap
-                    </th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Preferred Teammates
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {unassigned.map((golfer) => (
-                    <tr
+              <div
+                className={`px-3 py-2 border-b border-gray-200 ${dragOver === 'unassigned' ? 'bg-yellow-50' : 'bg-gray-50'}`}
+                onDragOver={e => { e.preventDefault(); setDragOver('unassigned'); }}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={() => setDragOver(null)}
+              >
+                <h2 className="text-sm font-semibold text-gray-700">
+                  Unassigned ({unassignedGolfers.length})
+                </h2>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                {unassignedGolfers.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-gray-400 text-center">All assigned</p>
+                ) : (
+                  unassignedGolfers.map(golfer => (
+                    <div
                       key={golfer.contact_id}
-                      className={`hover:bg-gray-50 ${
-                        selectedUnassigned.has(golfer.contact_id)
-                          ? 'bg-primary-50'
-                          : ''
+                      draggable
+                      onDragStart={() => handleDragStart(golfer)}
+                      onDragEnd={handleDragEnd}
+                      className={`px-3 py-2.5 cursor-grab active:cursor-grabbing select-none hover:bg-gray-50 ${
+                        draggedGolfer?.contact_id === golfer.contact_id ? 'opacity-40' : ''
                       }`}
                     >
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3">
+                      <div className="flex items-center gap-2">
+                        <svg className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+                        </svg>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {golfer.first_name} {golfer.last_name}
+                          </div>
+                          {golfer.golf_handicap != null && (
+                            <div className="text-xs text-gray-400">HCP {golfer.golf_handicap}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Teams */}
+          <div className="flex-1 min-w-0">
+            {/* Existing saved teams */}
+            {existingTeams.length > 0 && (
+              <div className="mb-4">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Saved Teams ({existingTeams.length})
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {existingTeams.map(team => {
+                    const isEditing = editingTeamId === team.id;
+                    const displayMembers = isEditing ? editingTeamData.members : team.members;
+                    const isFull = displayMembers.length >= 4;
+                    const isOver = dragOver === `existing-${team.id}`;
+
+                    return (
+                      <div
+                        key={team.id}
+                        onDragOver={e => { if (isEditing && !isFull && draggedGolfer) { e.preventDefault(); setDragOver(`existing-${team.id}`); } }}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={() => isEditing && handleDropOnEditing()}
+                        className={`bg-white shadow rounded-lg p-3 border-2 transition-colors ${
+                          isEditing
+                            ? isOver ? 'border-primary-400 bg-primary-50' : 'border-primary-300'
+                            : 'border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editingTeamData.name}
+                              onChange={e => setEditingTeamData(prev => ({ ...prev, name: e.target.value }))}
+                              className="text-sm font-semibold text-gray-900 border-0 border-b border-primary-300 focus:border-primary-500 focus:ring-0 px-0 py-0.5 bg-transparent w-full mr-2"
+                            />
+                          ) : (
+                            <span className="font-semibold text-gray-900 text-sm">{team.name}</span>
+                          )}
+                          <span className="text-xs text-gray-400 flex-shrink-0">{displayMembers.length}/4</span>
+                        </div>
+
+                        <div className="space-y-1 mb-2">
+                          {displayMembers.map((m, i) => (
+                            <div key={m.contact_id || i} className="text-sm text-gray-600 flex items-center justify-between">
+                              <span>
+                                <span className="text-gray-300 text-xs mr-1">{i + 1}.</span>
+                                {m.player_name}
+                                {m.handicap != null && <span className="text-gray-400 text-xs ml-1">({m.handicap})</span>}
+                              </span>
+                              {isEditing && (
+                                <button
+                                  onClick={() => handleRemoveFromEditing(m.contact_id)}
+                                  className="text-gray-300 hover:text-red-500 ml-1 flex-shrink-0"
+                                  title="Remove"
+                                >×</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {isEditing && !isFull && (
+                          <div className={`border-2 border-dashed rounded p-1.5 text-center text-xs mb-2 ${
+                            isOver ? 'border-primary-400 text-primary-600 bg-primary-50' : 'border-gray-200 text-gray-400'
+                          }`}>
+                            {draggedGolfer ? 'Drop here' : `${4 - displayMembers.length} spot${4 - displayMembers.length !== 1 ? 's' : ''} open`}
+                          </div>
+                        )}
+
+                        {!isEditing && !isFull && (
+                          <div className="mt-1 text-xs text-gray-400 text-center">{4 - displayMembers.length} spot{4 - displayMembers.length !== 1 ? 's' : ''} open</div>
+                        )}
+                        {!isEditing && isFull && (
+                          <div className="mt-1 text-xs text-gray-400 text-center">Full</div>
+                        )}
+
+                        <div className="mt-2 flex gap-2">
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={handleSaveEdit}
+                                disabled={saving}
+                                className="flex-1 px-2 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
+                              >
+                                {saving ? 'Saving…' : 'Save'}
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="px-2 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleStartEdit(team)}
+                              className="w-full px-2 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Pending (unsaved) teams */}
+            {pendingTeams.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Pending Teams — not yet saved ({pendingTeams.length})
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {pendingTeams.map((team, teamIdx) => {
+                    const isFull = team.members.length >= 4;
+                    const isOver = dragOver === `pending-${teamIdx}`;
+                    return (
+                      <div
+                        key={teamIdx}
+                        onDragOver={e => { if (!isFull && draggedGolfer) { e.preventDefault(); setDragOver(`pending-${teamIdx}`); } }}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={() => handleDropOnPending(teamIdx)}
+                        className={`bg-white shadow rounded-lg p-3 border-2 transition-colors ${
+                          isOver ? 'border-primary-400 bg-primary-50' : 'border-dashed border-gray-300'
+                        }`}
+                      >
+                        {/* Editable name */}
                         <input
-                          type="checkbox"
-                          checked={selectedUnassigned.has(golfer.contact_id)}
-                          onChange={() => toggleUnassigned(golfer.contact_id)}
-                          className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                          type="text"
+                          value={team.name}
+                          onChange={e => handleTeamNameChange(teamIdx, e.target.value)}
+                          className="block w-full text-sm font-semibold text-gray-900 border-0 border-b border-gray-200 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-2 bg-transparent"
+                          placeholder="Team name"
                         />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                        {golfer.first_name} {golfer.last_name}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {golfer.golf_handicap ?? '-'}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-500">
-                        {golfer.preferred_teammates || '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-white rounded-lg shadow">
-              <p className="text-gray-500">All golfers have been assigned to teams</p>
-            </div>
-          )}
+
+                        {/* Members */}
+                        <div className="space-y-1 mb-2">
+                          {team.members.map((m, i) => (
+                            <div key={m.contact_id || i} className="flex items-center justify-between text-sm text-gray-600">
+                              <span>
+                                <span className="text-gray-300 text-xs mr-1">{i + 1}.</span>
+                                {m.first_name ? `${m.first_name} ${m.last_name}` : m.player_name}
+                                {(m.golf_handicap ?? m.handicap) != null && (
+                                  <span className="text-gray-400 text-xs ml-1">({m.golf_handicap ?? m.handicap})</span>
+                                )}
+                              </span>
+                              <button
+                                onClick={() => handleRemoveFromPending(teamIdx, m.contact_id)}
+                                className="text-gray-300 hover:text-red-500 ml-1 flex-shrink-0"
+                                title="Remove"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Drop zone */}
+                        {!isFull && (
+                          <div className={`border-2 border-dashed rounded p-1.5 text-center text-xs mb-2 ${
+                            isOver ? 'border-primary-400 text-primary-600 bg-primary-50' : 'border-gray-200 text-gray-400'
+                          }`}>
+                            {draggedGolfer ? 'Drop here' : `${4 - team.members.length} spot${4 - team.members.length !== 1 ? 's' : ''} open`}
+                          </div>
+                        )}
+
+                        {/* Reason tags (from algorithm) */}
+                        {team.members.some(m => m.reasons?.length > 0) && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {team.members.flatMap(m => m.reasons || []).filter((r, i, a) => a.indexOf(r) === i).map((reason, ri) => (
+                              <span key={ri} className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                reason.startsWith('Registered') ? 'bg-blue-100 text-blue-700'
+                                : reason.startsWith('Preferred') || reason.startsWith('Prefers') ? 'bg-purple-100 text-purple-700'
+                                : 'bg-gray-100 text-gray-600'
+                              }`}>{reason}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAcceptTeam(teamIdx)}
+                            disabled={saving || team.members.length === 0}
+                            className="flex-1 px-2 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => handleDismiss(teamIdx)}
+                            className="px-2 py-1.5 text-xs font-medium text-red-700 border border-red-300 hover:bg-red-50 rounded"
+                          >
+                            Discard
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Empty state for teams panel */}
+            {existingTeams.length === 0 && pendingTeams.length === 0 && (
+              <div className="bg-white shadow rounded-lg p-8 text-center text-gray-400 border-2 border-dashed border-gray-200">
+                <p className="text-sm">No teams yet.</p>
+                <p className="text-sm mt-1">Click <strong>+ Add Team</strong> to create one manually, or <strong>Generate Suggestions</strong> to auto-assign.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — no registrations */}
       {!loading && golfers.length === 0 && !error && (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-gray-900">No golf registrations</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Select a tournament with golf registrations to get started.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Select a tournament with golf registrations to get started.</p>
         </div>
       )}
 
-      {/* Confirm All Dialog */}
       <ConfirmDialog
         isOpen={showConfirmAll}
         onClose={() => setShowConfirmAll(false)}
         onConfirm={handleAcceptAll}
-        title="Accept All Teams"
-        message={`This will create ${suggestedTeams.length} team${suggestedTeams.length !== 1 ? 's' : ''} with a total of ${suggestedTeams.reduce((sum, t) => sum + t.members.length, 0)} players. Continue?`}
-        confirmText="Accept All"
+        title="Save All Teams"
+        message={`This will save ${pendingTeams.length} team${pendingTeams.length !== 1 ? 's' : ''} with a total of ${pendingTeams.reduce((sum, t) => sum + t.members.length, 0)} players. Continue?`}
+        confirmText="Save All"
         confirmButtonClass="bg-primary-600 hover:bg-primary-700"
       />
     </div>

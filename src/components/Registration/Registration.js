@@ -520,38 +520,62 @@ export default function Registration() {
             {registrationStatus !== 'full' && (
               <>
                 <div className="mt-6 sm:mt-10 rounded-lg bg-primary-50 p-4 sm:p-8 ring-1 ring-primary-200">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
-                  <div className="text-left space-y-4">
-                    <div>
-                      <p className="text-base text-gray-700">
-                        <strong>Total Amount Due:</strong> <span className="text-2xl font-bold text-primary-600">{submittedTotals?.hasTbd && submittedTotal === 0 ? 'TBD' : `$${submittedTotal}`}</span>
-                      </p>
-                      {submittedTotals?.hasTbd && (
-                        <div className="mt-1 space-y-0.5">
-                          <p className="text-sm text-amber-700">
-                            {submittedTotals.hasUnestimatedTbd && submittedTotals.estimatedMin === 0
-                              ? '+ TBD'
-                              : submittedTotals.hasUnestimatedTbd
-                              ? `+ est. $${submittedTotals.estimatedMin}–$${submittedTotals.estimatedMax} and additional TBD costs`
-                              : `+ est. $${submittedTotals.estimatedMin}–$${submittedTotals.estimatedMax} for TBD event(s)`
-                            }
+                  {submittedTotals?.hasTbd && submittedTotal === 0 ? (
+                    <>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Watch Your Email</h3>
+                      <div className="text-left space-y-4">
+                        <p className="text-base text-gray-700">
+                          Registration pricing for your selected event(s) is still being finalized.
+                        </p>
+                        <div className="border-t border-primary-200 pt-4">
+                          <p className="text-base font-semibold text-gray-900 mb-2">What to expect:</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                            <li>An email with full tournament details will be sent to you</li>
+                            <li>That email will include your final registration fees</li>
+                            <li>Payment instructions will be included at that time</li>
+                          </ul>
+                          <p className="mt-4 text-sm text-gray-600 bg-white p-3 rounded border border-primary-200">
+                            <strong>Note:</strong> Your spot is reserved. No payment is needed until you receive the details email.
                           </p>
-                          <p className="text-sm text-gray-500">We will reach out to you with the final cost for TBD events.</p>
                         </div>
-                      )}
-                    </div>
-                    <div className="border-t border-primary-200 pt-4">
-                      <p className="text-base font-semibold text-gray-900 mb-3">Please submit payment via:</p>
-                      <div className="space-y-2 text-sm text-gray-700">
-                        <p><strong>Venmo:</strong> Payment details will be provided</p>
-                        <p><strong>Zelle:</strong> Payment details will be provided</p>
                       </div>
-                      <p className="mt-4 text-sm text-gray-600 bg-white p-3 rounded border border-primary-200">
-                        <strong>Note:</strong> Your registration will be confirmed once payment is received.
-                        Please include your name in the payment note.
-                      </p>
-                    </div>
-                  </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Next Steps: Payment Required</h3>
+                      <div className="text-left space-y-4">
+                        <div>
+                          <p className="text-base text-gray-700">
+                            <strong>Total Amount Due:</strong> <span className="text-2xl font-bold text-primary-600">${submittedTotal}</span>
+                          </p>
+                          {submittedTotals?.hasTbd && (
+                            <div className="mt-1 space-y-0.5">
+                              <p className="text-sm text-amber-700">
+                                {submittedTotals.hasUnestimatedTbd && submittedTotals.estimatedMin === 0
+                                  ? '+ TBD'
+                                  : submittedTotals.hasUnestimatedTbd
+                                  ? `+ est. $${submittedTotals.estimatedMin}–$${submittedTotals.estimatedMax} and additional TBD costs`
+                                  : `+ est. $${submittedTotals.estimatedMin}–$${submittedTotals.estimatedMax} for TBD event(s)`
+                                }
+                              </p>
+                              <p className="text-sm text-gray-500">We will reach out to you with the final cost for TBD events.</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t border-primary-200 pt-4">
+                          <p className="text-base font-semibold text-gray-900 mb-3">Please submit payment via:</p>
+                          <div className="space-y-2 text-sm text-gray-700">
+                            <p><strong>Venmo:</strong> Payment details will be provided</p>
+                            <p><strong>Zelle:</strong> Payment details will be provided</p>
+                          </div>
+                          <p className="mt-4 text-sm text-gray-600 bg-white p-3 rounded border border-primary-200">
+                            <strong>Note:</strong> Your registration will be confirmed once payment is received.
+                            Please include your name in the payment note.
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <p className="mt-8 text-base text-gray-600 font-serif">
@@ -1048,7 +1072,7 @@ export default function Registration() {
                       <button
                         type="button"
                         onClick={() => push({ firstName: '', lastName: '', email: '', phone: '', events: [], golfHandicap: '', preferredTeammates: '', childCounts: {} })}
-                        className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
+                        className="mx-auto flex items-center gap-1.5 rounded-lg border border-primary-600 bg-white px-4 py-2 text-sm font-medium text-primary-600 shadow-sm hover:bg-primary-50 transition-colors"
                       >
                         + Add Attendee
                       </button>

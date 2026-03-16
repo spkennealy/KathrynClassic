@@ -3,7 +3,6 @@ import { supabase } from '../../../supabaseClient';
 
 export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
   const [formData, setFormData] = useState({
-    team_name: '',
     team_number: '',
     total_score: '',
     score_to_par: '',
@@ -21,6 +20,13 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
   const [tournamentPar, setTournamentPar] = useState(72);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Team picker state
+  const [availableTeams, setAvailableTeams] = useState([]);
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [isCreatingNewTeam, setIsCreatingNewTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [teamSearch, setTeamSearch] = useState('');
 
   useEffect(() => {
     // Fetch tournament par
@@ -128,19 +134,34 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
       }
     };
 
+    const fetchTeams = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('teams')
+          .select('id, name')
+          .order('name');
+        if (!error) setAvailableTeams(data || []);
+      } catch (err) {
+        console.error('Error fetching teams:', err);
+      }
+    };
+
     fetchTournamentPar();
     fetchContacts();
+    fetchTeams();
   }, [tournamentId]);
 
   useEffect(() => {
     if (team) {
       setFormData({
-        team_name: team.team_name || '',
         team_number: team.team_number || '',
         total_score: team.total_score || '',
         score_to_par: team.score_to_par || '',
         status: team.status || 'F',
       });
+      if (team.teams_id) {
+        setSelectedTeamId(team.teams_id);
+      }
 
       if (team.players && team.players.length > 0) {
         const loadedPlayers = team.players.map(p => ({
@@ -310,9 +331,31 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
     setError(null);
 
     try {
+      // Resolve team_id — either existing or newly created
+      let resolvedTeamId = selectedTeamId;
+
+      if (isCreatingNewTeam) {
+        if (!newTeamName.trim()) {
+          setError('Please enter a team name');
+          setLoading(false);
+          return;
+        }
+        const { data: newTeam, error: newTeamError } = await supabase
+          .from('teams')
+          .insert({ name: newTeamName.trim() })
+          .select()
+          .single();
+        if (newTeamError) throw newTeamError;
+        resolvedTeamId = newTeam.id;
+      } else if (!resolvedTeamId) {
+        setError('Please select a team or create a new one');
+        setLoading(false);
+        return;
+      }
+
       const teamData = {
         tournament_id: tournamentId,
-        team_name: formData.team_name || null,
+        team_id: resolvedTeamId,
         team_number: formData.team_number ? parseInt(formData.team_number) : null,
         total_score: parseInt(formData.total_score),
         score_to_par: parseInt(formData.score_to_par),
@@ -437,35 +480,78 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
           )}
 
           <div className="space-y-6">
-            {/* Team Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="team_name" className="block text-sm font-medium text-gray-700">
-                  Team Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  id="team_name"
-                  value={formData.team_name}
-                  onChange={(e) => setFormData({ ...formData, team_name: e.target.value })}
-                  placeholder="e.g., The Birdies"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
-              </div>
+            {/* Team Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Team <span className="text-red-500">*</span>
+              </label>
+              {!isCreatingNewTeam ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={teamSearch}
+                    onChange={(e) => setTeamSearch(e.target.value)}
+                    placeholder="Search teams..."
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  />
+                  <select
+                    value={selectedTeamId}
+                    onChange={(e) => setSelectedTeamId(e.target.value)}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    size={Math.min(6, availableTeams.filter(t =>
+                      !teamSearch || t.name.toLowerCase().includes(teamSearch.toLowerCase())
+                    ).length + 1)}
+                  >
+                    <option value="">-- Select a team --</option>
+                    {availableTeams
+                      .filter(t => !teamSearch || t.name.toLowerCase().includes(teamSearch.toLowerCase()))
+                      .map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))
+                    }
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingNewTeam(true)}
+                    className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+                  >
+                    + Create new team
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    placeholder="New team name"
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setIsCreatingNewTeam(false); setNewTeamName(''); }}
+                    className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+                  >
+                    Back to existing teams
+                  </button>
+                </div>
+              )}
+            </div>
 
-              <div>
-                <label htmlFor="team_number" className="block text-sm font-medium text-gray-700">
-                  Team Number (Optional)
-                </label>
-                <input
-                  type="number"
-                  id="team_number"
-                  value={formData.team_number}
-                  onChange={(e) => setFormData({ ...formData, team_number: e.target.value })}
-                  placeholder="e.g., 1"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
-              </div>
+            {/* Team Number */}
+            <div>
+              <label htmlFor="team_number" className="block text-sm font-medium text-gray-700">
+                Team Number (Optional)
+              </label>
+              <input
+                type="number"
+                id="team_number"
+                value={formData.team_number}
+                onChange={(e) => setFormData({ ...formData, team_number: e.target.value })}
+                placeholder="e.g., 1"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              />
             </div>
 
             {/* Players */}

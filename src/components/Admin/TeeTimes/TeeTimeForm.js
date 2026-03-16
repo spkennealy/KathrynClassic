@@ -64,23 +64,21 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
       const { data, error } = await supabase
         .from('golf_teams')
         .select(`
-          *,
-          golf_team_players(
-            player_name,
-            player_order
-          )
+          id,
+          team_number,
+          teams ( name ),
+          golf_team_players ( player_name, player_order )
         `)
         .eq('tournament_id', tournamentId)
-        .order('team_name');
+        .order('teams(name)');
 
       if (error) throw error;
 
-      // Transform data to include players array
       const transformedTeams = (data || []).map(team => ({
         team_id: team.id,
-        team_name: team.team_name,
+        team_name: team.teams?.name,
         team_number: team.team_number,
-        players: team.golf_team_players?.sort((a, b) => a.player_order - b.player_order) || []
+        players: team.golf_team_players?.sort((a, b) => a.player_order - b.player_order) || [],
       }));
 
       setTeams(transformedTeams);

@@ -30,6 +30,39 @@ export default function ContactList() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [availableYears, setAvailableYears] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ column: 'last_name', direction: 'asc' });
+
+  const SORT_COLUMNS = {
+    name: 'last_name',
+    email: 'email',
+    phone: 'phone',
+    registrations: 'total_registrations',
+    tournaments: 'tournaments_attended',
+    years: 'tournament_years',
+    awards: 'awards_won',
+  };
+
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      column: SORT_COLUMNS[key],
+      direction: prev.column === SORT_COLUMNS[key] && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ colKey }) => {
+    const active = sortConfig.column === SORT_COLUMNS[colKey];
+    return (
+      <span className={`ml-1 inline-flex flex-col leading-none ${active ? 'text-primary-600' : 'text-gray-300'}`}>
+        <svg className={`h-3 w-3 -mb-0.5 ${active && sortConfig.direction === 'asc' ? 'text-primary-600' : 'text-gray-300'}`} viewBox="0 0 10 6" fill="currentColor">
+          <path d="M0 6l5-6 5 6z"/>
+        </svg>
+        <svg className={`h-3 w-3 ${active && sortConfig.direction === 'desc' ? 'text-primary-600' : 'text-gray-300'}`} viewBox="0 0 10 6" fill="currentColor">
+          <path d="M0 0l5 6 5-6z"/>
+        </svg>
+      </span>
+    );
+  };
 
   // Fetch contacts and total count
   useEffect(() => {
@@ -81,7 +114,10 @@ export default function ContactList() {
           query = query.contains('tournament_years', [parseInt(filters.tournamentYear)]);
         }
 
-        query = query.order('last_name');
+        query = query.order(sortConfig.column, { ascending: sortConfig.direction === 'asc', nullsFirst: false });
+        if (sortConfig.column !== 'last_name') {
+          query = query.order('last_name', { ascending: true });
+        }
 
         // Apply pagination or limit based on search
         if (searchTerm || hasActiveFilters()) {
@@ -120,7 +156,7 @@ export default function ContactList() {
     if (!selectAllPages) {
       setSelectedContactIds(new Set());
     }
-  }, [currentPage, selectAllPages, searchTerm, filters]);
+  }, [currentPage, selectAllPages, searchTerm, filters, sortConfig]);
 
   // When searching, contacts are already filtered by the database query
   // When not searching, show all contacts from the current page
@@ -637,25 +673,39 @@ export default function ContactList() {
                 />
               </th>
               <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                Name
+                <button onClick={() => handleSort('name')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Name<SortIcon colKey="name" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                Email
+                <button onClick={() => handleSort('email')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Email<SortIcon colKey="email" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                Phone
+                <button onClick={() => handleSort('phone')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Phone<SortIcon colKey="phone" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                Registrations
+                <button onClick={() => handleSort('registrations')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Registrations<SortIcon colKey="registrations" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                Tournaments
+                <button onClick={() => handleSort('tournaments')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Tournaments<SortIcon colKey="tournaments" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                Years
+                <button onClick={() => handleSort('years')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Years<SortIcon colKey="years" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                Awards
+                <button onClick={() => handleSort('awards')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+                  Awards<SortIcon colKey="awards" />
+                </button>
               </th>
               <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
                 Actions
