@@ -112,7 +112,7 @@ export const getTournamentEvents = async (year) => {
  * Format date for display
  */
 export const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(`${dateString}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -138,8 +138,8 @@ export const formatTime = (timeString) => {
  * Format date range
  */
 export const formatDateRange = (startDate, endDate) => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
 
   const options = { month: 'long', day: 'numeric', year: 'numeric' };
 
