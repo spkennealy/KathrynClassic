@@ -82,7 +82,7 @@ export default function Home() {
     <div className="relative isolate overflow-hidden">
       {/* Hero Section */}
       <div className="relative bg-primary-600 px-4 sm:px-6 py-12 sm:py-24 lg:py-30 overflow-hidden">
-        <div className="mx-auto max-w-4xl text-center relative z-20">
+        <div className="mx-auto max-w-6xl relative z-20 md:flex md:items-center md:gap-10 lg:gap-16">
           {/* Mobile-only hero photo */}
           <div className="mb-6 flex justify-center md:hidden">
             <img
@@ -91,34 +91,36 @@ export default function Home() {
               className="w-48 h-48 rounded-xl object-cover object-[50%_0%] shadow-lg ring-2 ring-white/30"
             />
           </div>
+          <div className="text-center md:text-left md:flex-1">
+            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif md:text-center">
+              The Kathryn Classic
+            </h1>
+            <p className="mt-4 sm:mt-6 text-base sm:text-xl leading-7 sm:leading-8 text-white/90">
+              Join us for a weekend of golf, community, and giving back. The annual Kathryn Classic tournament brings together golfers of all skill levels for a memorable experience while supporting CJD research through the CJD Foundation.<br /><br />
+              Even if you don't play golf, we would love to have you join us for the welcome dinner, beach day, or other family activities.
+            </p>
+            <div className="mt-8 sm:mt-10 flex items-center justify-center gap-x-6">
+              {loading ? (
+                <div className="rounded-lg px-6 py-3 text-base sm:text-lg font-semibold invisible font-serif">
+                  Register Now
+                </div>
+              ) : (
+                <Link
+                  to="/registration"
+                  className="rounded-lg bg-primary-700 px-6 py-3 text-base sm:text-lg font-semibold text-white shadow-sm hover:bg-primary-800 transition-colors font-serif"
+                >
+                  {getButtonText()}
+                </Link>
+              )}
+            </div>
+          </div>
           {/* Desktop-only hero photo */}
-          <div className="mb-8 hidden md:flex justify-center">
+          <div className="hidden md:flex md:flex-shrink-0 md:justify-end">
             <img
               src="/home_photos/kathryn_kyles_wedding.jpg"
               alt="Kathryn"
-              className="w-56 h-56 lg:w-64 lg:h-64 rounded-xl object-cover shadow-lg ring-2 ring-white/30"
+              className="w-64 h-64 lg:w-80 lg:h-80 rounded-xl object-cover shadow-lg ring-2 ring-white/30"
             />
-          </div>
-          <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif">
-            The Kathryn Classic
-          </h1>
-          <p className="mt-4 sm:mt-6 text-base sm:text-xl leading-7 sm:leading-8 text-white/90">
-            Join us for a weekend of golf, community, and giving back. The annual Kathryn Classic tournament brings together golfers of all skill levels for a memorable experience while supporting CJD research through the CJD Foundation.<br /><br />
-            Even if you don't play golf, we would love to have you join us for the welcome dinner, beach day, or other family activities.
-          </p>
-          <div className="mt-8 sm:mt-10 flex items-center justify-center gap-x-6">
-            {loading ? (
-              <div className="rounded-lg px-6 py-3 text-base sm:text-lg font-semibold invisible font-serif">
-                Register Now
-              </div>
-            ) : (
-              <Link
-                to="/registration"
-                className="rounded-lg bg-primary-700 px-6 py-3 text-base sm:text-lg font-semibold text-white shadow-sm hover:bg-primary-800 transition-colors font-serif"
-              >
-                {getButtonText()}
-              </Link>
-            )}
           </div>
         </div>
       </div>
