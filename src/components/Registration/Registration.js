@@ -12,7 +12,7 @@ const AdultSchema = Yup.object().shape({
   events: Yup.array().min(1, 'Select at least one event'),
   golfHandicap: Yup.number().when('events', {
     is: (events) => events && events.includes('golf_tournament'),
-    then: () => Yup.number().required('Handicap is required for golf. Put 20 if you don\'t have one.'),
+    then: () => Yup.number().required('Required (use 20 if unknown)'),
     otherwise: () => Yup.number().notRequired(),
   }),
   preferredTeammates: Yup.string(),
@@ -994,9 +994,9 @@ export default function Registration() {
                               <ErrorMessage name={`adults.${index}.phone`} component="div" className="mt-1 text-sm text-red-600" />
                             </div>
 
-                            <div className="sm:col-span-2">
+                            <div className="col-span-2">
                               <fieldset>
-                                <legend className="block text-sm font-semibold leading-6 text-gray-900">Select Events</legend>
+                                <legend className="block text-sm font-semibold leading-6 text-gray-900 text-center w-full">Select Events</legend>
                                 <div className="mt-2 space-y-3">
                                   {events.map((event) => (
                                     <div key={event.id} className="space-y-2">
@@ -1033,37 +1033,36 @@ export default function Registration() {
                                           <span className="text-xs text-gray-500 whitespace-nowrap">children (free)</span>
                                         </div>
                                       )}
+                                      {event.id === 'golf_tournament' && adult.events.includes(event.id) && (
+                                        <div className="ml-7 animate-highlight rounded-lg px-2 py-1">
+                                          <div className="flex items-start gap-2">
+                                            <div className="flex flex-col gap-1 flex-shrink-0">
+                                              <div className="flex items-center gap-2">
+                                                <Field
+                                                  type="number"
+                                                  name={`adults.${index}.golfHandicap`}
+                                                  min="0"
+                                                  placeholder="20"
+                                                  className="w-20 rounded-lg border-0 px-2 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 text-sm"
+                                                />
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">handicap</span>
+                                              </div>
+                                              <ErrorMessage name={`adults.${index}.golfHandicap`} component="div" className="text-xs text-red-600" />
+                                            </div>
+                                            <Field
+                                              type="text"
+                                              name={`adults.${index}.preferredTeammates`}
+                                              placeholder="Preferred teammates"
+                                              className="flex-1 min-w-0 rounded-lg border-0 px-2 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 text-sm"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
                                 <ErrorMessage name={`adults.${index}.events`} component="div" className="mt-1 text-sm text-red-600" />
                               </fieldset>
-
-                              {adult.events.includes('golf_tournament') && (
-                                <>
-                                  <div className="mt-4">
-                                    <label className="block text-sm font-semibold leading-6 text-gray-900">Golf Handicap</label>
-                                    <Field
-                                      type="number"
-                                      name={`adults.${index}.golfHandicap`}
-                                      placeholder="Enter handicap (or 20 if unknown)"
-                                      className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
-                                    />
-                                    <ErrorMessage name={`adults.${index}.golfHandicap`} component="div" className="mt-1 text-sm text-red-600" />
-                                  </div>
-                                  <div className="mt-4">
-                                    <label className="block text-sm font-semibold leading-6 text-gray-900">Preferred Teammates</label>
-                                    <Field
-                                      type="text"
-                                      name={`adults.${index}.preferredTeammates`}
-                                      placeholder="Scottie Scheffler, Rory McIlroy, Tiger Woods..."
-                                      className="mt-2 block w-full rounded-lg border-0 px-3.5 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 sm:text-sm"
-                                    />
-                                    <p className="mt-1 text-xs text-gray-500">Enter the names of players you'd like to play with, separated by commas</p>
-                                    <ErrorMessage name={`adults.${index}.preferredTeammates`} component="div" className="mt-1 text-sm text-red-600" />
-                                  </div>
-                                </>
-                              )}
                             </div>
                           </div>
                         </div>

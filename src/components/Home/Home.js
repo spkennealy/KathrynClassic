@@ -91,6 +91,14 @@ export default function Home() {
               className="w-48 h-48 rounded-xl object-cover object-[50%_0%] shadow-lg ring-2 ring-white/30"
             />
           </div>
+          {/* Desktop-only hero photo */}
+          <div className="mb-8 hidden md:flex justify-center">
+            <img
+              src="/home_photos/kathryn_kyles_wedding.jpg"
+              alt="Kathryn"
+              className="w-56 h-56 lg:w-64 lg:h-64 rounded-xl object-cover shadow-lg ring-2 ring-white/30"
+            />
+          </div>
           <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif">
             The Kathryn Classic
           </h1>
