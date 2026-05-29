@@ -14,6 +14,7 @@ export default function ContactList() {
   const [totalCount, setTotalCount] = useState(0);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedContactIds, setSelectedContactIds] = useState(new Set());
@@ -148,6 +149,7 @@ export default function ContactList() {
         setError(err.message || 'Failed to load contacts');
       } finally {
         setLoading(false);
+        setInitialLoading(false);
       }
     };
 
@@ -412,7 +414,7 @@ export default function ContactList() {
     filteredContacts.every(c => selectedContactIds.has(c.contact_id));
   const someFilteredSelected = filteredContacts.some(c => selectedContactIds.has(c.contact_id));
 
-  if (loading && contacts.length === 0) {
+  if (initialLoading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
