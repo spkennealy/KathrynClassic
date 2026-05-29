@@ -181,7 +181,7 @@ export default function TournamentList() {
       </div>
 
       {/* Tournaments List */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50">
             <tr>

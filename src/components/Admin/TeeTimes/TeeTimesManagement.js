@@ -152,7 +152,7 @@ export default function TeeTimesManagement() {
           <p className="mt-4 text-gray-600">Loading tee times...</p>
         </div>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="bg-white shadow rounded-lg overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-300">
             <thead className="bg-gray-50">
               <tr>
