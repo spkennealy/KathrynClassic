@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import ExpenseForm from './ExpenseForm';
 import ConfirmDialog from '../ConfirmDialog';
@@ -381,12 +382,22 @@ export default function FinancialsList() {
               const status = getPaymentDisplay(paid, totalCost);
               return (
                 <tr key={r.registration_id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
-                    {r.first_name} {r.last_name}
+                  <td className="py-4 pl-4 pr-3 text-sm">
+                    <Link
+                      to={`/admin/registrations?search=${encodeURIComponent(`${r.first_name} ${r.last_name}`)}`}
+                      className="font-medium text-primary-600 hover:text-primary-900 hover:underline"
+                    >
+                      {r.first_name} {r.last_name}
+                    </Link>
                     {r.has_tbd_event && (
                       <span className="ml-2 inline-flex rounded px-1.5 text-xs font-medium bg-gray-100 text-gray-600">
                         TBD
                       </span>
+                    )}
+                    {r.events && r.events.length > 0 && (
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        {r.events.join(', ')}
+                      </div>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 text-right">

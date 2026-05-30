@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
@@ -6,12 +7,61 @@ import ConfirmDialog from '../ConfirmDialog';
 
 const PAGE_SIZE = 50;
 
+// Build the PostgREST `.or()` filter for a search term. A primary contact match
+// (name/email/phone) is preferred; preferred_teammates is matched secondarily.
+// Multi-word terms ("First Last") are matched against first_name + last_name together,
+// since those are separate columns.
+const buildSearchConditions = (searchTerm) => {
+  const term = searchTerm.trim();
+  const conditions = [
+    `first_name.ilike.%${term}%`,
+    `last_name.ilike.%${term}%`,
+    `email.ilike.%${term}%`,
+    `phone.ilike.%${term}%`,
+    `preferred_teammates.ilike.%${term}%`,
+  ];
+
+  const words = term.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    const first = words[0];
+    const last = words.slice(1).join(' ');
+    conditions.push(`and(first_name.ilike.%${first}%,last_name.ilike.%${last}%)`);
+  }
+
+  const isNumeric = !isNaN(term) && term !== '';
+  if (isNumeric) {
+    conditions.push(`tournament_year.eq.${parseInt(term)}`);
+    conditions.push(`golf_handicap.eq.${parseFloat(term)}`);
+  }
+
+  return conditions.join(',');
+};
+
+// Sort so rows matching the primary contact come before rows that only matched
+// because the term appears in preferred_teammates.
+const sortByContactRelevance = (rows, searchTerm) => {
+  const term = searchTerm.trim().toLowerCase();
+  if (!term) return rows;
+  const isPrimary = (r) => {
+    const full = `${r.first_name || ''} ${r.last_name || ''}`.toLowerCase();
+    return (
+      (r.first_name || '').toLowerCase().includes(term) ||
+      (r.last_name || '').toLowerCase().includes(term) ||
+      full.includes(term) ||
+      (r.email || '').toLowerCase().includes(term) ||
+      (r.phone || '').toLowerCase().includes(term)
+    );
+  };
+  return [...rows].sort((a, b) => (isPrimary(a) === isPrimary(b) ? 0 : isPrimary(a) ? -1 : 1));
+};
+
 export default function RegistrationList() {
+  const [searchParams] = useSearchParams();
   const [filter, setFilter] = useState({
     tournamentYear: 'all',
     paymentStatus: 'all',
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -79,23 +129,7 @@ export default function RegistrationList() {
 
         // Apply search filter if present
         if (searchTerm) {
-          // Build search conditions for all searchable text columns
-          const searchConditions = [
-            `first_name.ilike.%${searchTerm}%`,
-            `last_name.ilike.%${searchTerm}%`,
-            `email.ilike.%${searchTerm}%`,
-            `phone.ilike.%${searchTerm}%`,
-            `preferred_teammates.ilike.%${searchTerm}%`,
-          ];
-
-          // If search term is numeric, also search tournament year and golf handicap
-          const isNumeric = !isNaN(searchTerm) && searchTerm.trim() !== '';
-          if (isNumeric) {
-            searchConditions.push(`tournament_year.eq.${parseInt(searchTerm)}`);
-            searchConditions.push(`golf_handicap.eq.${parseFloat(searchTerm)}`);
-          }
-
-          const searchFilter = searchConditions.join(',');
+          const searchFilter = buildSearchConditions(searchTerm);
           dataQuery = dataQuery.or(searchFilter);
           countQuery = countQuery.or(searchFilter);
         }
@@ -109,12 +143,12 @@ export default function RegistrationList() {
         if (searchTerm) {
           const { data, error: dataError } = await dataQuery.limit(500);
           if (dataError) throw dataError;
-          setRegistrations(data || []);
+          setRegistrations(sortByContactRelevance(data || [], searchTerm));
         } else {
           const offset = (currentPage - 1) * PAGE_SIZE;
           const { data, error: dataError } = await dataQuery.range(offset, offset + PAGE_SIZE - 1);
           if (dataError) throw dataError;
-          setRegistrations(data || []);
+          setRegistrations(sortByContactRelevance(data || [], searchTerm));
         }
       } catch (err) {
         console.error('Error fetching registrations:', err);
@@ -202,21 +236,7 @@ export default function RegistrationList() {
           }
 
           if (searchTerm) {
-            const searchConditions = [
-              `first_name.ilike.%${searchTerm}%`,
-              `last_name.ilike.%${searchTerm}%`,
-              `email.ilike.%${searchTerm}%`,
-              `phone.ilike.%${searchTerm}%`,
-              `preferred_teammates.ilike.%${searchTerm}%`,
-            ];
-
-            const isNumeric = !isNaN(searchTerm) && searchTerm.trim() !== '';
-            if (isNumeric) {
-              searchConditions.push(`tournament_year.eq.${parseInt(searchTerm)}`);
-              searchConditions.push(`golf_handicap.eq.${parseFloat(searchTerm)}`);
-            }
-
-            const searchFilter = searchConditions.join(',');
+            const searchFilter = buildSearchConditions(searchTerm);
             dataQuery = dataQuery.or(searchFilter);
             countQuery = countQuery.or(searchFilter);
           }
@@ -228,12 +248,12 @@ export default function RegistrationList() {
           if (searchTerm) {
             const { data, error: dataError } = await dataQuery.limit(500);
             if (dataError) throw dataError;
-            setRegistrations(data || []);
+            setRegistrations(sortByContactRelevance(data || [], searchTerm));
           } else {
             const offset = (currentPage - 1) * PAGE_SIZE;
             const { data, error: dataError } = await dataQuery.range(offset, offset + PAGE_SIZE - 1);
             if (dataError) throw dataError;
-            setRegistrations(data || []);
+            setRegistrations(sortByContactRelevance(data || [], searchTerm));
           }
         } catch (err) {
           console.error('Error fetching registrations:', err);
@@ -281,21 +301,7 @@ export default function RegistrationList() {
 
       // Apply search filter if present
       if (searchTerm) {
-        const searchConditions = [
-          `first_name.ilike.%${searchTerm}%`,
-          `last_name.ilike.%${searchTerm}%`,
-          `email.ilike.%${searchTerm}%`,
-          `phone.ilike.%${searchTerm}%`,
-          `preferred_teammates.ilike.%${searchTerm}%`,
-        ];
-
-        const isNumeric = !isNaN(searchTerm) && searchTerm.trim() !== '';
-        if (isNumeric) {
-          searchConditions.push(`tournament_year.eq.${parseInt(searchTerm)}`);
-          searchConditions.push(`golf_handicap.eq.${parseFloat(searchTerm)}`);
-        }
-
-        const searchFilter = searchConditions.join(',');
+        const searchFilter = buildSearchConditions(searchTerm);
         dataQuery = dataQuery.or(searchFilter);
         countQuery = countQuery.or(searchFilter);
       }
@@ -311,7 +317,7 @@ export default function RegistrationList() {
         .range(offset, offset + PAGE_SIZE - 1);
 
       if (dataError) throw dataError;
-      setRegistrations(data || []);
+      setRegistrations(sortByContactRelevance(data || [], searchTerm));
     } catch (err) {
       console.error('Error fetching registrations:', err);
       setError(err.message || 'Failed to load registrations');
