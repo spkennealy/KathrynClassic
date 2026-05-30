@@ -121,6 +121,50 @@ export default function Registration() {
     return total;
   };
 
+  // Build the per-registrant payload for the confirmation email edge function.
+  // One entry per newly registered adult, with their own events and amount owed.
+  const buildConfirmationPayload = (adults) => {
+    const registrants = adults.map(adult => {
+      const lines = [];
+      let total = 0;
+      let estimatedMin = 0;
+      let estimatedMax = 0;
+      let hasTbd = false;
+
+      adult.events.forEach(eventId => {
+        const event = events.find(e => e.id === eventId);
+        if (!event) return;
+        const childCount = adult.childCounts?.[eventId] || 0;
+
+        if (event.priceTbd) {
+          hasTbd = true;
+          if (event.adultPriceMin != null && event.adultPriceMax != null) {
+            estimatedMin += event.adultPriceMin;
+            estimatedMax += event.adultPriceMax;
+          }
+          lines.push({ name: event.name, adults: 1, children: childCount, amount: 0, tbd: true });
+        } else {
+          const amount = event.adultPrice + childCount * event.childPrice;
+          total += amount;
+          lines.push({ name: event.name, adults: 1, children: childCount, amount });
+        }
+      });
+
+      return {
+        firstName: adult.firstName,
+        lastName: adult.lastName,
+        email: adult.email,
+        events: lines,
+        total,
+        hasTbd,
+        estimatedMin,
+        estimatedMax,
+      };
+    });
+
+    return { tournamentYear, registrants };
+  };
+
   const calculateTotals = (adults) => {
     let confirmed = 0;
     let estimatedMin = 0;
@@ -460,6 +504,18 @@ export default function Registration() {
       if (isFullTeam) {
         console.log('Full team registered with registration_group_id:', teamGroupId);
       }
+
+      // STEP 7: Send confirmation emails (non-blocking — never fail the registration on email error)
+      try {
+        const { error: emailError } = await supabase.functions.invoke(
+          'send-registration-confirmation',
+          { body: buildConfirmationPayload(newAdults) }
+        );
+        if (emailError) console.error('Confirmation email error:', emailError);
+      } catch (emailErr) {
+        console.error('Failed to invoke confirmation email function:', emailErr);
+      }
+
       setSubmittedTotal(totalAmount);
       setSubmittedTotals(totals);
       setIsSubmitted(true);
@@ -565,13 +621,46 @@ export default function Registration() {
                         </div>
                         <div className="border-t border-primary-200 pt-4">
                           <p className="text-base font-semibold text-gray-900 mb-3">Please submit payment via:</p>
-                          <div className="space-y-2 text-sm text-gray-700">
-                            <p><strong>Venmo:</strong> Payment details will be provided</p>
-                            <p><strong>Zelle:</strong> Payment details will be provided</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex flex-col items-center rounded-lg bg-white p-4 ring-1 ring-primary-200">
+                              <img
+                                src="/venmo-qr.png"
+                                alt="Venmo QR code for Sean Kennealy"
+                                className="h-40 w-40 object-contain"
+                              />
+                              <a
+                                href="https://venmo.com/u/Sean-Kennealy"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 flex w-full items-center justify-center rounded-lg bg-[#008CFF] px-4 py-2.5 text-base font-semibold text-white shadow-sm hover:bg-[#0074d4] transition-colors"
+                              >
+                                Pay with Venmo
+                              </a>
+                            </div>
+                            <div className="flex flex-col items-center rounded-lg bg-white p-4 ring-1 ring-primary-200">
+                              <img
+                                src="/zelle-qr.png"
+                                alt="Zelle QR code for Sean Kennealy"
+                                className="h-40 w-40 object-contain"
+                              />
+                              <a
+                                href="https://enroll.zellepay.com/qr-codes?data=spkennealy@gmail.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 flex w-full items-center justify-center rounded-lg bg-[#6D1ED4] px-4 py-2.5 text-base font-semibold text-white shadow-sm hover:bg-[#5a17b0] transition-colors"
+                              >
+                                Pay with Zelle
+                              </a>
+                            </div>
+                          </div>
+                          <div className="mt-3 space-y-1 text-sm text-gray-700 bg-white p-3 rounded border border-primary-200">
+                            <p><strong>Venmo:</strong> @Sean-Kennealy</p>
+                            <p><strong>Zelle:</strong> spkennealy@gmail.com</p>
+                            <p><strong>Check:</strong> Payable to “Sean Kennealy” — 3001 Santa Clara Ave, Alameda, CA 94501</p>
                           </div>
                           <p className="mt-4 text-sm text-gray-600 bg-white p-3 rounded border border-primary-200">
-                            <strong>Note:</strong> Your registration will be confirmed once payment is received.
-                            Please include your name in the payment note.
+                            <strong>Note:</strong> Please submit payment within 2 weeks of registering,
+                            and include your name in the payment note.
                           </p>
                         </div>
                       </div>
