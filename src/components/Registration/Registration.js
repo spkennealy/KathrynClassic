@@ -1033,11 +1033,24 @@ export default function Registration() {
                   {({ push, remove }) => (
                     <div className="space-y-6">
                       <h3 className="text-xl font-semibold text-gray-900">Attendees</h3>
+                      {values.adults.length > 1 && (
+                        <p className="text-sm text-gray-600 -mt-3">
+                          Attendee 1 is the group organizer and will receive a summary email with everyone's
+                          costs and payment options. Each other attendee gets their own confirmation.
+                        </p>
+                      )}
 
                       {values.adults.map((adult, index) => (
                         <div key={index} className="rounded-lg bg-gray-50 p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
                           <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-lg font-semibold text-gray-900">Attendee {index + 1}</h4>
+                            <h4 className="text-lg font-semibold text-gray-900">
+                              Attendee {index + 1}
+                              {index === 0 && values.adults.length > 1 && (
+                                <span className="ml-2 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                                  Group organizer
+                                </span>
+                              )}
+                            </h4>
                             {values.adults.length > 1 && (
                               <button
                                 type="button"
