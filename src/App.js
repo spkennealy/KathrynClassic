@@ -18,6 +18,7 @@ import SetPassword from './components/Admin/SetPassword';
 import AdminLayout from './components/Admin/AdminLayout';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import RegistrationList from './components/Admin/Registrations/RegistrationList';
+import FinancialsList from './components/Admin/Financials/FinancialsList';
 import ContactList from './components/Admin/Contacts/ContactList';
 import TournamentList from './components/Admin/Tournaments/TournamentList';
 import EventList from './components/Admin/Events/EventList';
@@ -116,6 +117,7 @@ function App() {
                 <Route path="tournaments" element={<TournamentList />} />
                 <Route path="events" element={<EventList />} />
                 <Route path="registrations" element={<RegistrationList />} />
+                <Route path="financials" element={<FinancialsList />} />
                 <Route path="contacts" element={<ContactList />} />
                 <Route path="tee-times" element={<TeeTimesManagement />} />
                 <Route path="leaderboard" element={<LeaderboardManagement />} />

@@ -18,6 +18,7 @@ export default function AdminLayout() {
     { name: 'Tournaments', href: '/admin/tournaments', icon: '🏆' },
     { name: 'Events', href: '/admin/events', icon: '📅' },
     { name: 'Registrations', href: '/admin/registrations', icon: '✍️' },
+    { name: 'Financials', href: '/admin/financials', icon: '💰' },
     { name: 'Contacts', href: '/admin/contacts', icon: '👥' },
     { name: 'Teams', href: '/admin/teams', icon: '👫' },
     { name: 'Team Builder', href: '/admin/team-builder', icon: '🧩' },
