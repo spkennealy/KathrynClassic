@@ -3,6 +3,7 @@ import { Formik, Form, Field, ErrorMessage, FieldArray } from 'formik';
 import * as Yup from 'yup';
 import { supabase } from '../../supabaseClient';
 import { getCurrentTournamentYear, getTournamentEvents, formatDate } from '../../utils/tournamentUtils';
+import BookYourStay from './BookYourStay';
 
 const AdultSchema = Yup.object().shape({
   firstName: Yup.string().required('First name is required'),
@@ -597,6 +598,8 @@ export default function Registration() {
                 {registrationStatus === 'full' ? 'Add Another Person to Waitlist' : 'Register Another Group'}
               </button>
             </div>
+
+            <BookYourStay className="mt-12 text-left" />
           </div>
         </div>
       </div>
@@ -892,6 +895,8 @@ export default function Registration() {
                 </Form>
               )}
             </Formik>
+
+            <BookYourStay className="mt-12" />
           </div>
         </div>
       </div>
@@ -1192,6 +1197,8 @@ export default function Registration() {
               </Form>
             )}
           </Formik>
+
+          <BookYourStay className="mt-12" />
         </div>
       </div>
     </div>
