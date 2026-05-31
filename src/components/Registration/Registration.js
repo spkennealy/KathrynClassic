@@ -998,7 +998,7 @@ export default function Registration() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 font-serif">Register for The Kathryn Classic {tournamentYear}</h2>
           <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-gray-600 font-serif">
-            Join us for a weekend of golf, community, and giving back. Register multiple attendees at once and indicate how many children will attend each event.
+            Join us for a weekend of golf, community, and giving back. Register multiple attendees at once and indicate how many children will attend each event &mdash; <span className="font-semibold text-primary-600">kids are always free!</span>
           </p>
         </div>
 
@@ -1124,7 +1124,7 @@ export default function Registration() {
                                               )}
                                             </>
                                           ) : (
-                                            <span className="text-gray-500 ml-2">(${event.adultPrice} per person)</span>
+                                            <span className="text-gray-500 ml-2">(${event.adultPrice} per adult &middot; kids free)</span>
                                           )}
                                         </label>
                                       </div>
@@ -1137,7 +1137,9 @@ export default function Registration() {
                                             placeholder="0"
                                             className="w-20 rounded-lg border-0 px-2 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-500 text-sm"
                                           />
-                                          <span className="text-xs text-gray-500 whitespace-nowrap">children (free)</span>
+                                          <span className="text-xs text-gray-700 whitespace-nowrap">
+                                            children &mdash; <span className="font-semibold text-primary-600">kids are free!</span>
+                                          </span>
                                         </div>
                                       )}
                                       {event.id === 'golf_tournament' && adult.events.includes(event.id) && (
