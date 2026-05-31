@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Formik, Form, Field, ErrorMessage, FieldArray } from 'formik';
+import { Formik, Form, Field, ErrorMessage, FieldArray, useFormikContext } from 'formik';
 import * as Yup from 'yup';
 import { supabase } from '../../supabaseClient';
 import { getCurrentTournamentYear, getTournamentEvents, formatDate } from '../../utils/tournamentUtils';
@@ -32,6 +32,58 @@ const WaitlistSchema = Yup.object().shape({
   phone: Yup.string(),
   notes: Yup.string(),
 });
+
+// After a failed submit, scroll to the first field with a validation error so
+// mobile users see what needs fixing instead of staying at the submit button.
+function ScrollToError() {
+  const { submitCount, isValid, errors } = useFormikContext();
+
+  useEffect(() => {
+    if (submitCount === 0 || isValid) return;
+
+    // Collect the leaf error field paths (Formik nests them under adults.<i>.<field>).
+    const paths = [];
+    const walk = (obj, prefix) => {
+      Object.entries(obj || {}).forEach(([key, val]) => {
+        const path = prefix ? `${prefix}.${key}` : key;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          walk(val, path);
+        } else if (Array.isArray(val)) {
+          val.forEach((item, i) => {
+            if (item && typeof item === 'object') walk(item, `${path}.${i}`);
+            else if (item) paths.push(`${path}.${i}`);
+          });
+        } else if (val) {
+          paths.push(path);
+        }
+      });
+    };
+    walk(errors, '');
+
+    // Find the first error field actually present in the DOM, topmost on screen.
+    let target = null;
+    let topY = Infinity;
+    paths.forEach((name) => {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el) {
+        const y = el.getBoundingClientRect().top;
+        if (y < topY) {
+          topY = y;
+          target = el;
+        }
+      }
+    });
+
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (typeof target.focus === 'function') {
+        target.focus({ preventScroll: true });
+      }
+    }
+  }, [submitCount, isValid, errors]);
+
+  return null;
+}
 
 export default function Registration() {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -1022,6 +1074,7 @@ export default function Registration() {
           >
             {({ values, isSubmitting }) => (
               <Form className="space-y-8">
+                <ScrollToError />
                 {error && (
                   <div className="rounded-lg bg-red-50 p-4 border border-red-200">
                     <p className="text-sm text-red-800">{error}</p>

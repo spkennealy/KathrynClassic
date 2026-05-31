@@ -171,6 +171,11 @@ export default function FinancialsList() {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
+  const [statusFilter, setStatusFilter] = useState('all'); // all | unpaid | partial | paid
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 25;
+
   const selectedTournament = useMemo(
     () => tournaments.find((t) => String(t.year) === String(selectedYear)) || null,
     [tournaments, selectedYear]
@@ -250,6 +255,7 @@ export default function FinancialsList() {
     fetchData();
   }, [fetchData]);
 
+  // Summary cards always reflect the whole year, independent of filters/search.
   const totals = useMemo(() => {
     const totalDue = registrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0);
     const totalPaid = registrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
@@ -265,6 +271,35 @@ export default function FinancialsList() {
       net: totalPaid + totalDonations - totalExpenses,
     };
   }, [registrants, donations, expenses]);
+
+  // Apply status filter + search to the registrant table (not the cards).
+  const filteredRegistrants = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return registrants.filter((r) => {
+      const status = getPaymentDisplay(r.amount_paid, r.total_cost).label.toLowerCase();
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'unpaid' && status !== 'unpaid') return false;
+        if (statusFilter === 'partial' && status !== 'partial') return false;
+        if (statusFilter === 'paid' && status !== 'paid') return false;
+      }
+      if (term) {
+        const haystack = `${r.first_name || ''} ${r.last_name || ''} ${r.email || ''}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [registrants, statusFilter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRegistrants.length / PAGE_SIZE));
+  const pagedRegistrants = useMemo(
+    () => filteredRegistrants.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredRegistrants, currentPage]
+  );
+
+  // Reset to first page whenever the filter/search/year changes.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchTerm, selectedYear]);
 
   const handleDeleteExpense = async () => {
     if (!expenseToDelete) return;
@@ -360,8 +395,33 @@ export default function FinancialsList() {
 
       {/* Registrants table */}
       <div className="bg-white shadow rounded-lg overflow-x-auto">
-        <div className="px-4 py-4 sm:px-6 border-b border-gray-200">
+        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <h2 className="text-lg font-medium text-gray-900">Registrants</h2>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Name or email..."
+                className="block w-full sm:w-56 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Payment status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              >
+                <option value="all">All</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partial">Partially paid</option>
+                <option value="paid">Fully paid</option>
+              </select>
+            </div>
+          </div>
         </div>
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50">
@@ -375,7 +435,7 @@ export default function FinancialsList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {registrants.map((r) => {
+            {pagedRegistrants.map((r) => {
               const totalCost = Number(r.total_cost) || 0;
               const paid = Number(r.amount_paid) || 0;
               const balance = totalCost - paid;
@@ -426,27 +486,59 @@ export default function FinancialsList() {
               );
             })}
           </tbody>
-          {registrants.length > 0 && (
+          {filteredRegistrants.length > 0 && (
             <tfoot className="bg-gray-50 border-t border-gray-200">
               <tr>
-                <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900">Totals</td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
-                  {formatCurrency(totals.totalDue)}
+                <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900">
+                  {statusFilter === 'all' && !searchTerm ? 'Totals' : 'Filtered totals'}
                 </td>
                 <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
-                  {formatCurrency(totals.totalPaid)}
+                  {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0))}
                 </td>
                 <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
-                  {formatCurrency(totals.outstanding)}
+                  {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0))}
+                </td>
+                <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
+                  {formatCurrency(filteredRegistrants.reduce((s, r) => s + ((Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0)), 0))}
                 </td>
                 <td colSpan={2}></td>
               </tr>
             </tfoot>
           )}
         </table>
-        {registrants.length === 0 && !loading && (
+        {filteredRegistrants.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No registrations for {selectedYear}</p>
+            <p className="text-gray-500">
+              {registrants.length === 0
+                ? `No registrations for ${selectedYear}`
+                : 'No registrants match your filters'}
+            </p>
+          </div>
+        )}
+        {filteredRegistrants.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
+            <p className="text-sm text-gray-600">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredRegistrants.length)} of {filteredRegistrants.length}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="inline-flex items-center px-2 text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

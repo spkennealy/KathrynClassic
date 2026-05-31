@@ -61,6 +61,7 @@ export default function RegistrationList() {
     tournamentYear: 'all',
     paymentStatus: 'all',
   });
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState(null);
@@ -72,7 +73,15 @@ export default function RegistrationList() {
   const [totalCount, setTotalCount] = useState(0);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState(null);
+
+  // Debounce the search box so we don't refetch on every keystroke (which caused
+  // the input to lose focus when results briefly emptied during a fetch).
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch tournaments on mount
@@ -155,6 +164,7 @@ export default function RegistrationList() {
         setError(err.message || 'Failed to load registrations');
       } finally {
         setLoading(false);
+        setInitialLoad(false);
       }
     };
 
@@ -368,7 +378,7 @@ export default function RegistrationList() {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  if (loading && registrations.length === 0) {
+  if (initialLoad && loading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
@@ -419,8 +429,8 @@ export default function RegistrationList() {
             type="text"
             id="search"
             placeholder="Search by name, email, tournament, events, payment status, or date..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
@@ -513,19 +523,26 @@ export default function RegistrationList() {
                   const color = groupColorMap[reg.registration_group_id];
                   rows.push(
                     <tr key={`group-${reg.registration_group_id}`} className={color.bg}>
-                      <td colSpan={8} className={`px-4 py-1.5 text-xs font-medium ${color.text} border-l-4 ${color.border}`}>
+                      <td colSpan={8} className={`px-4 py-1.5 text-xs font-medium ${color.text} border-t-2 border-l-2 border-r-2 ${color.border}`}>
                         Registered together: {groupMap[reg.registration_group_id].map((m) => m.name).join(', ')}
                       </td>
                     </tr>
                   );
                 }
                 const groupColor = reg.registration_group_id && groupColorMap[reg.registration_group_id];
+                const groupMembers = reg.registration_group_id && groupMap[reg.registration_group_id];
+                const isLastInGroup = groupMembers && groupMembers[groupMembers.length - 1].id === reg.registration_id;
+                // Group color is applied to cells (not the <tr>) so it renders a full box.
+                const gb = groupColor ? groupColor.border : '';
+                const bBottom = groupColor && isLastInGroup ? ` border-b-2 ${gb}` : '';
+                const bLeft = groupColor ? ` border-l-2 ${gb}` : '';
+                const bRight = groupColor ? ` border-r-2 ${gb}` : '';
                 rows.push(
-                  <tr key={reg.registration_id} className={`hover:bg-gray-50${groupColor ? ` border-l-4 ${groupColor.border}` : ''}`}>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500">
+                  <tr key={reg.registration_id} className="hover:bg-gray-50">
+                    <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500${bLeft}${bBottom}`}>
                       {new Date(reg.registration_date).toLocaleDateString()}
                     </td>
-                    <td className="px-3 py-4 text-sm">
+                    <td className={`px-3 py-4 text-sm${bBottom}`}>
                       <button
                         onClick={() => {
                           setSelectedContact({ contact_id: reg.contact_id, first_name: reg.first_name, last_name: reg.last_name, email: reg.email, phone: reg.phone });
@@ -536,21 +553,29 @@ export default function RegistrationList() {
                         {reg.first_name} {reg.last_name}
                       </button>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-gray-500${bBottom}`}>
                       {reg.tournament_year}
                     </td>
-                    <td className="px-3 py-4 text-sm text-gray-500">
+                    <td className={`px-3 py-4 text-sm text-gray-500${bBottom}`}>
                       {reg.events && reg.events.length > 0 ? (
                         <div className="space-y-0.5">
-                          {reg.events.map((event, i) => (
-                            <div key={i}>{event}</div>
-                          ))}
+                          {reg.events.map((event, i) => {
+                            const isGolf = /golf/i.test(event);
+                            return (
+                              <div key={i}>
+                                {event}
+                                {isGolf && reg.golf_handicap != null && reg.golf_handicap !== '' && (
+                                  <span className="text-gray-400"> (handicap: {reg.golf_handicap})</span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <span className="text-gray-400">None</span>
                       )}
                     </td>
-                    <td className="px-3 py-4 text-sm text-gray-500">
+                    <td className={`px-3 py-4 text-sm text-gray-500${bBottom}`}>
                       {reg.children_by_event && Object.keys(reg.children_by_event).length > 0 ? (
                         <div className="space-y-1">
                           {Object.entries(reg.children_by_event).map(([eventType, count]) => (
@@ -565,7 +590,7 @@ export default function RegistrationList() {
                         <span className="text-gray-400">None</span>
                       )}
                     </td>
-                    <td className="px-3 py-4 text-sm text-gray-500">
+                    <td className={`px-3 py-4 text-sm text-gray-500${bBottom}`}>
                       {reg.preferred_teammates ? (
                         <div>
                           {reg.preferred_teammates.split(',').map((name, i) => (
@@ -576,7 +601,7 @@ export default function RegistrationList() {
                         <span className="text-gray-300">&mdash;</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
+                    <td className={`whitespace-nowrap px-3 py-4 text-sm${bBottom}`}>
                       <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
                         reg.payment_status === 'paid'
                           ? 'bg-green-100 text-green-800'
@@ -585,7 +610,7 @@ export default function RegistrationList() {
                         {reg.payment_status}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
+                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-right space-x-3${bRight}${bBottom}`}>
                       <button
                         onClick={() => handleEdit(reg)}
                         className="text-primary-600 hover:text-primary-900 font-medium"
