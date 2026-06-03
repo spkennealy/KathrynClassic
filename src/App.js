@@ -71,7 +71,7 @@ function App() {
     }
   }, [isAdminSite]);
   return (
-    <ThemeProvider>
+    <ThemeProvider followSystem={isAdminSite}>
       <AuthProvider>
       <Router>
         <Routes>
