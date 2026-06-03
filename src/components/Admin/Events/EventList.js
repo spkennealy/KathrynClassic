@@ -114,7 +114,7 @@ export default function EventList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading events...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading events...</p>
       </div>
     );
   }
@@ -132,8 +132,8 @@ export default function EventList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Events</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Events</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage tournament events and activities
           </p>
         </div>
@@ -146,16 +146,16 @@ export default function EventList() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow">
         <div className="flex gap-4 items-center">
-          <label htmlFor="year-filter" className="text-sm font-medium text-gray-700">
+          <label htmlFor="year-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Filter by Year:
           </label>
           <select
             id="year-filter"
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           >
             <option value="all">All Years</option>
             {tournaments.map((tournament) => (
@@ -164,73 +164,73 @@ export default function EventList() {
               </option>
             ))}
           </select>
-          <div className="flex items-center text-sm text-gray-600 ml-auto">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 ml-auto">
             Showing {filteredEvents.length} events
           </div>
         </div>
       </div>
 
       {/* Events Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-300">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-night-700">
               <tr>
-                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Event Name
                 </th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Type
                 </th>
-                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Year
                 </th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Date & Time
                 </th>
-                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Adult Price
                 </th>
-                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Child Price
                 </th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Location
                 </th>
-                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
               {filteredEvents.map((event) => (
-                <tr key={event.id} className="hover:bg-gray-50">
-                  <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                <tr key={event.id} className="hover:bg-gray-50 dark:bg-night-700">
+                  <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                     {event.event_name}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 capitalize">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 capitalize">
                     {event.event_type?.replace(/_/g, ' ')}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                     {event.tournaments?.year}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {formatDate(event.event_date)}
                     {event.start_time && <span className="text-gray-400"> • {formatTime(event.start_time)}</span>}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-right">
                     {event.price_tbd ? <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">TBD</span> : formatCurrency(event.adult_price)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-right">
                     {event.price_tbd ? <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">TBD</span> : formatCurrency(event.child_price)}
                   </td>
-                  <td className="px-3 py-4 text-sm text-gray-500">
+                  <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {event.location || '-'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                     <button
                       onClick={() => handleEdit(event)}
-                      className="text-primary-600 hover:text-primary-900 font-medium"
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
                       Edit
                     </button>
@@ -243,7 +243,7 @@ export default function EventList() {
 
         {filteredEvents.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               {selectedYear === 'all' ? 'No events found' : `No events found for ${selectedYear}`}
             </p>
           </div>

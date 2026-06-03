@@ -47,7 +47,7 @@ const navigation = {
 
 export default function Footer() {
   return (
-    <footer className="bg-primary-600">
+    <footer className="bg-primary-600 dark:bg-night-800 dark:border-t dark:border-night-700">
       <div className="mx-auto max-w-7xl overflow-hidden px-6 py-12 lg:px-8">
         <p className="text-center text-base leading-7 text-white font-serif mb-6">
           &copy; {new Date().getFullYear()} The Kathryn Classic. Making a difference, one swing at a time.

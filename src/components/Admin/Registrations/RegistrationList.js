@@ -382,7 +382,7 @@ export default function RegistrationList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading registrations...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading registrations...</p>
       </div>
     );
   }
@@ -400,8 +400,8 @@ export default function RegistrationList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Registrations</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Registrations</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage tournament registrations and payment status
           </p>
         </div>
@@ -420,9 +420,9 @@ export default function RegistrationList() {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-lg shadow space-y-4">
+      <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow space-y-4">
         <div className="flex-1">
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Search
           </label>
           <input
@@ -431,19 +431,19 @@ export default function RegistrationList() {
             placeholder="Search by name, email, tournament, events, payment status, or date..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
 
         <div className="flex flex-wrap gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tournament Year
             </label>
             <select
               value={filter.tournamentYear}
               onChange={(e) => setFilter({ ...filter, tournamentYear: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Years</option>
               {tournaments.map((tournament) => (
@@ -455,13 +455,13 @@ export default function RegistrationList() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Payment Status
             </label>
             <select
               value={filter.paymentStatus}
               onChange={(e) => setFilter({ ...filter, paymentStatus: e.target.value })}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Statuses</option>
               <option value="paid">Paid</option>
@@ -470,7 +470,7 @@ export default function RegistrationList() {
           </div>
 
           <div className="flex items-end">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {searchTerm ? (
                 <>Showing {filteredRegistrations.length} matching registrations</>
               ) : (
@@ -482,37 +482,37 @@ export default function RegistrationList() {
       </div>
 
       {/* Registrations Table */}
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Date
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Name
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Tournament
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Events
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Children
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Preferred Teammates
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Payment
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {(() => {
               const seenGroups = new Set();
               return filteredRegistrations.flatMap((reg) => {
@@ -538,8 +538,8 @@ export default function RegistrationList() {
                 const bLeft = groupColor ? ` border-l-2 ${gb}` : '';
                 const bRight = groupColor ? ` border-r-2 ${gb}` : '';
                 rows.push(
-                  <tr key={reg.registration_id} className="hover:bg-gray-50">
-                    <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500${bLeft}${bBottom}`}>
+                  <tr key={reg.registration_id} className="hover:bg-gray-50 dark:bg-night-700">
+                    <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400${bLeft}${bBottom}`}>
                       {new Date(reg.registration_date).toLocaleDateString()}
                     </td>
                     <td className={`px-3 py-4 text-sm${bBottom}`}>
@@ -548,15 +548,15 @@ export default function RegistrationList() {
                           setSelectedContact({ contact_id: reg.contact_id, first_name: reg.first_name, last_name: reg.last_name, email: reg.email, phone: reg.phone });
                           setShowContactForm(true);
                         }}
-                        className="font-medium text-primary-600 hover:text-primary-900 hover:underline text-left"
+                        className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 hover:underline text-left"
                       >
                         {reg.first_name} {reg.last_name}
                       </button>
                     </td>
-                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-gray-500${bBottom}`}>
+                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400${bBottom}`}>
                       {reg.tournament_year}
                     </td>
-                    <td className={`px-3 py-4 text-sm text-gray-500${bBottom}`}>
+                    <td className={`px-3 py-4 text-sm text-gray-500 dark:text-gray-400${bBottom}`}>
                       {reg.events && reg.events.length > 0 ? (
                         <div className="space-y-0.5">
                           {reg.events.map((event, i) => {
@@ -575,7 +575,7 @@ export default function RegistrationList() {
                         <span className="text-gray-400">None</span>
                       )}
                     </td>
-                    <td className={`px-3 py-4 text-sm text-gray-500${bBottom}`}>
+                    <td className={`px-3 py-4 text-sm text-gray-500 dark:text-gray-400${bBottom}`}>
                       {reg.children_by_event && Object.keys(reg.children_by_event).length > 0 ? (
                         <div className="space-y-1">
                           {Object.entries(reg.children_by_event).map(([eventType, count]) => (
@@ -590,7 +590,7 @@ export default function RegistrationList() {
                         <span className="text-gray-400">None</span>
                       )}
                     </td>
-                    <td className={`px-3 py-4 text-sm text-gray-500${bBottom}`}>
+                    <td className={`px-3 py-4 text-sm text-gray-500 dark:text-gray-400${bBottom}`}>
                       {reg.preferred_teammates ? (
                         <div>
                           {reg.preferred_teammates.split(',').map((name, i) => (
@@ -613,7 +613,7 @@ export default function RegistrationList() {
                     <td className={`whitespace-nowrap px-3 py-4 text-sm text-right space-x-3${bRight}${bBottom}`}>
                       <button
                         onClick={() => handleEdit(reg)}
-                        className="text-primary-600 hover:text-primary-900 font-medium"
+                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                       >
                         Edit
                       </button>
@@ -634,7 +634,7 @@ export default function RegistrationList() {
 
         {filteredRegistrations.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               {searchTerm ? 'No registrations found matching your search' : 'No registrations found'}
             </p>
           </div>
@@ -643,26 +643,26 @@ export default function RegistrationList() {
 
       {/* Pagination - hidden when searching */}
       {!searchTerm && totalPages > 1 && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow">
+        <div className="bg-white dark:bg-night-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-night-700 sm:px-6 rounded-lg shadow">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
           </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 Showing <span className="font-medium">{(currentPage - 1) * PAGE_SIZE + 1}</span> to{' '}
                 <span className="font-medium">{Math.min(currentPage * PAGE_SIZE, totalCount)}</span> of{' '}
                 <span className="font-medium">{totalCount}</span> registrations
@@ -673,7 +673,7 @@ export default function RegistrationList() {
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-night-600 bg-white dark:bg-night-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -697,8 +697,8 @@ export default function RegistrationList() {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                         currentPage === pageNum
-                          ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          ? 'z-10 bg-primary-50 border-primary-500 text-primary-600 dark:text-primary-400'
+                          : 'bg-white dark:bg-night-800 border-gray-300 dark:border-night-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-night-700'
                       }`}
                     >
                       {pageNum}
@@ -708,7 +708,7 @@ export default function RegistrationList() {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-night-600 bg-white dark:bg-night-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

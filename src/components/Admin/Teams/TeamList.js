@@ -107,7 +107,7 @@ export default function TeamList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading teams...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading teams...</p>
       </div>
     );
   }
@@ -125,8 +125,8 @@ export default function TeamList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Teams</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Teams</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage golf teams and their members
           </p>
         </div>
@@ -144,17 +144,17 @@ export default function TeamList() {
       {/* Teams Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {teams.map((team) => (
-          <div key={team.team_id} className="bg-white overflow-hidden shadow rounded-lg">
+          <div key={team.team_id} className="bg-white dark:bg-night-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-medium text-gray-900">{team.team_name}</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{team.team_name}</h3>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {team.member_count} {team.member_count === 1 ? 'player' : 'players'}
                 </span>
               </div>
 
               {team.tournament_years && team.tournament_years.length > 0 && (
-                <p className="text-sm text-gray-500 mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                   Tournaments: {team.tournament_years.join(', ')}
                 </p>
               )}
@@ -163,13 +163,13 @@ export default function TeamList() {
               <div className="space-y-2 mb-4">
                 {team.members && team.members.length > 0 ? (
                   team.members.map((member, index) => (
-                    <div key={index} className="text-sm text-gray-600">
+                    <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
                       <span className="font-medium">{member.position}.</span> {member.player_name}
                       {member.handicap && <span className="text-gray-400 ml-2">({member.handicap})</span>}
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500 italic">No members assigned</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">No members assigned</p>
                 )}
               </div>
 
@@ -177,13 +177,13 @@ export default function TeamList() {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleEdit(team)}
-                  className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 dark:border-night-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(team.team_id, team.team_name)}
-                  className="inline-flex justify-center items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="inline-flex justify-center items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white dark:bg-night-800 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
                   Delete
                 </button>
@@ -194,12 +194,12 @@ export default function TeamList() {
       </div>
 
       {teams.length === 0 && !loading && (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
+        <div className="text-center py-12 bg-white dark:bg-night-800 rounded-lg shadow">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No teams</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by creating a new team.</p>
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No teams</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating a new team.</p>
           <div className="mt-6">
             <button
               onClick={handleAdd}

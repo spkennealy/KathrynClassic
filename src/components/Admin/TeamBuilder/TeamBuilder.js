@@ -471,8 +471,8 @@ export default function TeamBuilder() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Team Builder</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Team Builder</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Drag golfers from the pool on the left onto team cards on the right.
           </p>
         </div>
@@ -488,13 +488,13 @@ export default function TeamBuilder() {
       </div>
 
       {/* Tournament selector + actions */}
-      <div className="bg-white p-4 rounded-lg shadow flex flex-col sm:flex-row sm:items-end gap-3">
+      <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Tournament</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tournament</label>
           <select
             value={selectedTournament}
             onChange={e => setSelectedTournament(e.target.value)}
-            className="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="block w-full max-w-xs rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           >
             {tournaments.map(t => <option key={t.id} value={t.id}>{t.year}</option>)}
           </select>
@@ -502,7 +502,7 @@ export default function TeamBuilder() {
         <button
           onClick={handleAddNewTeam}
           disabled={loading}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+          className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-night-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50"
         >
           + Add Team
         </button>
@@ -526,13 +526,13 @@ export default function TeamBuilder() {
       {!loading && golfers.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'Total Golfers', value: totalGolfers, color: 'text-gray-900' },
+            { label: 'Total Golfers', value: totalGolfers, color: 'text-gray-900 dark:text-gray-100' },
             { label: 'On Teams', value: onTeams, color: 'text-green-600' },
-            { label: 'Pending Teams', value: pendingTeams.length, color: 'text-primary-600' },
+            { label: 'Pending Teams', value: pendingTeams.length, color: 'text-primary-600 dark:text-primary-400' },
             { label: 'Unassigned', value: unassignedGolfers.length, color: 'text-yellow-600' },
           ].map(stat => (
-            <div key={stat.label} className="overflow-hidden rounded-lg bg-white px-4 py-4 shadow">
-              <dt className="truncate text-sm font-medium text-gray-500">{stat.label}</dt>
+            <div key={stat.label} className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-4 shadow">
+              <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{stat.label}</dt>
               <dd className={`mt-1 text-3xl font-semibold tracking-tight ${stat.color}`}>{stat.value}</dd>
             </div>
           ))}
@@ -543,7 +543,7 @@ export default function TeamBuilder() {
       {loading && (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading golfers...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading golfers...</p>
         </div>
       )}
 
@@ -552,14 +552,14 @@ export default function TeamBuilder() {
         <div className="flex gap-4 items-start">
           {/* Left: Unassigned pool */}
           <div className="w-64 flex-shrink-0">
-            <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-hidden">
               <div
-                className={`px-3 py-2 border-b border-gray-200 ${dragOver === 'unassigned' ? 'bg-yellow-50' : 'bg-gray-50'}`}
+                className={`px-3 py-2 border-b border-gray-200 dark:border-night-700 ${dragOver === 'unassigned' ? 'bg-yellow-50' : 'bg-gray-50 dark:bg-night-700'}`}
                 onDragOver={e => { e.preventDefault(); setDragOver('unassigned'); }}
                 onDragLeave={() => setDragOver(null)}
                 onDrop={() => setDragOver(null)}
               >
-                <h2 className="text-sm font-semibold text-gray-700">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Unassigned ({unassignedGolfers.length})
                 </h2>
               </div>
@@ -573,7 +573,7 @@ export default function TeamBuilder() {
                       draggable
                       onDragStart={() => handleDragStart(golfer)}
                       onDragEnd={handleDragEnd}
-                      className={`px-3 py-2.5 cursor-grab active:cursor-grabbing select-none hover:bg-gray-50 ${
+                      className={`px-3 py-2.5 cursor-grab active:cursor-grabbing select-none hover:bg-gray-50 dark:bg-night-700 ${
                         draggedGolfer?.contact_id === golfer.contact_id ? 'opacity-40' : ''
                       }`}
                     >
@@ -582,7 +582,7 @@ export default function TeamBuilder() {
                           <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
                         </svg>
                         <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                             {golfer.first_name} {golfer.last_name}
                           </div>
                           {golfer.golf_handicap != null && (
@@ -602,7 +602,7 @@ export default function TeamBuilder() {
             {/* Existing saved teams */}
             {existingTeams.length > 0 && (
               <div className="mb-4">
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Saved Teams ({existingTeams.length})
                 </h2>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -618,7 +618,7 @@ export default function TeamBuilder() {
                         onDragOver={e => { if (isEditing && !isFull && draggedGolfer) { e.preventDefault(); setDragOver(`existing-${team.id}`); } }}
                         onDragLeave={() => setDragOver(null)}
                         onDrop={() => isEditing && handleDropOnEditing()}
-                        className={`bg-white shadow rounded-lg p-3 border-2 transition-colors ${
+                        className={`bg-white dark:bg-night-800 shadow rounded-lg p-3 border-2 transition-colors ${
                           isEditing
                             ? isOver ? 'border-primary-400 bg-primary-50' : 'border-primary-300'
                             : 'border-transparent'
@@ -630,17 +630,17 @@ export default function TeamBuilder() {
                               type="text"
                               value={editingTeamData.name}
                               onChange={e => setEditingTeamData(prev => ({ ...prev, name: e.target.value }))}
-                              className="text-sm font-semibold text-gray-900 border-0 border-b border-primary-300 focus:border-primary-500 focus:ring-0 px-0 py-0.5 bg-transparent w-full mr-2"
+                              className="text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-primary-300 focus:border-primary-500 focus:ring-0 px-0 py-0.5 bg-transparent w-full mr-2"
                             />
                           ) : (
-                            <span className="font-semibold text-gray-900 text-sm">{team.name}</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{team.name}</span>
                           )}
                           <span className="text-xs text-gray-400 flex-shrink-0">{displayMembers.length}/4</span>
                         </div>
 
                         <div className="space-y-1 mb-2">
                           {displayMembers.map((m, i) => (
-                            <div key={m.contact_id || i} className="text-sm text-gray-600 flex items-center justify-between">
+                            <div key={m.contact_id || i} className="text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
                               <span>
                                 <span className="text-gray-300 text-xs mr-1">{i + 1}.</span>
                                 {m.player_name}
@@ -659,7 +659,7 @@ export default function TeamBuilder() {
 
                         {isEditing && !isFull && (
                           <div className={`border-2 border-dashed rounded p-1.5 text-center text-xs mb-2 ${
-                            isOver ? 'border-primary-400 text-primary-600 bg-primary-50' : 'border-gray-200 text-gray-400'
+                            isOver ? 'border-primary-400 text-primary-600 dark:text-primary-400 bg-primary-50' : 'border-gray-200 dark:border-night-700 text-gray-400'
                           }`}>
                             {draggedGolfer ? 'Drop here' : `${4 - displayMembers.length} spot${4 - displayMembers.length !== 1 ? 's' : ''} open`}
                           </div>
@@ -684,7 +684,7 @@ export default function TeamBuilder() {
                               </button>
                               <button
                                 onClick={handleCancelEdit}
-                                className="px-2 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded"
+                                className="px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-night-600 hover:bg-gray-50 dark:bg-night-700 rounded"
                               >
                                 Cancel
                               </button>
@@ -692,7 +692,7 @@ export default function TeamBuilder() {
                           ) : (
                             <button
                               onClick={() => handleStartEdit(team)}
-                              className="w-full px-2 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded"
+                              className="w-full px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-night-600 hover:bg-gray-50 dark:bg-night-700 rounded"
                             >
                               Edit
                             </button>
@@ -708,7 +708,7 @@ export default function TeamBuilder() {
             {/* Pending (unsaved) teams */}
             {pendingTeams.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Pending Teams — not yet saved ({pendingTeams.length})
                 </h2>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -721,8 +721,8 @@ export default function TeamBuilder() {
                         onDragOver={e => { if (!isFull && draggedGolfer) { e.preventDefault(); setDragOver(`pending-${teamIdx}`); } }}
                         onDragLeave={() => setDragOver(null)}
                         onDrop={() => handleDropOnPending(teamIdx)}
-                        className={`bg-white shadow rounded-lg p-3 border-2 transition-colors ${
-                          isOver ? 'border-primary-400 bg-primary-50' : 'border-dashed border-gray-300'
+                        className={`bg-white dark:bg-night-800 shadow rounded-lg p-3 border-2 transition-colors ${
+                          isOver ? 'border-primary-400 bg-primary-50' : 'border-dashed border-gray-300 dark:border-night-600'
                         }`}
                       >
                         {/* Editable name */}
@@ -730,14 +730,14 @@ export default function TeamBuilder() {
                           type="text"
                           value={team.name}
                           onChange={e => handleTeamNameChange(teamIdx, e.target.value)}
-                          className="block w-full text-sm font-semibold text-gray-900 border-0 border-b border-gray-200 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-2 bg-transparent"
+                          className="block w-full text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-night-700 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-2 bg-transparent"
                           placeholder="Team name"
                         />
 
                         {/* Members */}
                         <div className="space-y-1 mb-2">
                           {team.members.map((m, i) => (
-                            <div key={m.contact_id || i} className="flex items-center justify-between text-sm text-gray-600">
+                            <div key={m.contact_id || i} className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                               <span>
                                 <span className="text-gray-300 text-xs mr-1">{i + 1}.</span>
                                 {m.first_name ? `${m.first_name} ${m.last_name}` : m.player_name}
@@ -759,7 +759,7 @@ export default function TeamBuilder() {
                         {/* Drop zone */}
                         {!isFull && (
                           <div className={`border-2 border-dashed rounded p-1.5 text-center text-xs mb-2 ${
-                            isOver ? 'border-primary-400 text-primary-600 bg-primary-50' : 'border-gray-200 text-gray-400'
+                            isOver ? 'border-primary-400 text-primary-600 dark:text-primary-400 bg-primary-50' : 'border-gray-200 dark:border-night-700 text-gray-400'
                           }`}>
                             {draggedGolfer ? 'Drop here' : `${4 - team.members.length} spot${4 - team.members.length !== 1 ? 's' : ''} open`}
                           </div>
@@ -772,7 +772,7 @@ export default function TeamBuilder() {
                               <span key={ri} className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                                 reason.startsWith('Registered') ? 'bg-blue-100 text-blue-700'
                                 : reason.startsWith('Preferred') || reason.startsWith('Prefers') ? 'bg-purple-100 text-purple-700'
-                                : 'bg-gray-100 text-gray-600'
+                                : 'bg-gray-100 dark:bg-night-900 text-gray-600 dark:text-gray-400'
                               }`}>{reason}</span>
                             ))}
                           </div>
@@ -803,7 +803,7 @@ export default function TeamBuilder() {
 
             {/* Empty state for teams panel */}
             {existingTeams.length === 0 && pendingTeams.length === 0 && (
-              <div className="bg-white shadow rounded-lg p-8 text-center text-gray-400 border-2 border-dashed border-gray-200">
+              <div className="bg-white dark:bg-night-800 shadow rounded-lg p-8 text-center text-gray-400 border-2 border-dashed border-gray-200 dark:border-night-700">
                 <p className="text-sm">No teams yet.</p>
                 <p className="text-sm mt-1">Click <strong>+ Add Team</strong> to create one manually, or <strong>Generate Suggestions</strong> to auto-assign.</p>
               </div>
@@ -814,12 +814,12 @@ export default function TeamBuilder() {
 
       {/* Empty state — no registrations */}
       {!loading && golfers.length === 0 && !error && (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
+        <div className="text-center py-12 bg-white dark:bg-night-800 rounded-lg shadow">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No golf registrations</h3>
-          <p className="mt-1 text-sm text-gray-500">Select a tournament with golf registrations to get started.</p>
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No golf registrations</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a tournament with golf registrations to get started.</p>
         </div>
       )}
 

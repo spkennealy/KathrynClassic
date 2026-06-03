@@ -134,9 +134,9 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {teeTime ? 'Edit Tee Time' : 'Add Tee Time'}
           </h2>
         </div>
@@ -151,7 +151,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
           <div className="space-y-4">
             {/* Event Selection */}
             <div>
-              <label htmlFor="tournament_event_id" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="tournament_event_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Golf Event <span className="text-red-500">*</span>
               </label>
               <select
@@ -159,7 +159,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 required
                 value={formData.tournament_event_id}
                 onChange={(e) => setFormData({ ...formData, tournament_event_id: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Select event</option>
                 {events.map((event) => (
@@ -173,7 +173,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
             {/* Tee Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="tee_date" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="tee_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -182,12 +182,12 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.tee_date}
                   onChange={(e) => setFormData({ ...formData, tee_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="tee_time_input" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="tee_time_input" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Time <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -196,7 +196,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.tee_time_input}
                   onChange={(e) => setFormData({ ...formData, tee_time_input: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -204,7 +204,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
             {/* Hole Number and Team */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="hole_number" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="hole_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Starting Hole <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -212,7 +212,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.hole_number}
                   onChange={(e) => setFormData({ ...formData, hole_number: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   {Array.from({ length: 18 }, (_, i) => i + 1).map(hole => (
                     <option key={hole} value={hole}>Hole {hole}</option>
@@ -221,14 +221,14 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
               </div>
 
               <div>
-                <label htmlFor="team_id" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="team_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Assign Team
                 </label>
                 <select
                   id="team_id"
                   value={formData.team_id}
                   onChange={(e) => setFormData({ ...formData, team_id: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="">No team yet</option>
                   {teams.map((team) => (
@@ -238,7 +238,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Optional - can be assigned later
                 </p>
               </div>
@@ -246,7 +246,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
 
             {/* Notes */}
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Notes
               </label>
               <textarea
@@ -255,7 +255,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Optional notes about this tee time..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
           </div>
@@ -264,7 +264,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>

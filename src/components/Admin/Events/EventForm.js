@@ -185,9 +185,9 @@ export default function EventForm({ event, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {event ? 'Edit Event' : 'Add Event'}
           </h2>
         </div>
@@ -201,7 +201,7 @@ export default function EventForm({ event, onClose, onSave }) {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="tournament_id" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="tournament_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Tournament <span className="text-red-500">*</span>
               </label>
               <select
@@ -209,7 +209,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 required
                 value={formData.tournament_id}
                 onChange={(e) => setFormData({ ...formData, tournament_id: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Select a tournament</option>
                 {tournaments.map((tournament) => (
@@ -222,7 +222,7 @@ export default function EventForm({ event, onClose, onSave }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="event_name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="event_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -232,12 +232,12 @@ export default function EventForm({ event, onClose, onSave }) {
                   value={formData.event_name}
                   onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
                   placeholder="e.g., The Kathryn Class Golf Tournament"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="event_type" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Type <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -245,7 +245,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   required
                   value={formData.event_type}
                   onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="">Select type</option>
                   {eventTypes.map((type) => (
@@ -259,7 +259,7 @@ export default function EventForm({ event, onClose, onSave }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="event_date" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Event Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -268,12 +268,12 @@ export default function EventForm({ event, onClose, onSave }) {
                   required
                   value={formData.event_date}
                   onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="start_time" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="start_time" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Start Time
                 </label>
                 <input
@@ -281,14 +281,14 @@ export default function EventForm({ event, onClose, onSave }) {
                   id="start_time"
                   value={formData.start_time}
                   onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Location
                 </label>
                 <input
@@ -297,12 +297,12 @@ export default function EventForm({ event, onClose, onSave }) {
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="e.g., Cape May National Golf Club"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="host" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="host" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Host
                 </label>
                 <input
@@ -311,13 +311,13 @@ export default function EventForm({ event, onClose, onSave }) {
                   value={formData.host}
                   onChange={(e) => setFormData({ ...formData, host: e.target.value })}
                   placeholder="e.g., Jane Smith"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="map_link" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="map_link" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Google Maps Link
               </label>
               <input
@@ -326,7 +326,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 value={formData.map_link}
                 onChange={(e) => setFormData({ ...formData, map_link: e.target.value })}
                 placeholder="https://maps.google.com/..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
@@ -337,9 +337,9 @@ export default function EventForm({ event, onClose, onSave }) {
                   id="price_tbd"
                   checked={formData.price_tbd}
                   onChange={(e) => setFormData({ ...formData, price_tbd: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="h-4 w-4 rounded border-gray-300 dark:border-night-600 text-primary-600 dark:text-primary-400 focus:ring-primary-500"
                 />
-                <label htmlFor="price_tbd" className="ml-2 text-sm font-medium text-gray-700">
+                <label htmlFor="price_tbd" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Price TBD — we will contact registrants with final cost
                 </label>
               </div>
@@ -348,7 +348,7 @@ export default function EventForm({ event, onClose, onSave }) {
             {!formData.price_tbd ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="adult_price" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="adult_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Adult Price ($) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -360,12 +360,12 @@ export default function EventForm({ event, onClose, onSave }) {
                     value={formData.adult_price}
                     onChange={(e) => setFormData({ ...formData, adult_price: e.target.value })}
                     placeholder="0.00"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="child_price" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="child_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Child Price ($) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -377,7 +377,7 @@ export default function EventForm({ event, onClose, onSave }) {
                     value={formData.child_price}
                     onChange={(e) => setFormData({ ...formData, child_price: e.target.value })}
                     placeholder="0.00"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -386,7 +386,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 <p className="text-sm text-amber-800 font-medium">Optional: Estimate range shown to registrants</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Adult Price Min ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Adult Price Min ($)</label>
                     <input
                       type="number"
                       min="0"
@@ -394,11 +394,11 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.adult_price_min}
                       onChange={(e) => setFormData({ ...formData, adult_price_min: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Adult Price Max ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Adult Price Max ($)</label>
                     <input
                       type="number"
                       min="0"
@@ -406,13 +406,13 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.adult_price_max}
                       onChange={(e) => setFormData({ ...formData, adult_price_max: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Child Price Min ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Child Price Min ($)</label>
                     <input
                       type="number"
                       min="0"
@@ -420,11 +420,11 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.child_price_min}
                       onChange={(e) => setFormData({ ...formData, child_price_min: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Child Price Max ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Child Price Max ($)</label>
                     <input
                       type="number"
                       min="0"
@@ -432,7 +432,7 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.child_price_max}
                       onChange={(e) => setFormData({ ...formData, child_price_max: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -440,14 +440,14 @@ export default function EventForm({ event, onClose, onSave }) {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Event Photo</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Event Photo</label>
               <div className="mt-1 flex items-start gap-4">
                 {formData.photo_url && (
                   <div className="relative flex-shrink-0">
                     <img
                       src={formData.photo_url}
                       alt="Event"
-                      className="w-24 h-24 rounded-lg object-cover border border-gray-200"
+                      className="w-24 h-24 rounded-lg object-cover border border-gray-200 dark:border-night-700"
                     />
                     <button
                       type="button"
@@ -460,7 +460,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 )}
                 <div className="flex-1 space-y-2">
                   <div className="flex gap-2">
-                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700">
                       <span>{photoUploading ? 'Uploading...' : 'Upload New'}</span>
                       <input
                         type="file"
@@ -473,32 +473,32 @@ export default function EventForm({ event, onClose, onSave }) {
                     <button
                       type="button"
                       onClick={loadExistingPhotos}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                      className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700"
                     >
                       Choose Existing
                     </button>
                   </div>
                   {photoError && <p className="text-xs text-red-600">{photoError}</p>}
                   {!formData.photo_url && !photoError && (
-                    <p className="text-xs text-gray-500">JPG, PNG, or WebP recommended</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">JPG, PNG, or WebP recommended</p>
                   )}
                 </div>
               </div>
 
               {showPhotoPicker && (
-                <div className="mt-3 border border-gray-200 rounded-lg p-3 bg-gray-50">
+                <div className="mt-3 border border-gray-200 dark:border-night-700 rounded-lg p-3 bg-gray-50 dark:bg-night-700">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-600">Select a photo</span>
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Select a photo</span>
                     <button
                       type="button"
                       onClick={() => setShowPhotoPicker(false)}
-                      className="text-xs text-gray-500 hover:text-gray-700"
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
                     >
                       Close
                     </button>
                   </div>
                   {existingPhotos.length === 0 ? (
-                    <p className="text-xs text-gray-500">Loading...</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Loading...</p>
                   ) : (
                     <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
                       {existingPhotos.map((photo) => (
@@ -532,7 +532,7 @@ export default function EventForm({ event, onClose, onSave }) {
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Description
               </label>
               <textarea
@@ -541,7 +541,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Optional description of the event"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
           </div>
@@ -550,7 +550,7 @@ export default function EventForm({ event, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>

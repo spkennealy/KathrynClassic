@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
@@ -17,6 +18,14 @@ module.exports = {
           700: '#136B5A',  // Darker teal
           800: '#0F5145',  // Very dark teal
           900: '#0B3730',  // Darkest teal
+        },
+        // Soft, slightly warm dark-mode surfaces (gentler than Tailwind's near-black gray-900).
+        // Layering: 900 = page background, 800 = cards/nav, 700 = inputs/hover, 600 = borders.
+        'night': {
+          600: '#4e5867',  // borders / rings
+          700: '#404a58',  // inputs / subtle hover
+          800: '#343d4a',  // elevated surfaces (cards, nav, modals)
+          900: '#2a313d',  // page background (soft slate, lighter than before)
         },
       },
       fontFamily: {

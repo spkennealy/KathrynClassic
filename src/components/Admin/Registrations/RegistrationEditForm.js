@@ -542,16 +542,16 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {isCreateMode
               ? `New Registration${attendees.length > 1 ? ` (${attendees.length} attendees)` : ''}`
               : 'Edit Registration'
             }
           </h2>
           {!isCreateMode && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Tournament: {registration.tournament_year}
             </p>
           )}
@@ -569,7 +569,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             <div className="space-y-4">
               {/* Tournament Selection (shared) */}
               <div>
-                <label htmlFor="tournament_id" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="tournament_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Tournament <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -577,7 +577,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   required
                   value={formData.tournament_id}
                   onChange={(e) => setFormData({ ...formData, tournament_id: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="">Select a tournament...</option>
                   {tournaments.map((tournament) => (
@@ -592,10 +592,10 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               {attendees.map((attendee, index) => {
                 const filteredForAttendee = getFilteredContactsFor(attendee.contactSearchTerm);
                 return (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                  <div key={index} className="border border-gray-200 dark:border-night-700 rounded-lg p-4 space-y-4">
                     {/* Card header */}
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-900">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         Attendee {index + 1}
                       </h3>
                       {attendees.length > 1 && (
@@ -612,23 +612,23 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                     {/* Contact Selection */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                           Contact <span className="text-red-500">*</span>
                         </label>
                         <button
                           type="button"
                           onClick={() => updateAttendee(index, { showNewContactForm: !attendee.showNewContactForm })}
-                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                          className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300 font-medium"
                         >
                           {attendee.showNewContactForm ? 'Cancel' : '+ New Contact'}
                         </button>
                       </div>
 
                       {attendee.showNewContactForm ? (
-                        <div className="bg-gray-50 p-4 rounded-md space-y-3">
+                        <div className="bg-gray-50 dark:bg-night-700 p-4 rounded-md space-y-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 First Name <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -637,11 +637,11 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                 onChange={(e) => updateAttendee(index, {
                                   newContactData: { ...attendee.newContactData, first_name: e.target.value }
                                 })}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Last Name <span className="text-red-500">*</span>
                               </label>
                               <input
@@ -650,30 +650,30 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                 onChange={(e) => updateAttendee(index, {
                                   newContactData: { ...attendee.newContactData, last_name: e.target.value }
                                 })}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                               />
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                             <input
                               type="email"
                               value={attendee.newContactData.email}
                               onChange={(e) => updateAttendee(index, {
                                 newContactData: { ...attendee.newContactData, email: e.target.value }
                               })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
                             <input
                               type="tel"
                               value={attendee.newContactData.phone}
                               onChange={(e) => updateAttendee(index, {
                                 newContactData: { ...attendee.newContactData, phone: e.target.value }
                               })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                             />
                           </div>
                           <button
@@ -698,11 +698,11 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                             onFocus={() => updateAttendee(index, { showContactDropdown: true })}
                             onBlur={() => setTimeout(() => updateAttendee(index, { showContactDropdown: false }), 200)}
                             placeholder="Search by name or email..."
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                             autoComplete="off"
                           />
                           {attendee.showContactDropdown && attendee.contactSearchTerm && (
-                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-night-800 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                               {filteredForAttendee.length > 0 ? (
                                 filteredForAttendee.map((contact) => (
                                   <button
@@ -713,25 +713,25 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                       contactSearchTerm: `${contact.first_name} ${contact.last_name}`,
                                       showContactDropdown: false,
                                     })}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:bg-night-900 focus:bg-gray-100 dark:bg-night-900 focus:outline-none"
                                   >
-                                    <div className="font-medium text-gray-900">
+                                    <div className="font-medium text-gray-900 dark:text-gray-100">
                                       {contact.first_name} {contact.last_name}
                                     </div>
                                     {contact.email && (
-                                      <div className="text-sm text-gray-500">{contact.email}</div>
+                                      <div className="text-sm text-gray-500 dark:text-gray-400">{contact.email}</div>
                                     )}
                                   </button>
                                 ))
                               ) : (
-                                <div className="px-4 py-2 text-sm text-gray-500">
+                                <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                                   No contacts found
                                 </div>
                               )}
                             </div>
                           )}
                           {!attendee.contact_id && attendee.contactSearchTerm && (
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                               Please select a contact from the dropdown
                             </p>
                           )}
@@ -741,13 +741,13 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
                     {/* Payment Status */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Payment Status <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={attendee.payment_status}
                         onChange={(e) => updateAttendee(index, { payment_status: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       >
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
@@ -756,7 +756,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
                     {/* Golf Handicap */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Golf Handicap
                         {events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) && (
                           <span className="text-red-500 ml-1">*</span>
@@ -768,13 +768,13 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                         value={attendee.golf_handicap}
                         onChange={(e) => updateAttendee(index, { golf_handicap: e.target.value })}
                         placeholder={events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) ? "Required for golf (e.g., 18.5)" : "e.g., 18.5"}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       />
                     </div>
 
                     {/* Preferred Teammates */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Preferred Teammates
                       </label>
                       <textarea
@@ -782,17 +782,17 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                         value={attendee.preferred_teammates}
                         onChange={(e) => updateAttendee(index, { preferred_teammates: e.target.value })}
                         placeholder="Names of preferred golf teammates"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       />
                     </div>
 
                     {/* Events Attending */}
                     {events.length > 0 && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Events Attending
                         </label>
-                        <div className="space-y-2 bg-gray-50 p-4 rounded-md">
+                        <div className="space-y-2 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
                           {events.map((event) => (
                             <div key={event.id} className="flex items-center">
                               <input
@@ -805,15 +805,15 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                     [event.id]: !attendee.selectedEvents[event.id],
                                   },
                                 })}
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                className="h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
                               />
-                              <label htmlFor={`att-${index}-select-event-${event.id}`} className="ml-3 text-sm text-gray-700">
+                              <label htmlFor={`att-${index}-select-event-${event.id}`} className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                                 {event.event_name}
                               </label>
                             </div>
                           ))}
                         </div>
-                        <p className="mt-2 text-xs text-gray-500">
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                           Select which events this attendee is registered for
                         </p>
                       </div>
@@ -822,13 +822,13 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                     {/* Child Counts by Event */}
                     {events.length > 0 && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Child Counts by Event
                         </label>
-                        <div className="space-y-3 bg-gray-50 p-4 rounded-md">
+                        <div className="space-y-3 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
                           {events.map((event) => (
                             <div key={event.id} className="flex items-center justify-between">
-                              <label htmlFor={`att-${index}-event-${event.id}`} className="text-sm text-gray-700">
+                              <label htmlFor={`att-${index}-event-${event.id}`} className="text-sm text-gray-700 dark:text-gray-300">
                                 {event.event_name}
                               </label>
                               <input
@@ -842,12 +842,12 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                     [event.id]: e.target.value,
                                   },
                                 })}
-                                className="w-20 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                                className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                               />
                             </div>
                           ))}
                         </div>
-                        <p className="mt-2 text-xs text-gray-500">
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                           Enter the number of children attending each event
                         </p>
                       </div>
@@ -860,7 +860,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               <button
                 type="button"
                 onClick={addAttendee}
-                className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                className="w-full py-2 px-4 border-2 border-dashed border-gray-300 dark:border-night-600 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:border-gray-400 hover:text-gray-700 dark:text-gray-300 transition-colors"
               >
                 + Add Another Attendee
               </button>
@@ -871,60 +871,60 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               {/* Contact Selection - shown in both create and edit modes */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor="contact_id" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="contact_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Contact <span className="text-red-500">*</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowNewContactForm(!showNewContactForm)}
-                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                    className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300 font-medium"
                   >
                     {showNewContactForm ? 'Cancel' : '+ New Contact'}
                   </button>
                 </div>
 
                 {showNewContactForm ? (
-                  <div className="bg-gray-50 p-4 rounded-md space-y-3">
+                  <div className="bg-gray-50 dark:bg-night-700 p-4 rounded-md space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           First Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={newContactData.first_name}
                           onChange={(e) => setNewContactData({ ...newContactData, first_name: e.target.value })}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                          className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Last Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={newContactData.last_name}
                           onChange={(e) => setNewContactData({ ...newContactData, last_name: e.target.value })}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                          className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                       <input
                         type="email"
                         value={newContactData.email}
                         onChange={(e) => setNewContactData({ ...newContactData, email: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
                       <input
                         type="tel"
                         value={newContactData.phone}
                         onChange={(e) => setNewContactData({ ...newContactData, phone: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                       />
                     </div>
                     <button
@@ -947,36 +947,36 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                       onFocus={() => setShowContactDropdown(true)}
                       onBlur={() => setTimeout(() => setShowContactDropdown(false), 200)}
                       placeholder="Search by name or email..."
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       autoComplete="off"
                     />
                     {showContactDropdown && contactSearchTerm && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-night-800 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                         {filteredContacts.length > 0 ? (
                           filteredContacts.map((contact) => (
                             <button
                               key={contact.id}
                               type="button"
                               onClick={() => handleSelectContact(contact)}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:bg-night-900 focus:bg-gray-100 dark:bg-night-900 focus:outline-none"
                             >
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {contact.first_name} {contact.last_name}
                               </div>
                               {contact.email && (
-                                <div className="text-sm text-gray-500">{contact.email}</div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">{contact.email}</div>
                               )}
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 py-2 text-sm text-gray-500">
+                          <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                             No contacts found
                           </div>
                         )}
                       </div>
                     )}
                     {!formData.contact_id && contactSearchTerm && (
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Please select a contact from the dropdown
                       </p>
                     )}
@@ -985,7 +985,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               </div>
 
               <div>
-                <label htmlFor="payment_status" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="payment_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Payment Status <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -993,7 +993,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   required
                   value={formData.payment_status}
                   onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
@@ -1001,7 +1001,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               </div>
 
               <div>
-                <label htmlFor="golf_handicap" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="golf_handicap" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Golf Handicap
                   {events.some(event => event.event_type === 'golf_tournament' && selectedEvents[event.id]) && (
                     <span className="text-red-500 ml-1">*</span>
@@ -1014,12 +1014,12 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   value={formData.golf_handicap}
                   onChange={(e) => setFormData({ ...formData, golf_handicap: e.target.value })}
                   placeholder={events.some(event => event.event_type === 'golf_tournament' && selectedEvents[event.id]) ? "Required for golf (e.g., 18.5)" : "e.g., 18.5"}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="preferred_teammates" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="preferred_teammates" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Preferred Teammates
                 </label>
                 <textarea
@@ -1028,16 +1028,16 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   value={formData.preferred_teammates}
                   onChange={(e) => setFormData({ ...formData, preferred_teammates: e.target.value })}
                   placeholder="Names of preferred golf teammates"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               {events.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Events Attending
                   </label>
-                  <div className="space-y-2 bg-gray-50 p-4 rounded-md">
+                  <div className="space-y-2 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
                     {events.map((event) => (
                       <div key={event.id} className="flex items-center">
                         <input
@@ -1045,15 +1045,15 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                           id={`select-event-${event.id}`}
                           checked={selectedEvents[event.id] || false}
                           onChange={() => handleEventToggle(event.id)}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
                         />
-                        <label htmlFor={`select-event-${event.id}`} className="ml-3 text-sm text-gray-700">
+                        <label htmlFor={`select-event-${event.id}`} className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                           {event.event_name}
                         </label>
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     Select which events this attendee is registered for
                   </p>
                 </div>
@@ -1061,13 +1061,13 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
               {events.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Child Counts by Event
                   </label>
-                  <div className="space-y-3 bg-gray-50 p-4 rounded-md">
+                  <div className="space-y-3 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
                     {events.map((event) => (
                       <div key={event.id} className="flex items-center justify-between">
-                        <label htmlFor={`event-${event.id}`} className="text-sm text-gray-700">
+                        <label htmlFor={`event-${event.id}`} className="text-sm text-gray-700 dark:text-gray-300">
                           {event.event_name}
                         </label>
                         <input
@@ -1076,12 +1076,12 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                           min="0"
                           value={registrationEvents[event.id] || 0}
                           onChange={(e) => handleChildCountChange(event.id, e.target.value)}
-                          className="w-20 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                         />
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     Enter the number of children attending each event
                   </p>
                 </div>
@@ -1093,7 +1093,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>

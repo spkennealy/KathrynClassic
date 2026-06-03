@@ -169,13 +169,13 @@ export default function TournamentHistory() {
   };
 
   return (
-    <div className="bg-primary-50 min-h-screen">
+    <div className="bg-primary-50 dark:bg-night-900 min-h-screen">
       {/* Main Content */}
       <div className="py-24 sm:py-32">
         <div className="mx-auto max-w-6xl px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-16">
-            <h1 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+            <h1 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">
               Tournament History
             </h1>
           </div>
@@ -183,7 +183,7 @@ export default function TournamentHistory() {
           {/* Tournament History Cards */}
           {loading ? (
             <div className="text-center">
-              <p className="text-xl text-gray-600 font-serif">Loading tournament history...</p>
+              <p className="text-xl text-gray-600 dark:text-gray-400 font-serif">Loading tournament history...</p>
             </div>
           ) : tournaments.length > 0 ? (
             <div className="space-y-12">
@@ -192,7 +192,7 @@ export default function TournamentHistory() {
                   {/* Year Header */}
                   <div className="text-center">
                     <div className="inline-flex items-center gap-3">
-                      <h2 className="text-3xl font-bold text-primary-600 font-serif">
+                      <h2 className="text-3xl font-bold text-primary-600 dark:text-primary-400 font-serif">
                         {tournament.year} Tournament
                       </h2>
                       <div className="text-4xl">🏆</div>
@@ -200,33 +200,33 @@ export default function TournamentHistory() {
                   </div>
 
                   {/* Tournament Summary Block */}
-                  <div className="bg-white rounded-2xl shadow-lg p-8">
+                  <div className="bg-white dark:bg-night-800 rounded-2xl shadow-lg p-8">
                     {tournament.tournament_summary ? (
                       <div className="prose prose-lg max-w-none">
-                        <p className="text-base leading-7 text-gray-700 font-serif whitespace-pre-line">
+                        <p className="text-base leading-7 text-gray-700 dark:text-gray-300 font-serif whitespace-pre-line">
                           {tournament.tournament_summary}
                         </p>
                       </div>
                     ) : (
                       <div className="text-center py-6">
-                        <p className="text-gray-500 font-serif italic">
+                        <p className="text-gray-500 dark:text-gray-400 font-serif italic">
                           Tournament summary will be added after the event concludes.
                         </p>
                       </div>
                     )}
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-gray-200">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-gray-200 dark:border-night-700">
                       {/* Champion */}
                       <div className="text-center">
-                        <div className="text-xs font-semibold text-primary-600 uppercase tracking-wide mb-2">
+                        <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide mb-2">
                           Champion
                         </div>
-                        <div className="text-lg font-bold text-gray-900 font-serif">
+                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
                           {tournament.champion ? (
                             <div className="space-y-1">
                               {tournament.champion.team_name && (
-                                <div className="text-sm font-semibold text-primary-600 uppercase">
+                                <div className="text-sm font-semibold text-primary-600 dark:text-primary-400 uppercase">
                                   {tournament.champion.team_name}
                                 </div>
                               )}
@@ -248,10 +248,10 @@ export default function TournamentHistory() {
 
                       {/* Money Raised */}
                       <div className="text-center">
-                        <div className="text-xs font-semibold text-primary-600 uppercase tracking-wide mb-2">
+                        <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide mb-2">
                           Money Raised
                         </div>
-                        <div className="text-lg font-bold text-gray-900 font-serif">
+                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
                           {tournament.total_raised !== null && tournament.total_raised !== undefined
                             ? `$${Math.round(tournament.total_raised).toLocaleString()}`
                             : '$0'}
@@ -260,10 +260,10 @@ export default function TournamentHistory() {
 
                       {/* Golfers */}
                       <div className="text-center">
-                        <div className="text-xs font-semibold text-primary-600 uppercase tracking-wide mb-2">
+                        <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide mb-2">
                           Golfers
                         </div>
-                        <div className="text-lg font-bold text-gray-900 font-serif">
+                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
                           {tournament.golfer_count !== null && tournament.golfer_count !== undefined
                             ? tournament.golfer_count
                             : '0'}
@@ -272,10 +272,10 @@ export default function TournamentHistory() {
 
                       {/* Total Attendees */}
                       <div className="text-center">
-                        <div className="text-xs font-semibold text-primary-600 uppercase tracking-wide mb-2">
+                        <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide mb-2">
                           Total Attendees
                         </div>
-                        <div className="text-lg font-bold text-gray-900 font-serif">
+                        <div className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
                           {tournament.total_attendees !== null && tournament.total_attendees !== undefined
                             ? tournament.total_attendees
                             : '0'}
@@ -287,8 +287,8 @@ export default function TournamentHistory() {
               ))}
             </div>
           ) : (
-            <div className="text-center bg-white rounded-2xl shadow-lg p-16">
-              <p className="text-xl text-gray-600 font-serif">
+            <div className="text-center bg-white dark:bg-night-800 rounded-2xl shadow-lg p-16">
+              <p className="text-xl text-gray-600 dark:text-gray-400 font-serif">
                 Tournament history will be displayed here after each annual event.
               </p>
             </div>

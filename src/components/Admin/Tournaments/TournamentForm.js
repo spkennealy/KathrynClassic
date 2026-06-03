@@ -91,9 +91,9 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {tournament ? 'Edit Tournament' : 'Add Tournament'}
           </h2>
         </div>
@@ -107,7 +107,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Year <span className="text-red-500">*</span>
               </label>
               <input
@@ -118,13 +118,13 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 max="2100"
                 value={formData.year}
                 onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Start Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -133,12 +133,12 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   required
                   value={formData.start_date}
                   onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   End Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -147,13 +147,13 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   required
                   value={formData.end_date}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Location
               </label>
               <input
@@ -162,13 +162,13 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="e.g., Pine Mountain Lake"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="golf_course" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="golf_course" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Golf Course
                 </label>
                 <input
@@ -177,12 +177,12 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.golf_course}
                   onChange={(e) => setFormData({ ...formData, golf_course: e.target.value })}
                   placeholder="e.g., Pine Mountain Lake Golf Course"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="par" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="par" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Course Par
                 </label>
                 <input
@@ -193,14 +193,14 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.par}
                   onChange={(e) => setFormData({ ...formData, par: e.target.value })}
                   placeholder="72"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
-                <p className="mt-1 text-xs text-gray-500">Typically 72</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Typically 72</p>
               </div>
             </div>
 
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Notes
               </label>
               <textarea
@@ -209,12 +209,12 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Optional notes about this tournament..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
             <div>
-              <label htmlFor="total_raised" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="total_raised" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Total Raised ($)
               </label>
               <input
@@ -225,13 +225,13 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.total_raised}
                 onChange={(e) => setFormData({ ...formData, total_raised: e.target.value })}
                 placeholder="0.00"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="golfer_count" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="golfer_count" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Number of Golfers
                 </label>
                 <input
@@ -241,12 +241,12 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.golfer_count}
                   onChange={(e) => setFormData({ ...formData, golfer_count: e.target.value })}
                   placeholder="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
               <div>
-                <label htmlFor="total_attendees" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="total_attendees" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Total Attendees
                 </label>
                 <input
@@ -256,13 +256,13 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.total_attendees}
                   onChange={(e) => setFormData({ ...formData, total_attendees: e.target.value })}
                   placeholder="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
 
-            <div className="border-t border-gray-200 pt-4">
-              <label htmlFor="tournament_summary" className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="border-t border-gray-200 dark:border-night-700 pt-4">
+              <label htmlFor="tournament_summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Tournament Summary
               </label>
               <textarea
@@ -271,23 +271,23 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.tournament_summary}
                 onChange={(e) => setFormData({ ...formData, tournament_summary: e.target.value })}
                 placeholder="Write a 1-2 paragraph summary of the tournament, including the success of the event, who won, how much money was raised, and how many participated..."
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 This summary will appear on the public Tournament History page
               </p>
             </div>
 
-            <div className="border-t border-gray-200 pt-4 space-y-4">
+            <div className="border-t border-gray-200 dark:border-night-700 pt-4 space-y-4">
               <div>
-                <label htmlFor="registration_status" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="registration_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Registration Status
                 </label>
                 <select
                   id="registration_status"
                   value={formData.registration_status}
                   onChange={(e) => setFormData({ ...formData, registration_status: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="open">Open - New registrations accepted</option>
                   <option value="full">Full - Waitlist only</option>
@@ -302,14 +302,14 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                     type="checkbox"
                     checked={formData.is_finalized}
                     onChange={(e) => setFormData({ ...formData, is_finalized: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="h-4 w-4 rounded border-gray-300 dark:border-night-600 text-primary-600 dark:text-primary-400 focus:ring-primary-500"
                   />
                 </div>
                 <div className="ml-3 text-sm">
-                  <label htmlFor="is_finalized" className="font-medium text-gray-700">
+                  <label htmlFor="is_finalized" className="font-medium text-gray-700 dark:text-gray-300">
                     Finalize Tournament
                   </label>
-                  <p className="text-gray-500">
+                  <p className="text-gray-500 dark:text-gray-400">
                     When checked, this tournament will appear on the public Tournament History page. Only check this after all scores are entered and the summary is complete.
                   </p>
                 </div>
@@ -321,7 +321,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>

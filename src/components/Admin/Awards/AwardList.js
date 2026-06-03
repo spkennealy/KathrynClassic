@@ -72,7 +72,7 @@ export default function AwardList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading awards...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading awards...</p>
       </div>
     );
   }
@@ -90,25 +90,25 @@ export default function AwardList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Awards</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Awards</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage tournament awards and winners
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow">
         <div className="flex gap-4 items-center flex-wrap">
           <div className="flex items-center gap-2">
-            <label htmlFor="year-filter" className="text-sm font-medium text-gray-700">
+            <label htmlFor="year-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Year:
             </label>
             <select
               id="year-filter"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Years</option>
               {tournaments.map((tournament) => (
@@ -120,14 +120,14 @@ export default function AwardList() {
           </div>
 
           <div className="flex items-center gap-2">
-            <label htmlFor="category-filter" className="text-sm font-medium text-gray-700">
+            <label htmlFor="category-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Category:
             </label>
             <select
               id="category-filter"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Categories</option>
               {getAwardCategories().map((category) => (
@@ -138,57 +138,57 @@ export default function AwardList() {
             </select>
           </div>
 
-          <div className="flex items-center text-sm text-gray-600 ml-auto">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 ml-auto">
             Showing {filteredAwards.length} awards
           </div>
         </div>
       </div>
 
       {/* Awards Table */}
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Winner
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Award Category
               </th>
-              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Year
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Prize Amount
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Notes
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {filteredAwards.map((award) => {
               const winnerName = award.contacts
                 ? `${award.contacts.first_name} ${award.contacts.last_name}`
                 : award.winner_name;
 
               return (
-                <tr key={award.id} className="hover:bg-gray-50">
+                <tr key={award.id} className="hover:bg-gray-50 dark:bg-night-700">
                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
-                    <div className="font-medium text-gray-900">{winnerName}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{winnerName}</div>
                     {award.contacts?.email && (
-                      <div className="text-gray-500 text-xs">{award.contacts.email}</div>
+                      <div className="text-gray-500 dark:text-gray-400 text-xs">{award.contacts.email}</div>
                     )}
                   </td>
-                  <td className="px-3 py-4 text-sm text-gray-500">
+                  <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                       {award.award_category?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                     {award.tournaments?.year}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {award.prize_amount ? (
                       <span className="font-medium text-green-600">
                         ${award.prize_amount.toLocaleString()}
@@ -197,7 +197,7 @@ export default function AwardList() {
                       '-'
                     )}
                   </td>
-                  <td className="px-3 py-4 text-sm text-gray-500 max-w-xs truncate">
+                  <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
                     {award.notes || '-'}
                   </td>
                 </tr>
@@ -208,7 +208,7 @@ export default function AwardList() {
 
         {filteredAwards.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               No awards found
               {(selectedYear !== 'all' || selectedCategory !== 'all') && ' with selected filters'}
             </p>

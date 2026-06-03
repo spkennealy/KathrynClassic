@@ -54,11 +54,11 @@ export default function ContactList() {
   const SortIcon = ({ colKey }) => {
     const active = sortConfig.column === SORT_COLUMNS[colKey];
     return (
-      <span className={`ml-1 inline-flex flex-col leading-none ${active ? 'text-primary-600' : 'text-gray-300'}`}>
-        <svg className={`h-3 w-3 -mb-0.5 ${active && sortConfig.direction === 'asc' ? 'text-primary-600' : 'text-gray-300'}`} viewBox="0 0 10 6" fill="currentColor">
+      <span className={`ml-1 inline-flex flex-col leading-none ${active ? 'text-primary-600 dark:text-primary-400' : 'text-gray-300'}`}>
+        <svg className={`h-3 w-3 -mb-0.5 ${active && sortConfig.direction === 'asc' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-300'}`} viewBox="0 0 10 6" fill="currentColor">
           <path d="M0 6l5-6 5 6z"/>
         </svg>
-        <svg className={`h-3 w-3 ${active && sortConfig.direction === 'desc' ? 'text-primary-600' : 'text-gray-300'}`} viewBox="0 0 10 6" fill="currentColor">
+        <svg className={`h-3 w-3 ${active && sortConfig.direction === 'desc' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-300'}`} viewBox="0 0 10 6" fill="currentColor">
           <path d="M0 0l5 6 5-6z"/>
         </svg>
       </span>
@@ -418,7 +418,7 @@ export default function ContactList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading contacts...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading contacts...</p>
       </div>
     );
   }
@@ -436,8 +436,8 @@ export default function ContactList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contacts</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Contacts</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage tournament participants and their contact information
           </p>
         </div>
@@ -456,7 +456,7 @@ export default function ContactList() {
       </div>
 
       {/* Search and Email Button */}
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow">
         <div className="flex gap-4">
           <div className="flex-1">
             <label htmlFor="search" className="sr-only">Search contacts</label>
@@ -466,7 +466,7 @@ export default function ContactList() {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
           {selectedContactIds.size > 0 && (
@@ -480,7 +480,7 @@ export default function ContactList() {
               Email Contacts ({selectedContactIds.size})
             </button>
           )}
-          <div className="flex items-center text-sm text-gray-600">
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
             {searchTerm ? (
               <>Showing {filteredContacts.length} matching contacts</>
             ) : (
@@ -498,18 +498,18 @@ export default function ContactList() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50"
+          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:bg-night-700"
         >
           <div className="flex items-center gap-2">
             <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            <span className="font-medium text-gray-900">Filters</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">Filters</span>
             {hasActiveFilters() && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/40 text-primary-800">
                 Active
               </span>
             )}
@@ -520,15 +520,15 @@ export default function ContactList() {
         </button>
 
         {showFilters && (
-          <div className="px-4 py-4 border-t border-gray-200">
+          <div className="px-4 py-4 border-t border-gray-200 dark:border-night-700">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {/* Has Email Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <select
                   value={filters.hasEmail}
                   onChange={(e) => setFilters({ ...filters, hasEmail: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Email</option>
@@ -538,11 +538,11 @@ export default function ContactList() {
 
               {/* Has Phone Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
                 <select
                   value={filters.hasPhone}
                   onChange={(e) => setFilters({ ...filters, hasPhone: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Phone</option>
@@ -552,11 +552,11 @@ export default function ContactList() {
 
               {/* Has Registrations Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Registrations</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registrations</label>
                 <select
                   value={filters.hasRegistrations}
                   onChange={(e) => setFilters({ ...filters, hasRegistrations: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Registered</option>
@@ -566,11 +566,11 @@ export default function ContactList() {
 
               {/* Has Tournaments Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tournaments</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tournaments</label>
                 <select
                   value={filters.hasTournaments}
                   onChange={(e) => setFilters({ ...filters, hasTournaments: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Attended</option>
@@ -580,11 +580,11 @@ export default function ContactList() {
 
               {/* Has Awards Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Awards</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Awards</label>
                 <select
                   value={filters.hasAwards}
                   onChange={(e) => setFilters({ ...filters, hasAwards: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Awards</option>
@@ -594,11 +594,11 @@ export default function ContactList() {
 
               {/* Tournament Year Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Year</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
                 <select
                   value={filters.tournamentYear}
                   onChange={(e) => setFilters({ ...filters, tournamentYear: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All Years</option>
                   {availableYears.map(year => (
@@ -612,7 +612,7 @@ export default function ContactList() {
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={clearFilters}
-                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                  className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300"
                 >
                   Clear all filters
                 </button>
@@ -657,11 +657,11 @@ export default function ContactList() {
       )}
 
       {/* Contacts Table */}
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 w-12">
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 w-12">
                 <input
                   type="checkbox"
                   checked={allFilteredSelected}
@@ -671,83 +671,83 @@ export default function ContactList() {
                     }
                   }}
                   onChange={handleSelectAll}
-                  className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                  className="h-4 w-4 rounded border-gray-300 dark:border-night-600 text-green-600 focus:ring-green-500 cursor-pointer"
                 />
               </th>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('name')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('name')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Name<SortIcon colKey="name" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('email')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('email')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Email<SortIcon colKey="email" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('phone')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('phone')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Phone<SortIcon colKey="phone" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('registrations')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('registrations')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Registrations<SortIcon colKey="registrations" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('tournaments')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('tournaments')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Tournaments<SortIcon colKey="tournaments" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('years')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('years')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Years<SortIcon colKey="years" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
-                <button onClick={() => handleSort('awards')} className="inline-flex items-center hover:text-primary-600 transition-colors">
+              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <button onClick={() => handleSort('awards')} className="inline-flex items-center hover:text-primary-600 dark:text-primary-400 transition-colors">
                   Awards<SortIcon colKey="awards" />
                 </button>
               </th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {filteredContacts.map((contact) => (
-              <tr key={contact.contact_id} className="hover:bg-gray-50">
+              <tr key={contact.contact_id} className="hover:bg-gray-50 dark:bg-night-700">
                 <td className="py-4 pl-4 pr-3 text-sm w-12">
                   <input
                     type="checkbox"
                     checked={selectedContactIds.has(contact.contact_id)}
                     onChange={() => handleSelectContact(contact.contact_id)}
-                    className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-gray-300 dark:border-night-600 text-green-600 focus:ring-green-500 cursor-pointer"
                   />
                 </td>
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                   {contact.first_name} {contact.last_name}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {contact.email || (
                     <span className="text-yellow-600">⚠️ Missing</span>
                   )}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {contact.phone || '-'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                   <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                     {contact.total_registrations || 0}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                   {contact.tournaments_attended || 0}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {contact.tournament_years?.join(', ') || '-'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                   {contact.awards_won > 0 ? (
                     <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
                       🏅 {contact.awards_won}
@@ -759,7 +759,7 @@ export default function ContactList() {
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleEdit(contact)}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Edit
                   </button>
@@ -777,7 +777,7 @@ export default function ContactList() {
 
         {filteredContacts.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               {searchTerm ? 'No contacts found matching your search' : 'No contacts found'}
             </p>
           </div>
@@ -786,26 +786,26 @@ export default function ContactList() {
 
       {/* Pagination - hidden when searching */}
       {!searchTerm && totalPages > 1 && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow">
+        <div className="bg-white dark:bg-night-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-night-700 sm:px-6 rounded-lg shadow">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
           </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 Showing <span className="font-medium">{(currentPage - 1) * PAGE_SIZE + 1}</span> to{' '}
                 <span className="font-medium">{Math.min(currentPage * PAGE_SIZE, totalCount)}</span> of{' '}
                 <span className="font-medium">{totalCount}</span> contacts
@@ -816,7 +816,7 @@ export default function ContactList() {
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-night-600 bg-white dark:bg-night-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="sr-only">Previous</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -840,8 +840,8 @@ export default function ContactList() {
                       onClick={() => setCurrentPage(pageNum)}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                         currentPage === pageNum
-                          ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          ? 'z-10 bg-primary-50 border-primary-500 text-primary-600 dark:text-primary-400'
+                          : 'bg-white dark:bg-night-800 border-gray-300 dark:border-night-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-night-700'
                       }`}
                     >
                       {pageNum}
@@ -851,7 +851,7 @@ export default function ContactList() {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-night-600 bg-white dark:bg-night-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="sr-only">Next</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

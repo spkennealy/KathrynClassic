@@ -211,7 +211,7 @@ export default function RecycleBin() {
     if (records.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-gray-500">No deleted {selectedTab} found</p>
+          <p className="text-gray-500 dark:text-gray-400">No deleted {selectedTab} found</p>
         </div>
       );
     }
@@ -219,9 +219,9 @@ export default function RecycleBin() {
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {selectedTab === 'registrations' && 'Name / Email'}
                 {selectedTab === 'contacts' && 'Name / Email'}
                 {selectedTab === 'tournaments' && 'Year'}
@@ -229,37 +229,37 @@ export default function RecycleBin() {
                 {selectedTab === 'teams' && 'Team Name'}
                 {selectedTab === 'awards' && 'Winner / Category'}
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Details
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Deleted
               </th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {selectedTab === 'registrations' && records.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
+              <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
                     {record.contacts?.first_name} {record.contacts?.last_name}
                   </div>
-                  <div className="text-gray-500">{record.contacts?.email}</div>
+                  <div className="text-gray-500 dark:text-gray-400">{record.contacts?.email}</div>
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {record.tournaments?.year} Tournament • {record.payment_status}
                   {record.golf_handicap && ` • Handicap: ${record.golf_handicap}`}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(record.deleted_at)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleRestoreClick(record, 'registrations')}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Restore
                   </button>
@@ -274,23 +274,23 @@ export default function RecycleBin() {
             ))}
 
             {selectedTab === 'contacts' && records.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
+              <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
                     {record.first_name} {record.last_name}
                   </div>
-                  <div className="text-gray-500">{record.email}</div>
+                  <div className="text-gray-500 dark:text-gray-400">{record.email}</div>
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {record.phone || 'No phone'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(record.deleted_at)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleRestoreClick(record, 'contacts')}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Restore
                   </button>
@@ -305,21 +305,21 @@ export default function RecycleBin() {
             ))}
 
             {selectedTab === 'tournaments' && records.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+              <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
+                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                   {record.year}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {new Date(record.start_date).toLocaleDateString()} - {new Date(record.end_date).toLocaleDateString()}
                   {record.location && ` • ${record.location}`}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(record.deleted_at)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleRestoreClick(record, 'tournaments')}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Restore
                   </button>
@@ -334,21 +334,21 @@ export default function RecycleBin() {
             ))}
 
             {selectedTab === 'events' && records.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
+              <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
                 <td className="py-4 pl-4 pr-3 text-sm">
-                  <div className="font-medium text-gray-900">{record.event_name}</div>
-                  <div className="text-gray-500">{record.event_type}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{record.event_name}</div>
+                  <div className="text-gray-500 dark:text-gray-400">{record.event_type}</div>
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {record.tournaments?.year} • {new Date(record.event_date).toLocaleDateString()}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(record.deleted_at)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleRestoreClick(record, 'events')}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Restore
                   </button>
@@ -363,20 +363,20 @@ export default function RecycleBin() {
             ))}
 
             {selectedTab === 'teams' && records.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+              <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
+                <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                   {record.teams?.name || 'Unknown Team'}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {record.tournaments?.year} • Score: {record.total_score}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(record.deleted_at)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleRestoreClick(record, 'teams')}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Restore
                   </button>
@@ -396,24 +396,24 @@ export default function RecycleBin() {
                 : record.winner_name;
 
               return (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
                   <td className="py-4 pl-4 pr-3 text-sm">
-                    <div className="font-medium text-gray-900">{winnerName || 'Unknown'}</div>
-                    <div className="text-gray-500">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{winnerName || 'Unknown'}</div>
+                    <div className="text-gray-500 dark:text-gray-400">
                       {record.award_category?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                     </div>
                   </td>
-                  <td className="px-3 py-4 text-sm text-gray-500">
+                  <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {record.tournaments?.year}
                     {record.details && ` • ${record.details}`}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {formatDate(record.deleted_at)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                     <button
                       onClick={() => handleRestoreClick(record, 'awards')}
-                      className="text-primary-600 hover:text-primary-900 font-medium"
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
                       Restore
                     </button>
@@ -437,7 +437,7 @@ export default function RecycleBin() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading recycle bin...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading recycle bin...</p>
       </div>
     );
   }
@@ -447,8 +447,8 @@ export default function RecycleBin() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Recycle Bin</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Recycle Bin</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Recover or permanently delete soft-deleted records
           </p>
         </div>
@@ -461,7 +461,7 @@ export default function RecycleBin() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-night-700">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => (
             <button
@@ -470,15 +470,15 @@ export default function RecycleBin() {
               className={`
                 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium
                 ${selectedTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:border-night-600 hover:text-gray-700 dark:text-gray-300'
                 }
               `}
             >
               {tab.name}
               {tab.count > 0 && (
                 <span className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  selectedTab === tab.id ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-900'
+                  selectedTab === tab.id ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-night-900 text-gray-900 dark:text-gray-100'
                 }`}>
                   {tab.count}
                 </span>
@@ -489,7 +489,7 @@ export default function RecycleBin() {
       </div>
 
       {/* Records List */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-hidden">
         {renderRecordsList()}
       </div>
 

@@ -81,7 +81,7 @@ export default function Home() {
   return (
     <div className="relative isolate overflow-hidden">
       {/* Hero Section */}
-      <div className="relative bg-primary-600 px-4 sm:px-6 py-12 sm:py-24 lg:py-30 overflow-hidden">
+      <div className="relative bg-primary-600 dark:bg-primary-800 px-4 sm:px-6 py-12 sm:py-24 lg:py-30 overflow-hidden">
         <div className="mx-auto max-w-6xl relative z-20 md:flex md:items-center md:gap-10 lg:gap-16">
           {/* Mobile-only hero photo */}
           <div className="mb-6 flex justify-center md:hidden">
@@ -127,7 +127,7 @@ export default function Home() {
 
       {/* Photo Slideshow */}
       {photos.length > 0 && (
-        <div className="bg-primary-50 py-8 sm:py-10">
+        <div className="bg-primary-50 dark:bg-night-900 py-8 sm:py-10">
           <div className="mx-auto max-w-4xl px-4 sm:px-6">
             <div className="relative flex items-center justify-center" style={{ height: '60vw', maxHeight: '500px' }}>
               {photos.map((photo, index) => (
@@ -160,32 +160,32 @@ export default function Home() {
       )}
 
       {/* Features Section */}
-      <div className="bg-primary-50 pt-4 sm:pt-6 pb-16 sm:pb-24 lg:pb-32">
+      <div className="bg-primary-50 dark:bg-night-900 pt-4 sm:pt-6 pb-16 sm:pb-24 lg:pb-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 sm:gap-8 lg:grid-cols-3">
             {/* Honoring Kathryn */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            <div className="bg-white dark:bg-night-800 rounded-2xl shadow-lg p-6 sm:p-8">
               <div className="text-4xl sm:text-6xl mb-4 sm:mb-6">⛳</div>
-              <h3 className="text-xl sm:text-2xl font-bold text-primary-600 mb-3 sm:mb-4 font-serif">Honoring Kathryn</h3>
-              <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 font-serif">
+              <h3 className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400 mb-3 sm:mb-4 font-serif">Honoring Kathryn</h3>
+              <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 dark:text-gray-400 font-serif">
                 An intimate gathering to celebrate Kathryn Rourick's legacy through golf, community, and remembrance.
               </p>
             </div>
 
             {/* Supporting CJD Research */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            <div className="bg-white dark:bg-night-800 rounded-2xl shadow-lg p-6 sm:p-8">
               <div className="text-4xl sm:text-6xl mb-4 sm:mb-6">💚</div>
-              <h3 className="text-xl sm:text-2xl font-bold text-primary-600 mb-3 sm:mb-4 font-serif">Supporting CJD Research</h3>
-              <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 font-serif">
+              <h3 className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400 mb-3 sm:mb-4 font-serif">Supporting CJD Research</h3>
+              <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 dark:text-gray-400 font-serif">
                 100% of proceeds benefit the CJD Foundation, funding research and supporting families affected by Creutzfeldt-Jakob disease.
               </p>
             </div>
 
             {/* Building Community */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            <div className="bg-white dark:bg-night-800 rounded-2xl shadow-lg p-6 sm:p-8">
               <div className="text-4xl sm:text-6xl mb-4 sm:mb-6">🏆</div>
-              <h3 className="text-xl sm:text-2xl font-bold text-primary-600 mb-3 sm:mb-4 font-serif">Building Community</h3>
-              <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 font-serif">
+              <h3 className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400 mb-3 sm:mb-4 font-serif">Building Community</h3>
+              <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 dark:text-gray-400 font-serif">
                 A weekend bringing together family and friends who knew and loved Kathryn for golf, connection, and hope.
               </p>
             </div>

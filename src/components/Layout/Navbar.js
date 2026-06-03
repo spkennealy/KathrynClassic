@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Disclosure } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import ThemeToggle from './ThemeToggle';
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -17,15 +18,15 @@ export default function Navbar() {
   const location = useLocation();
 
   return (
-    <Disclosure as="nav" className="bg-white border-b border-gray-200">
+    <Disclosure as="nav" className="bg-white dark:bg-night-800 border-b border-gray-200 dark:border-night-700">
       {({ open, close }) => (
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-20 items-center justify-between">
               <div className="flex-1 md:flex-none text-center md:text-left">
                 <Link to="/" className="block">
-                  <h1 className="text-primary-600 font-serif text-3xl font-bold leading-tight">The Kathryn Classic</h1>
-                  <p className="text-primary-600 text-sm font-medium md:text-center">A weekend of family, golf & giving</p>
+                  <h1 className="text-primary-600 dark:text-primary-400 font-serif text-3xl font-bold leading-tight">The Kathryn Classic</h1>
+                  <p className="text-primary-600 dark:text-primary-400 text-sm font-medium md:text-center">A weekend of family, golf & giving</p>
                 </Link>
               </div>
               <div className="hidden md:block">
@@ -36,13 +37,14 @@ export default function Navbar() {
                       to={item.href}
                       className={`${
                         location.pathname === item.href
-                          ? 'text-primary-600 border-b-2 border-primary-600'
-                          : 'text-primary-600 hover:border-b-2 hover:border-primary-600'
+                          ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
+                          : 'text-primary-600 dark:text-primary-400 hover:border-b-2 hover:border-primary-600 dark:hover:border-primary-400'
                       } pb-1 text-base font-serif transition-all duration-200`}
                     >
                       {item.name}
                     </Link>
                   ))}
+                  <ThemeToggle />
                 </div>
               </div>
               <div className="-mr-2 flex md:hidden">
@@ -58,7 +60,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          <Disclosure.Panel className="md:hidden border-t border-gray-200">
+          <Disclosure.Panel className="md:hidden border-t border-gray-200 dark:border-night-700">
             <div className="space-y-1 px-2 pb-3 pt-2 sm:px-3">
               {navigation.map((item) => (
                 <Link
@@ -67,13 +69,16 @@ export default function Navbar() {
                   onClick={() => close()}
                   className={`${
                     location.pathname === item.href
-                      ? 'bg-primary-50 text-primary-600 font-medium'
-                      : 'text-primary-600 hover:bg-primary-50'
+                      ? 'bg-primary-50 dark:bg-night-700 text-primary-600 dark:text-primary-400 font-medium'
+                      : 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-night-700'
                   } block rounded-lg px-3 py-2 text-base transition-colors font-serif`}
                 >
                   {item.name}
                 </Link>
               ))}
+              <div className="border-t border-gray-200 dark:border-night-700 mt-2 pt-2">
+                <ThemeToggle variant="row" />
+              </div>
             </div>
           </Disclosure.Panel>
         </>

@@ -5,6 +5,16 @@
     <link rel="icon" href="%PUBLIC_URL%/kc_favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#006747" />
+    <!-- Set the theme before React mounts to avoid a flash of the wrong color scheme. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var isDark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
     <meta
       name="description"
       content="Join us for a weekend of family, golf & giving. The annual Kathryn Classic tournament supports CJD research through the CJD Foundation."

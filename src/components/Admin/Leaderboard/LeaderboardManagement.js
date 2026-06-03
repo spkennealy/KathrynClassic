@@ -116,8 +116,8 @@ export default function LeaderboardManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Leaderboard Management</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Leaderboard Management</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage tournament scores and team standings
           </p>
         </div>
@@ -130,14 +130,14 @@ export default function LeaderboardManagement() {
       </div>
 
       {/* Tournament Selector */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Tournament
         </label>
         <select
           value={selectedTournament}
           onChange={(e) => setSelectedTournament(e.target.value)}
-          className="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="block w-full max-w-xs rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
         >
           {tournaments.map((tournament) => (
             <option key={tournament.id} value={tournament.id}>
@@ -151,37 +151,37 @@ export default function LeaderboardManagement() {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading teams...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading teams...</p>
         </div>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-x-auto">
+        <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-300">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-night-700">
               <tr>
-                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Pos
                 </th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Team / Players
                 </th>
-                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   To Par
                 </th>
-                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Total
                 </th>
-                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Status
                 </th>
-                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
               {teams.map((team) => (
-                <tr key={team.team_id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900">
+                <tr key={team.team_id} className="hover:bg-gray-50 dark:bg-night-700">
+                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900 dark:text-gray-100">
                     <div className="flex items-center gap-2">
                       {team.is_tied ? `T${team.position}` : team.position}
                       {getPlaceEmoji(team.position, team.is_tied) && (
@@ -189,34 +189,34 @@ export default function LeaderboardManagement() {
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-4 text-sm text-gray-900">
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
                     {team.team_name && (
-                      <div className="font-semibold text-primary-600 mb-1 flex items-center gap-2">
+                      <div className="font-semibold text-primary-600 dark:text-primary-400 mb-1 flex items-center gap-2">
                         {team.team_name}
                       </div>
                     )}
                     {team.players && team.players.map((player, idx) => (
-                      <div key={idx} className="text-gray-600">
+                      <div key={idx} className="text-gray-600 dark:text-gray-400">
                         {player.name}
                         {player.handicap && ` (${player.handicap})`}
                       </div>
                     ))}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-bold">
-                    <span className={team.score_to_par < 0 ? 'text-red-600' : 'text-gray-900'}>
+                    <span className={team.score_to_par < 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}>
                       {formatScore(team.score_to_par)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                     {team.total_score}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-600">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-600 dark:text-gray-400">
                     {team.status || 'F'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-2">
                     <button
                       onClick={() => handleEditTeam(team)}
-                      className="text-primary-600 hover:text-primary-900 font-medium"
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
                       Edit
                     </button>
@@ -234,7 +234,7 @@ export default function LeaderboardManagement() {
 
           {teams.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">No teams added yet</p>
+              <p className="text-gray-500 dark:text-gray-400">No teams added yet</p>
             </div>
           )}
         </div>

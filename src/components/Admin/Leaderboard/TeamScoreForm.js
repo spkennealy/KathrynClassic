@@ -465,9 +465,9 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {team ? 'Edit Team Score' : 'Add Team Score'}
           </h2>
         </div>
@@ -482,7 +482,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
           <div className="space-y-6">
             {/* Team Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Team <span className="text-red-500">*</span>
               </label>
               {!isCreatingNewTeam ? (
@@ -492,12 +492,12 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                     value={teamSearch}
                     onChange={(e) => setTeamSearch(e.target.value)}
                     placeholder="Search teams..."
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                   <select
                     value={selectedTeamId}
                     onChange={(e) => setSelectedTeamId(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     size={Math.min(6, availableTeams.filter(t =>
                       !teamSearch || t.name.toLowerCase().includes(teamSearch.toLowerCase())
                     ).length + 1)}
@@ -513,7 +513,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                   <button
                     type="button"
                     onClick={() => setIsCreatingNewTeam(true)}
-                    className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 font-medium"
                   >
                     + Create new team
                   </button>
@@ -525,13 +525,13 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                     value={newTeamName}
                     onChange={(e) => setNewTeamName(e.target.value)}
                     placeholder="New team name"
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => { setIsCreatingNewTeam(false); setNewTeamName(''); }}
-                    className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 font-medium"
                   >
                     Back to existing teams
                   </button>
@@ -541,7 +541,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
 
             {/* Team Number */}
             <div>
-              <label htmlFor="team_number" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="team_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Team Number (Optional)
               </label>
               <input
@@ -550,26 +550,26 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                 value={formData.team_number}
                 onChange={(e) => setFormData({ ...formData, team_number: e.target.value })}
                 placeholder="e.g., 1"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
             {/* Players */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 Team Players (up to 4)
               </label>
               <div className="space-y-4">
                 {players.map((player, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div key={index} className="border border-gray-200 dark:border-night-700 rounded-lg p-4 bg-gray-50 dark:bg-night-700">
                     <div className="grid grid-cols-12 gap-3">
                       <div className="col-span-1 flex items-center">
-                        <span className="text-sm text-gray-500 font-medium">{index + 1}.</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">{index + 1}.</span>
                       </div>
                       <div className="col-span-11 space-y-3">
                         {/* Searchable Contact Selector */}
                         <div className="relative">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             Search Contact or Enter Name
                           </label>
                           <input
@@ -590,21 +590,21 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                               }, 200);
                             }}
                             placeholder="Start typing name or email..."
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                           />
                           {/* Dropdown Results */}
                           {showDropdowns[index] && getFilteredContacts(index).length > 0 && (
-                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-sm overflow-auto border border-gray-300">
+                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-night-800 shadow-lg max-h-60 rounded-md py-1 text-sm overflow-auto border border-gray-300 dark:border-night-600">
                               {getFilteredContacts(index).map((contact) => (
                                 <div
                                   key={contact.id}
                                   onClick={() => handleContactSelect(index, contact)}
                                   className="cursor-pointer px-3 py-2 hover:bg-primary-50"
                                 >
-                                  <div className="font-medium text-gray-900">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
                                     {contact.last_name}, {contact.first_name}
                                   </div>
-                                  <div className="text-xs text-gray-500">{contact.email}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">{contact.email}</div>
                                 </div>
                               ))}
                             </div>
@@ -620,7 +620,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                         </div>
                         {/* Handicap */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                             Handicap
                           </label>
                           <input
@@ -629,7 +629,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                             value={player.handicap}
                             onChange={(e) => handlePlayerChange(index, 'handicap', e.target.value)}
                             placeholder="e.g., 18"
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                           />
                         </div>
                       </div>
@@ -637,7 +637,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 Start typing to search contacts, or manually enter a name for guests
               </p>
             </div>
@@ -645,15 +645,15 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
             {/* Course Par Info */}
             <div className="bg-primary-50 rounded-lg p-4 border border-primary-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Course Par:</span>
-                <span className="text-2xl font-bold text-primary-600">{tournamentPar}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Course Par:</span>
+                <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">{tournamentPar}</span>
               </div>
             </div>
 
             {/* Scores */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="total_score" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="total_score" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Total Score <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -663,13 +663,13 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                   value={formData.total_score}
                   onChange={(e) => setFormData({ ...formData, total_score: e.target.value })}
                   placeholder="e.g., 68"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
-                <p className="mt-1 text-xs text-gray-500">Total strokes for the round</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Total strokes for the round</p>
               </div>
 
               <div>
-                <label htmlFor="score_to_par" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="score_to_par" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Score to Par (Auto-calculated)
                 </label>
                 <input
@@ -677,10 +677,10 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                   id="score_to_par"
                   readOnly
                   value={formData.score_to_par ? (formData.score_to_par === '0' ? 'E' : (parseInt(formData.score_to_par) > 0 ? `+${formData.score_to_par}` : formData.score_to_par)) : '-'}
-                  className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm sm:text-sm font-bold text-center text-lg"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 bg-gray-50 dark:bg-night-700 shadow-sm sm:text-sm font-bold text-center text-lg"
                   style={{ color: formData.score_to_par && parseInt(formData.score_to_par) < 0 ? '#dc2626' : '#111827' }}
                 />
-                <p className="mt-1 text-xs text-gray-500">Calculated: Total - {tournamentPar}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Calculated: Total - {tournamentPar}</p>
               </div>
             </div>
 
@@ -702,7 +702,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
 
             {/* Status */}
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Status
               </label>
               <input
@@ -711,9 +711,9 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 placeholder="F for finished, or Thru 15"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
-              <p className="mt-1 text-xs text-gray-500">F = Finished, or current hole</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">F = Finished, or current hole</p>
             </div>
           </div>
 
@@ -721,7 +721,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>

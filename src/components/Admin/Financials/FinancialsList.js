@@ -69,10 +69,10 @@ function PaymentModal({ registrant, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Record Payment</h2>
-          <p className="mt-1 text-sm text-gray-500">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-md w-full">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Record Payment</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {registrant.first_name} {registrant.last_name} &middot; Total {formatCurrency(totalCost)}
           </p>
         </div>
@@ -85,7 +85,7 @@ function PaymentModal({ registrant, onClose, onSave }) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Amount Paid</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount Paid</label>
             <input
               type="number"
               step="0.01"
@@ -93,44 +93,44 @@ function PaymentModal({ registrant, onClose, onSave }) {
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
               placeholder="0.00"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
             <button
               type="button"
               onClick={() => setAmountPaid(String(totalCost))}
-              className="mt-1 text-xs text-primary-600 hover:text-primary-700"
+              className="mt-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300"
             >
               Set to total ({formatCurrency(totalCost)})
             </button>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Payment Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Date</label>
             <input
               type="date"
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between gap-3">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-night-700 flex justify-between gap-3">
           <button
             type="button"
             onClick={() => save(totalCost)}
             disabled={loading || totalCost <= 0}
-            className="px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-primary-700 dark:text-primary-300 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 dark:bg-primary-900/40 disabled:opacity-50"
           >
             Mark Fully Paid
           </button>
@@ -138,7 +138,7 @@ function PaymentModal({ registrant, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700"
             >
               Cancel
             </button>
@@ -322,7 +322,7 @@ export default function FinancialsList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading financials...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading financials...</p>
       </div>
     );
   }
@@ -332,17 +332,17 @@ export default function FinancialsList() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Financials</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Financials</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Registration revenue, payments, and expenses by tournament year
           </p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Tournament Year</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tournament Year</label>
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="block rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="block rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           >
             {tournaments.map((t) => (
               <option key={t.id} value={t.year}>
@@ -361,59 +361,59 @@ export default function FinancialsList() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Registrations</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+        <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Registrations</dt>
+          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
             {totals.registrations}
           </dd>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Total Amount Due</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+        <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount Due</dt>
+          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
             {formatCurrency(totals.totalDue)}
           </dd>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {formatCurrency(totals.outstanding)} outstanding
           </p>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Amount Paid</dt>
+        <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Amount Paid</dt>
           <dd className="mt-1 text-3xl font-semibold tracking-tight text-green-600">
             {formatCurrency(totals.totalPaid)}
           </dd>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Net (income &minus; expenses)</dt>
+        <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Net (income &minus; expenses)</dt>
           <dd className={`mt-1 text-3xl font-semibold tracking-tight ${totals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatCurrency(totals.net)}
           </dd>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             incl. {formatCurrency(totals.totalDonations)} donations &middot; {formatCurrency(totals.totalExpenses)} expenses
           </p>
         </div>
       </div>
 
       {/* Registrants table */}
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
-        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <h2 className="text-lg font-medium text-gray-900">Registrants</h2>
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
+        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Registrants</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Name or email..."
-                className="block w-full sm:w-56 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="block w-full sm:w-56 rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Payment status</label>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Payment status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="all">All</option>
                 <option value="unpaid">Unpaid</option>
@@ -424,49 +424,49 @@ export default function FinancialsList() {
           </div>
         </div>
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Total Cost</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Amount Paid</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Balance</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Name</th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Total Cost</th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount Paid</th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Balance</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {pagedRegistrants.map((r) => {
               const totalCost = Number(r.total_cost) || 0;
               const paid = Number(r.amount_paid) || 0;
               const balance = totalCost - paid;
               const status = getPaymentDisplay(paid, totalCost);
               return (
-                <tr key={r.registration_id} className="hover:bg-gray-50">
+                <tr key={r.registration_id} className="hover:bg-gray-50 dark:bg-night-700">
                   <td className="py-4 pl-4 pr-3 text-sm">
                     <Link
                       to={`/admin/registrations?search=${encodeURIComponent(`${r.first_name} ${r.last_name}`)}`}
-                      className="font-medium text-primary-600 hover:text-primary-900 hover:underline"
+                      className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 hover:underline"
                     >
                       {r.first_name} {r.last_name}
                     </Link>
                     {r.has_tbd_event && (
-                      <span className="ml-2 inline-flex rounded px-1.5 text-xs font-medium bg-gray-100 text-gray-600">
+                      <span className="ml-2 inline-flex rounded px-1.5 text-xs font-medium bg-gray-100 dark:bg-night-900 text-gray-600 dark:text-gray-400">
                         TBD
                       </span>
                     )}
                     {r.events && r.events.length > 0 && (
-                      <div className="mt-0.5 text-xs text-gray-500">
+                      <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         {r.events.join(', ')}
                       </div>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 text-right">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                     {formatCurrency(totalCost)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 text-right">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                     {formatCurrency(paid)}
                   </td>
-                  <td className={`whitespace-nowrap px-3 py-4 text-sm text-right ${balance > 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  <td className={`whitespace-nowrap px-3 py-4 text-sm text-right ${balance > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
                     {formatCurrency(balance)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm">
@@ -477,7 +477,7 @@ export default function FinancialsList() {
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                     <button
                       onClick={() => setPaymentRegistrant(r)}
-                      className="text-primary-600 hover:text-primary-900 font-medium"
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
                       Record Payment
                     </button>
@@ -487,18 +487,18 @@ export default function FinancialsList() {
             })}
           </tbody>
           {filteredRegistrants.length > 0 && (
-            <tfoot className="bg-gray-50 border-t border-gray-200">
+            <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
               <tr>
-                <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900">
+                <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {statusFilter === 'all' && !searchTerm ? 'Totals' : 'Filtered totals'}
                 </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                   {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0))}
                 </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                   {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0))}
                 </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                   {formatCurrency(filteredRegistrants.reduce((s, r) => s + ((Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0)), 0))}
                 </td>
                 <td colSpan={2}></td>
@@ -508,7 +508,7 @@ export default function FinancialsList() {
         </table>
         {filteredRegistrants.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               {registrants.length === 0
                 ? `No registrations for ${selectedYear}`
                 : 'No registrants match your filters'}
@@ -516,25 +516,25 @@ export default function FinancialsList() {
           </div>
         )}
         {filteredRegistrants.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
-            <p className="text-sm text-gray-600">
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-night-700 px-4 py-3 sm:px-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredRegistrants.length)} of {filteredRegistrants.length}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
-              <span className="inline-flex items-center px-2 text-sm text-gray-600">
+              <span className="inline-flex items-center px-2 text-sm text-gray-600 dark:text-gray-400">
                 Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -544,9 +544,9 @@ export default function FinancialsList() {
       </div>
 
       {/* Expenses */}
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
-        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900">Expenses</h2>
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
+        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex items-center justify-between">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Expenses</h2>
           <button
             onClick={() => { setSelectedExpense(null); setShowExpenseForm(true); }}
             className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -558,34 +558,34 @@ export default function FinancialsList() {
           </button>
         </div>
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Date</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Description</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Category</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Vendor</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Method</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Amount</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Actions</th>
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Description</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Category</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Vendor</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Method</th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount</th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {expenses.map((e) => (
-              <tr key={e.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500">
+              <tr key={e.id} className="hover:bg-gray-50 dark:bg-night-700">
+                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400">
                   {e.expense_date ? new Date(e.expense_date).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-900">{e.description}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{e.category || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{e.vendor || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{e.payment_method || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 text-right">
+                <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">{e.description}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.category || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.vendor || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.payment_method || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                   {formatCurrency(e.amount)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => { setSelectedExpense(e); setShowExpenseForm(true); }}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Edit
                   </button>
@@ -600,12 +600,12 @@ export default function FinancialsList() {
             ))}
           </tbody>
           {expenses.length > 0 && (
-            <tfoot className="bg-gray-50 border-t border-gray-200">
+            <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
               <tr>
-                <td colSpan={5} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900">
+                <td colSpan={5} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Total Expenses
                 </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                   {formatCurrency(totals.totalExpenses)}
                 </td>
                 <td></td>
@@ -615,7 +615,7 @@ export default function FinancialsList() {
         </table>
         {expenses.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No expenses recorded for {selectedYear}</p>
+            <p className="text-gray-500 dark:text-gray-400">No expenses recorded for {selectedYear}</p>
           </div>
         )}
       </div>

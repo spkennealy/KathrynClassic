@@ -13,6 +13,7 @@ import TournamentHistory from './components/TournamentHistory/TournamentHistory'
 
 // Admin imports
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import AdminLogin from './components/Admin/AdminLogin';
 import SetPassword from './components/Admin/SetPassword';
 import AdminLayout from './components/Admin/AdminLayout';
@@ -70,14 +71,15 @@ function App() {
     }
   }, [isAdminSite]);
   return (
-    <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
       <Router>
         <Routes>
           {/* PUBLIC SITE (www.kathrynclassic.com or localhost) */}
           {!isAdminSite && (
             <>
               <Route path="/*" element={
-                <div className="App min-h-screen flex flex-col bg-white">
+                <div className="App min-h-screen flex flex-col bg-white dark:bg-night-900">
                   <Navbar />
                   <main className="flex-grow">
                     <Routes>
@@ -139,7 +141,8 @@ function App() {
           )}
         </Routes>
       </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

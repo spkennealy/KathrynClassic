@@ -126,9 +126,9 @@ export default function TournamentList() {
       case 'full':
         return 'bg-yellow-100 text-yellow-800';
       case 'closed':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-night-900 text-gray-800 dark:text-gray-100';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-night-900 text-gray-800 dark:text-gray-100';
     }
   };
 
@@ -149,7 +149,7 @@ export default function TournamentList() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading tournaments...</p>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading tournaments...</p>
       </div>
     );
   }
@@ -167,8 +167,8 @@ export default function TournamentList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tournaments</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Tournaments</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Manage Kathryn Classic tournament details
           </p>
         </div>
@@ -181,49 +181,49 @@ export default function TournamentList() {
       </div>
 
       {/* Tournaments List */}
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
+      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
+              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Year
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Dates
               </th>
-              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Attendees
               </th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Total Raised
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Location
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Registration Status
               </th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
             {tournaments.map((tournament) => (
-              <tr key={tournament.id} className="hover:bg-gray-50">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">
+              <tr key={tournament.id} className="hover:bg-gray-50 dark:bg-night-700">
+                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100">
                   {tournament.year}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(tournament.start_date)} - {formatDate(tournament.end_date)}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                   {tournament.total_attendees || '-'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right font-medium">
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-right font-medium">
                   {formatCurrency(tournament.total_raised)}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-500">
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {tournament.location || '-'}
                 </td>
                 <td className="px-3 py-4 text-sm">
@@ -240,7 +240,7 @@ export default function TournamentList() {
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
                     onClick={() => handleEdit(tournament)}
-                    className="text-primary-600 hover:text-primary-900 font-medium"
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                   >
                     Edit
                   </button>
@@ -258,7 +258,7 @@ export default function TournamentList() {
 
         {tournaments.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No tournaments found</p>
+            <p className="text-gray-500 dark:text-gray-400">No tournaments found</p>
           </div>
         )}
       </div>

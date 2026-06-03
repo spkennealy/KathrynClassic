@@ -26,11 +26,11 @@ const iconUrl = (link) =>
 
 export default function BookYourStay({ className = '' }) {
   return (
-    <div className={`rounded-lg bg-white p-4 sm:p-6 lg:p-8 shadow-sm ring-1 ring-gray-200 ${className}`}>
-      <h3 className="text-xl sm:text-2xl font-bold text-primary-600 font-serif text-center">
+    <div className={`rounded-lg bg-white dark:bg-night-800 p-4 sm:p-6 lg:p-8 shadow-sm ring-1 ring-gray-200 dark:ring-night-700 ${className}`}>
+      <h3 className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400 font-serif text-center">
         Book Your Stay
       </h3>
-      <p className="mt-2 text-sm sm:text-base text-gray-600 text-center">
+      <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 text-center">
         The Kathryn Classic is held at Pine Mountain Lake, CA. Find a place to stay through one of these options:
       </p>
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -40,7 +40,7 @@ export default function BookYourStay({ className = '' }) {
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-lg border border-primary-600 bg-white px-4 py-3 text-center text-sm font-medium text-primary-600 shadow-sm hover:bg-primary-50 transition-colors"
+            className="flex items-center justify-center gap-2 rounded-lg border border-primary-600 dark:border-primary-400 bg-white dark:bg-night-700 px-4 py-3 text-center text-sm font-medium text-primary-600 dark:text-primary-300 shadow-sm hover:bg-primary-50 dark:hover:bg-night-600 transition-colors"
           >
             <img
               src={iconUrl(link)}

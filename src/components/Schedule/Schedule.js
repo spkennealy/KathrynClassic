@@ -84,10 +84,10 @@ export default function Schedule() {
 
   if (loading) {
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="text-center">
-            <p className="text-lg text-gray-600">Loading schedule...</p>
+            <p className="text-lg text-gray-600 dark:text-gray-400">Loading schedule...</p>
           </div>
         </div>
       </div>
@@ -96,13 +96,13 @@ export default function Schedule() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+            <h2 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">
               Tournament Schedule
             </h2>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
+            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
               Schedule details will be posted soon. Check back later for the full tournament schedule.
             </p>
           </div>
@@ -119,10 +119,10 @@ export default function Schedule() {
   });
 
   return (
-    <div className="bg-primary-50 py-24 sm:py-32 min-h-screen">
+    <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold tracking-tight text-primary-600 sm:text-5xl font-serif">
+          <h2 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">
             Tournament Schedule
           </h2>
         </div>
@@ -131,7 +131,7 @@ export default function Schedule() {
           <div key={date} className="mb-12">
             {/* Date Header */}
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-primary-600 font-serif">
+              <h3 className="text-2xl font-bold text-primary-600 dark:text-primary-400 font-serif">
                 {formatDateHeader(date)}
               </h3>
             </div>
@@ -139,49 +139,49 @@ export default function Schedule() {
             {/* Events for this date */}
             <div className="space-y-6">
               {dateEvents.map((event) => (
-                <div key={event.id} className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col sm:flex-row gap-4 sm:gap-6 sm:items-center">
+                <div key={event.id} className="bg-white dark:bg-night-800 rounded-2xl shadow-lg p-6 sm:p-8 flex flex-col sm:flex-row gap-4 sm:gap-6 sm:items-center">
                   {/* Time Section */}
                   <div className="sm:w-40 flex-shrink-0 text-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-primary-600 font-serif">
+                    <div className="text-3xl sm:text-4xl font-bold text-primary-600 dark:text-primary-400 font-serif">
                       {formatTime(event.start_time)}
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
+                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {getTimeOfDay(event.start_time)}
                     </div>
                   </div>
 
                   {/* Content Section */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-xl sm:text-2xl font-bold text-primary-600 mb-2 sm:mb-3 font-serif">
+                    <h3 className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400 mb-2 sm:mb-3 font-serif">
                       {event.event_name}
                     </h3>
-                    <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 font-serif mb-3 sm:mb-4">
+                    <p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 dark:text-gray-400 font-serif mb-3 sm:mb-4">
                       {event.description}
                     </p>
 
                     {event.location && (
                       <div className="mb-2">
-                        <span className="text-sm font-semibold text-gray-900">📍 Location: </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">📍 Location: </span>
                         {event.map_link ? (
-                          <a href={event.map_link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 hover:text-primary-800 underline">
+                          <a href={event.map_link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 underline">
                             {event.location}
                           </a>
                         ) : (
-                          <span className="text-sm text-gray-600">{event.location}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{event.location}</span>
                         )}
                       </div>
                     )}
 
                     {event.host && (
                       <div className="mb-2">
-                        <span className="text-sm font-semibold text-gray-900">👤 Host: </span>
-                        <span className="text-sm text-gray-600">{event.host}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">👤 Host: </span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{event.host}</span>
                       </div>
                     )}
 
                     {event.details && event.details.length > 0 && (
                       <div className="mt-3">
-                        <ul className="space-y-1 text-sm text-gray-600">
+                        <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                           {event.details.map((detail, index) => (
                             <li key={index} className="flex items-start">
                               <span className="mr-2">•</span>
