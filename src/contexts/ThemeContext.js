@@ -10,13 +10,10 @@ export const useTheme = () => {
   return context;
 };
 
-// Resolve the initial theme: a stored override wins, otherwise fall back to the OS preference.
+// Resolve the initial theme: a toggle made earlier this session wins, otherwise default to light mode.
 const getInitialIsDark = () => {
   if (typeof window === 'undefined') return false;
-  const stored = window.localStorage.getItem('theme');
-  if (stored === 'dark') return true;
-  if (stored === 'light') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return window.sessionStorage.getItem('theme') === 'dark';
 };
 
 const applyTheme = (isDark) => {
@@ -31,22 +28,10 @@ export const ThemeProvider = ({ children }) => {
     applyTheme(isDark);
   }, [isDark]);
 
-  // When the user hasn't picked an explicit override, follow live OS changes.
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      if (!window.localStorage.getItem('theme')) {
-        setIsDark(e.matches);
-      }
-    };
-    media.addEventListener('change', handleChange);
-    return () => media.removeEventListener('change', handleChange);
-  }, []);
-
   const toggleTheme = () => {
     setIsDark((prev) => {
       const next = !prev;
-      window.localStorage.setItem('theme', next ? 'dark' : 'light');
+      window.sessionStorage.setItem('theme', next ? 'dark' : 'light');
       return next;
     });
   };
