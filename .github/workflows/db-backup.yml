@@ -1,0 +1,70 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    # 10:00 UTC daily (~3am PT). GitHub may delay scheduled runs under load.
+    - cron: '0 10 * * *'
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set date
+        id: date
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Dump database (pg_dump 17, custom format)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          # Pin pg_dump to v17 to match the remote Postgres major version.
+          docker run --rm -i postgres:17 \
+            pg_dump --no-owner --no-privileges -Fc "$SUPABASE_DB_URL" \
+            > "kathryn-${{ steps.date.outputs.date }}.dump"
+          ls -lh "kathryn-${{ steps.date.outputs.date }}.dump"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Back up event-photos bucket
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          node scripts/backup-photos.js
+          tar -czf "kathryn-${{ steps.date.outputs.date }}.tar.gz" -C photos .
+          ls -lh "kathryn-${{ steps.date.outputs.date }}.tar.gz"
+
+      - name: Upload to object storage
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }} # optional; set for Cloudflare R2 / Backblaze B2
+        run: |
+          set -euo pipefail
+          DATE="${{ steps.date.outputs.date }}"
+          ENDPOINT_ARG=""
+          if [ -n "${S3_ENDPOINT:-}" ]; then
+            ENDPOINT_ARG="--endpoint-url ${S3_ENDPOINT}"
+          fi
+          aws s3 cp "kathryn-${DATE}.dump"   "s3://${S3_BUCKET}/db/kathryn-${DATE}.dump"       ${ENDPOINT_ARG}
+          aws s3 cp "kathryn-${DATE}.tar.gz" "s3://${S3_BUCKET}/photos/kathryn-${DATE}.tar.gz" ${ENDPOINT_ARG}
+          echo "Uploaded db/kathryn-${DATE}.dump and photos/kathryn-${DATE}.tar.gz"
