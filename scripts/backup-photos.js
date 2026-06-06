@@ -16,17 +16,24 @@ const { createClient } = require('@supabase/supabase-js');
 const BUCKET = 'event-photos';
 const OUTPUT_DIR = path.join(__dirname, '..', 'photos');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Trim to guard against secrets pasted with a trailing newline/space, which would
+// otherwise corrupt the request URL or Authorization header.
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
 if (!supabaseUrl || !serviceRoleKey) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var.');
   process.exit(1);
 }
 
+// Non-sensitive diagnostics so a misconfigured secret is obvious in the CI log.
+console.log(`SUPABASE_URL host: ${(() => { try { return new URL(supabaseUrl).host; } catch { return '(invalid URL!)'; } })()}`);
+console.log(`Service key: length=${serviceRoleKey.length}, prefix="${serviceRoleKey.slice(0, 6)}…"`);
+
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 // storage.list() is per-folder (not recursive); an entry with a null `id` is a folder.
+// The root is listed with no prefix arg (matches the working call in EventForm.js).
 async function walk(prefix = '') {
   const files = [];
   const pageSize = 100;
@@ -35,12 +42,15 @@ async function walk(prefix = '') {
   for (;;) {
     const { data, error } = await supabase.storage
       .from(BUCKET)
-      .list(prefix, { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
+      .list(prefix || undefined, { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
 
-    if (error) throw new Error(`list "${prefix}": ${error.message}`);
+    if (error) {
+      throw new Error(`list "${prefix}": ${error.message} (status=${error.statusCode ?? '?'}, name=${error.name ?? '?'})`);
+    }
     if (!data || data.length === 0) break;
 
     for (const entry of data) {
+      if (entry.name === '.emptyFolderPlaceholder') continue;
       const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
       if (entry.id === null) {
         // Folder — recurse into it.
