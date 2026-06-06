@@ -386,16 +386,28 @@ export default function Registration() {
       setSkippedDuplicates([]);
 
       // Each attendee must have their own email. Contacts are keyed by email, so
-      // reusing one address collapses two attendees into a single person and the
-      // registration insert fails. Block it up front with a friendly explanation.
+      // reusing one address collapses two attendees into a single contact, and the
+      // second registration row violates the idx_unique_active_registration index
+      // (duplicate (contact_id, tournament)). Block it up front with a friendly
+      // explanation, using the attendees' own email + first names in the examples.
       const normalizedEmails = values.adults.map(a => (a.email || '').trim().toLowerCase());
-      const duplicatedEmail = normalizedEmails.find((e, i) => normalizedEmails.indexOf(e) !== i);
+      const duplicatedEmail = normalizedEmails.find((e, i) => e && normalizedEmails.indexOf(e) !== i);
       if (duplicatedEmail) {
+        const sharers = values.adults.filter((_, i) => normalizedEmails[i] === duplicatedEmail);
+        const [localPart, domain] = duplicatedEmail.split('@');
+        // Strip to alias-safe characters; fall back to generic names if blank/identical.
+        const aliasTag = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        let tag1 = aliasTag(sharers[0]?.firstName) || 'anna';
+        let tag2 = aliasTag(sharers[1]?.firstName) || 'ben';
+        if (tag1 === tag2) { tag1 = `${tag1}1`; tag2 = `${tag2}2`; }
+        const examples = domain
+          ? `${localPart}+${tag1}@${domain} and ${localPart}+${tag2}@${domain}`
+          : `yourname+${tag1}@gmail.com and yourname+${tag2}@gmail.com`;
         setError(
           `Each attendee needs their own email address, but "${duplicatedEmail}" is used more than once. ` +
           `If you'd like to register two people from one inbox, most email providers (Gmail, Outlook, iCloud) ` +
-          `support "+aliases": add "+" and any word before the @ — e.g. yourname+anna@gmail.com and ` +
-          `yourname+ben@gmail.com. Both still deliver to your normal inbox, but count as separate addresses here.`
+          `support "+aliases": add "+" and any word before the @ — e.g. ${examples}. ` +
+          `Both still deliver to your normal inbox, but count as separate addresses here.`
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
