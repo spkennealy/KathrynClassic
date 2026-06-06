@@ -3,6 +3,8 @@ import { Formik, Form, Field, ErrorMessage, FieldArray, useFormikContext } from 
 import * as Yup from 'yup';
 import { supabase } from '../../supabaseClient';
 import { getCurrentTournamentYear, getTournamentEvents, formatDate } from '../../utils/tournamentUtils';
+import { reportError } from '../../utils/reportError';
+import { safeUuid } from '../../utils/uuid';
 import BookYourStay from './BookYourStay';
 
 const AdultSchema = Yup.object().shape({
@@ -146,7 +148,7 @@ export default function Registration() {
         setEvents(formattedEvents);
       }
     } catch (err) {
-      console.error('Error loading tournament data:', err);
+      reportError('registration_load', err);
       setError('Failed to load tournament information. Please try again later.');
     } finally {
       setLoading(false);
@@ -318,8 +320,8 @@ export default function Registration() {
       setIsSubmitted(true);
       resetForm();
     } catch (err) {
-      console.error('Error submitting waitlist:', err);
-      setError('Failed to join waitlist. Please try again or contact support.');
+      const ref = await reportError('waitlist_submit', err, { payload: { email: values.email } });
+      setError(`Failed to join waitlist. Please try again, or contact support and mention reference code ${ref}.`);
     } finally {
       setSubmitting(false);
     }
@@ -371,8 +373,8 @@ export default function Registration() {
 
       resetForm();
     } catch (err) {
-      console.error('Error submitting contact:', err);
-      setError('Failed to save your information. Please try again or contact support.');
+      const ref = await reportError('contact_submit', err, { payload: { email: values.email } });
+      setError(`Failed to save your information. Please try again, or contact support and mention reference code ${ref}.`);
     } finally {
       setSubmitting(false);
     }
@@ -494,7 +496,7 @@ export default function Registration() {
         adult.events.includes('golf_tournament')
       );
       const isFullTeam = golfAdults.length === 4;
-      const teamGroupId = newAdults.length > 1 ? crypto.randomUUID() : null;
+      const teamGroupId = newAdults.length > 1 ? safeUuid() : null;
 
       // STEP 4: Create registrations with contact_id references (without events/child_counts)
       const registrations = newAdults.map(adult => {
@@ -574,8 +576,16 @@ export default function Registration() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       resetForm();
     } catch (err) {
-      console.error('Error saving registration:', err);
-      setError('Failed to submit registration. Please try again or contact support.');
+      const ref = await reportError('registration_submit', err, {
+        payload: {
+          tournamentId,
+          adultCount: values.adults?.length ?? 0,
+          emails: values.adults?.map((a) => a.email),
+        },
+      });
+      setError(
+        `Failed to submit registration. Please try again, or contact support and mention reference code ${ref}.`
+      );
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
