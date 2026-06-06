@@ -24,8 +24,11 @@ yarn-error.log*
 # database dumps and backups
 *.sql
 
-# supabase local CLI
-/supabase/
+# supabase: track config, functions, and migrations.
+# Secrets and local CLI state are excluded by supabase/.gitignore
+# (.temp, .branches, .env*). Re-include migration SQL since *.sql is
+# ignored globally above.
+!supabase/migrations/*.sql
 
 # sql migration scripts (tracked separately)
 /supabase_sql_scripts

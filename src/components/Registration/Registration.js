@@ -385,6 +385,35 @@ export default function Registration() {
       setError(null);
       setSkippedDuplicates([]);
 
+      // Each attendee must have their own email. Contacts are keyed by email, so
+      // reusing one address collapses two attendees into a single contact, and the
+      // second registration row violates the idx_unique_active_registration index
+      // (duplicate (contact_id, tournament)). Block it up front with a friendly
+      // explanation, using the attendees' own email + first names in the examples.
+      const normalizedEmails = values.adults.map(a => (a.email || '').trim().toLowerCase());
+      const duplicatedEmail = normalizedEmails.find((e, i) => e && normalizedEmails.indexOf(e) !== i);
+      if (duplicatedEmail) {
+        const sharers = values.adults.filter((_, i) => normalizedEmails[i] === duplicatedEmail);
+        const [localPart, domain] = duplicatedEmail.split('@');
+        // Strip to alias-safe characters; fall back to generic names if blank/identical.
+        const aliasTag = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        let tag1 = aliasTag(sharers[0]?.firstName) || 'anna';
+        let tag2 = aliasTag(sharers[1]?.firstName) || 'ben';
+        if (tag1 === tag2) { tag1 = `${tag1}1`; tag2 = `${tag2}2`; }
+        const examples = domain
+          ? `${localPart}+${tag1}@${domain}\n${localPart}+${tag2}@${domain}`
+          : `yourname+${tag1}@gmail.com\nyourname+${tag2}@gmail.com`;
+        setError(
+          `Each attendee needs their own email address, but "${duplicatedEmail}" is used more than once.\n\n` +
+          `If you'd like to register two people from one inbox, most email providers (Gmail, Outlook, iCloud) ` +
+          `support "+aliases": add "+" and any word before the @ — for example:\n` +
+          `${examples}\n\n` +
+          `Both still deliver to your normal inbox, but count as separate addresses here.`
+        );
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       // STEP 1: Get unique emails and batch lookup contacts
       const emails = [...new Set(values.adults.map(a => a.email))];
 
@@ -784,8 +813,9 @@ export default function Registration() {
     );
   }
 
-  // Show off-season message if registration is closed (no waitlist)
-  if (registrationStatus === 'closed') {
+  // Show off-season message if registration is closed or the tournament has been
+  // completed (both are terminal, no-waitlist states).
+  if (registrationStatus === 'closed' || registrationStatus === 'completed') {
     // Show success message if contact was submitted
     if (contactSubmitted) {
       return (
@@ -1087,7 +1117,7 @@ export default function Registration() {
                 <ScrollToError />
                 {error && (
                   <div className="rounded-lg bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800">
-                    <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                    <p className="text-sm text-red-800 dark:text-red-300 whitespace-pre-line">{error}</p>
                   </div>
                 )}
 

@@ -1,0 +1,74 @@
+# Registration Confirmation Email
+
+Supabase Edge Function that emails each registrant a confirmation after they
+register, including what they signed up for, what they owe, and how to pay.
+Sends via [Resend](https://resend.com).
+
+The function is invoked from the public registration form
+(`src/components/Registration/Registration.js`, STEP 7) right after a successful
+registration. Email failures are logged but never block the registration.
+
+## One-time setup
+
+### 1. Resend account + domain
+1. Create a free account at https://resend.com.
+2. Add your domain (the one managed in Namecheap) under **Domains**.
+3. Resend shows DNS records (SPF/DKIM, and a Return-Path). Add them in
+   **Namecheap → Domain List → Manage → Advanced DNS**. Wait for them to verify
+   (usually minutes). Your Namecheap *email forwarding* keeps working — these are
+   separate records.
+4. Create an API key under **API Keys**.
+
+> Reply-To is set to your Namecheap forwarding address, so when a registrant
+> replies, it lands in the forwarded inbox as before.
+
+### 2. Edit the payment details
+In `index.ts`, update the `PAYMENT_METHODS` array with your real Venmo handle,
+Zelle email/phone, and check-by-mail payee + address.
+
+### 3. Set secrets
+```bash
+supabase secrets set \
+  RESEND_API_KEY="re_xxxxxxxx" \
+  FROM_EMAIL="The Kathryn Classic <registration@YOURDOMAIN.com>" \
+  REPLY_TO_EMAIL="yourwife@YOURDOMAIN.com" \
+  ORGANIZER_BCC="organizer@YOURDOMAIN.com"
+```
+`ORGANIZER_BCC` is optional and may be a comma-separated list. `FROM_EMAIL` must
+be on a domain you've verified in Resend (until then, use `onboarding@resend.dev`).
+
+### 4. Deploy
+```bash
+supabase functions deploy send-registration-confirmation --no-verify-jwt
+```
+`--no-verify-jwt` lets the public (anon) registration form invoke it.
+
+## Test
+```bash
+curl -i -X POST \
+  "https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-registration-confirmation" \
+  -H "Authorization: Bearer YOUR_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tournamentYear": 2026,
+    "registrants": [{
+      "firstName": "Test", "lastName": "Golfer", "email": "you@example.com",
+      "events": [{ "name": "Golf Tournament", "adults": 1, "children": 0, "amount": 150 }],
+      "total": 150
+    }]
+  }'
+```
+You should receive the email and get `{"sent":1,"failed":[]}`.
+
+## Payload shape
+```ts
+{
+  tournamentYear: number | string,
+  registrants: Array<{
+    firstName, lastName, email,
+    events: Array<{ name, adults, children, amount, tbd? }>,
+    total,                       // confirmed amount owed
+    hasTbd?, estimatedMin?, estimatedMax?
+  }>
+}
+```
