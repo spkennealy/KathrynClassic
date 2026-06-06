@@ -155,7 +155,7 @@ export default function EventList() {
             id="year-filter"
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           >
             <option value="all">All Years</option>
             {tournaments.map((tournament) => (

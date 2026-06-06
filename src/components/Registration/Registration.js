@@ -406,7 +406,7 @@ export default function Registration() {
         setError(
           `Each attendee needs their own email address, but "${duplicatedEmail}" is used more than once.\n\n` +
           `If you'd like to register two people from one inbox, most email providers (Gmail, Outlook, iCloud) ` +
-          `support "+aliases": add "+" and any word before the @ — for example:\n` +
+          `support "+aliases": add "+" and any word before the @ — for example:\n\n` +
           `${examples}\n\n` +
           `Both still deliver to your normal inbox, but count as separate addresses here.`
         );
@@ -863,13 +863,19 @@ export default function Registration() {
               </svg>
             </div>
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 dark:text-primary-400 font-serif">
-              Registration Currently Closed
+              {registrationStatus === 'completed'
+                ? 'This Tournament Has Concluded'
+                : 'Registration Currently Closed'}
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400 font-serif">
-              We're currently in the off-season. Registration for the next Kathryn Classic will open in March 2026.
+              {registrationStatus === 'completed'
+                ? 'Thank you to everyone who came out to play, give, and remember together. Your generosity makes a lasting difference in the fight against CJD.'
+                : "We're currently in the off-season. Registration for the next Kathryn Classic will open in March 2026."}
             </p>
             <p className="mt-4 text-base text-gray-600 dark:text-gray-400 font-serif">
-              Sign up below to be notified when registration opens.
+              {registrationStatus === 'completed'
+                ? "Sign up below and we'll let you know when registration opens for next year's tournament."
+                : 'Sign up below to be notified when registration opens.'}
             </p>
           </div>
 

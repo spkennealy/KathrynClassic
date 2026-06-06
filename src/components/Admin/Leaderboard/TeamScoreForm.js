@@ -492,12 +492,12 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                     value={teamSearch}
                     onChange={(e) => setTeamSearch(e.target.value)}
                     placeholder="Search teams..."
-                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                   <select
                     value={selectedTeamId}
                     onChange={(e) => setSelectedTeamId(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     size={Math.min(6, availableTeams.filter(t =>
                       !teamSearch || t.name.toLowerCase().includes(teamSearch.toLowerCase())
                     ).length + 1)}
@@ -525,7 +525,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                     value={newTeamName}
                     onChange={(e) => setNewTeamName(e.target.value)}
                     placeholder="New team name"
-                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     autoFocus
                   />
                   <button
@@ -550,7 +550,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                 value={formData.team_number}
                 onChange={(e) => setFormData({ ...formData, team_number: e.target.value })}
                 placeholder="e.g., 1"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
@@ -590,7 +590,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                               }, 200);
                             }}
                             placeholder="Start typing name or email..."
-                            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                           />
                           {/* Dropdown Results */}
                           {showDropdowns[index] && getFilteredContacts(index).length > 0 && (
@@ -629,7 +629,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                             value={player.handicap}
                             onChange={(e) => handlePlayerChange(index, 'handicap', e.target.value)}
                             placeholder="e.g., 18"
-                            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                           />
                         </div>
                       </div>
@@ -663,7 +663,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                   value={formData.total_score}
                   onChange={(e) => setFormData({ ...formData, total_score: e.target.value })}
                   placeholder="e.g., 68"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Total strokes for the round</p>
               </div>
@@ -711,7 +711,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 placeholder="F for finished, or Thru 15"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">F = Finished, or current hole</p>
             </div>

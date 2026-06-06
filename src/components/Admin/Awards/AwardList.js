@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import AwardForm from './AwardForm';
+import ConfirmDialog from '../ConfirmDialog';
 
 export default function AwardList() {
   const [awards, setAwards] = useState([]);
@@ -8,6 +10,10 @@ export default function AwardList() {
   const [selectedYear, setSelectedYear] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [tournaments, setTournaments] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [selectedAward, setSelectedAward] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [awardToDelete, setAwardToDelete] = useState(null);
 
   useEffect(() => {
     fetchTournaments();
@@ -45,6 +51,7 @@ export default function AwardList() {
             email
           )
         `)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -67,6 +74,64 @@ export default function AwardList() {
     const categoryMatch = selectedCategory === 'all' || award.award_category === selectedCategory;
     return yearMatch && categoryMatch;
   });
+
+  const handleAdd = () => {
+    setSelectedAward(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (award) => {
+    setSelectedAward(award);
+    setShowForm(true);
+  };
+
+  const handleClose = () => {
+    setShowForm(false);
+    setSelectedAward(null);
+  };
+
+  const handleSave = () => {
+    fetchAwards();
+  };
+
+  const handleDeleteClick = (award) => {
+    setAwardToDelete(award);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
+    setAwardToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      const { error: deleteError } = await supabase
+        .from('tournament_awards')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', awardToDelete.id);
+
+      if (deleteError) throw deleteError;
+
+      setShowDeleteConfirm(false);
+      setAwardToDelete(null);
+      fetchAwards();
+    } catch (err) {
+      console.error('Error deleting award:', err);
+      alert('Failed to delete award');
+      setShowDeleteConfirm(false);
+      setAwardToDelete(null);
+    }
+  };
+
+  const formatAwardDate = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   if (loading) {
     return (
@@ -95,6 +160,12 @@ export default function AwardList() {
             Manage tournament awards and winners
           </p>
         </div>
+        <button
+          onClick={handleAdd}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        >
+          Add Award
+        </button>
       </div>
 
       {/* Filters */}
@@ -108,7 +179,7 @@ export default function AwardList() {
               id="year-filter"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Years</option>
               {tournaments.map((tournament) => (
@@ -127,7 +198,7 @@ export default function AwardList() {
               id="category-filter"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Categories</option>
               {getAwardCategories().map((category) => (
@@ -159,10 +230,16 @@ export default function AwardList() {
                 Year
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Date
+              </th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Prize Amount
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Notes
+                Description
+              </th>
+              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Actions
               </th>
             </tr>
           </thead>
@@ -175,10 +252,21 @@ export default function AwardList() {
               return (
                 <tr key={award.id} className="hover:bg-gray-50 dark:bg-night-700">
                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">{winnerName}</div>
-                    {award.contacts?.email && (
-                      <div className="text-gray-500 dark:text-gray-400 text-xs">{award.contacts.email}</div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {award.photo_url && (
+                        <img
+                          src={award.photo_url}
+                          alt={winnerName}
+                          className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-night-700 flex-shrink-0"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{winnerName}</div>
+                        {award.contacts?.email && (
+                          <div className="text-gray-500 dark:text-gray-400 text-xs">{award.contacts.email}</div>
+                        )}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
@@ -187,6 +275,9 @@ export default function AwardList() {
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                     {award.tournaments?.year}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {formatAwardDate(award.award_date) || '-'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {award.prize_amount ? (
@@ -198,7 +289,21 @@ export default function AwardList() {
                     )}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                    {award.notes || '-'}
+                    {award.details || '-'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
+                    <button
+                      onClick={() => handleEdit(award)}
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(award)}
+                      className="text-red-600 hover:text-red-900 font-medium"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               );
@@ -215,6 +320,26 @@ export default function AwardList() {
           </div>
         )}
       </div>
+
+      {/* Award Form Modal */}
+      {showForm && (
+        <AwardForm
+          award={selectedAward}
+          onClose={handleClose}
+          onSave={handleSave}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Award"
+        message={`Are you sure you want to delete this award? This action can be undone from the Recycle Bin.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

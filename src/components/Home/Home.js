@@ -73,7 +73,7 @@ export default function Home() {
 
   const getButtonText = () => {
     const status = getRegistrationStatus();
-    if (status === 'closed') return 'Get Notified';
+    if (status === 'closed' || status === 'completed') return 'Get Notified';
     if (status === 'full') return 'Join the Waitlist';
     return 'Register Now';
   };
