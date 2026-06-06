@@ -726,6 +726,8 @@ export default function Registration() {
               </>
             )}
 
+            <BookYourStay className="mt-12 text-left" />
+
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <button
                 onClick={() => {
@@ -739,8 +741,6 @@ export default function Registration() {
                 {registrationStatus === 'full' ? 'Add Another Person to Waitlist' : 'Register Another Group'}
               </button>
             </div>
-
-            <BookYourStay className="mt-12 text-left" />
           </div>
         </div>
       </div>
