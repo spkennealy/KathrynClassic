@@ -385,6 +385,22 @@ export default function Registration() {
       setError(null);
       setSkippedDuplicates([]);
 
+      // Each attendee must have their own email. Contacts are keyed by email, so
+      // reusing one address collapses two attendees into a single person and the
+      // registration insert fails. Block it up front with a friendly explanation.
+      const normalizedEmails = values.adults.map(a => (a.email || '').trim().toLowerCase());
+      const duplicatedEmail = normalizedEmails.find((e, i) => normalizedEmails.indexOf(e) !== i);
+      if (duplicatedEmail) {
+        setError(
+          `Each attendee needs their own email address, but "${duplicatedEmail}" is used more than once. ` +
+          `If you'd like to register two people from one inbox, most email providers (Gmail, Outlook, iCloud) ` +
+          `support "+aliases": add "+" and any word before the @ — e.g. yourname+anna@gmail.com and ` +
+          `yourname+ben@gmail.com. Both still deliver to your normal inbox, but count as separate addresses here.`
+        );
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       // STEP 1: Get unique emails and batch lookup contacts
       const emails = [...new Set(values.adults.map(a => a.email))];
 
