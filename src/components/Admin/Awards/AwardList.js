@@ -233,7 +233,7 @@ export default function AwardList() {
                 Date
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Prize Amount
+                Prize
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Description
@@ -279,14 +279,8 @@ export default function AwardList() {
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {formatAwardDate(award.award_date) || '-'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {award.prize_amount ? (
-                      <span className="font-medium text-green-600">
-                        ${award.prize_amount.toLocaleString()}
-                      </span>
-                    ) : (
-                      '-'
-                    )}
+                  <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {award.prize || '-'}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
                     {award.details || '-'}

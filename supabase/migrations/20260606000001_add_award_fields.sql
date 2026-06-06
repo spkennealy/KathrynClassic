@@ -2,6 +2,7 @@
 --   award_date  - the date the award was given out
 --   event_id    - optional link to a specific event from that year's tournament
 --   photo_url    - optional photo of the award / winner
+--   prize        - free text, since the prize isn't always money (e.g. a gift)
 -- The award's description is stored in the existing `details` column, and the
 -- winner in the existing contact_id / winner_name columns.
 --
@@ -13,6 +14,7 @@
 alter table public.tournament_awards
   add column if not exists award_date date,
   add column if not exists event_id   uuid references public.tournament_events(id) on delete set null,
-  add column if not exists photo_url   text;
+  add column if not exists photo_url   text,
+  add column if not exists prize       text;
 
 create index if not exists tournament_awards_event_id_idx on public.tournament_awards (event_id);

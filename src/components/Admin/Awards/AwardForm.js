@@ -30,7 +30,7 @@ export default function AwardForm({ award, onClose, onSave }) {
     contact_id: '',
     award_date: '',
     event_id: '',
-    prize_amount: '',
+    prize: '',
     details: '',
     photo_url: '',
   });
@@ -58,7 +58,7 @@ export default function AwardForm({ award, onClose, onSave }) {
         contact_id: award.contact_id || '',
         award_date: award.award_date || '',
         event_id: award.event_id || '',
-        prize_amount: award.prize_amount ?? '',
+        prize: award.prize || '',
         details: award.details || '',
         photo_url: award.photo_url || '',
       });
@@ -167,12 +167,13 @@ export default function AwardForm({ award, onClose, onSave }) {
       const awardData = {
         tournament_id: formData.tournament_id,
         award_category: category,
-        // Use the linked contact when one is selected; otherwise store the typed name.
+        // winner_name is NOT NULL, so always store the displayed name; contact_id
+        // additionally links to a contact record when one was picked.
         contact_id: formData.contact_id || null,
-        winner_name: formData.contact_id ? null : contactSearchTerm.trim(),
+        winner_name: contactSearchTerm.trim(),
         award_date: formData.award_date || null,
         event_id: formData.event_id || null,
-        prize_amount: formData.prize_amount ? parseFloat(formData.prize_amount) : null,
+        prize: formData.prize.trim() || null,
         details: formData.details || null,
         photo_url: formData.photo_url || null,
       };
@@ -364,17 +365,15 @@ export default function AwardForm({ award, onClose, onSave }) {
               </div>
 
               <div>
-                <label htmlFor="prize_amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Prize Amount ($) (optional)
+                <label htmlFor="prize" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Prize (optional)
                 </label>
                 <input
-                  type="number"
-                  id="prize_amount"
-                  min="0"
-                  step="0.01"
-                  value={formData.prize_amount}
-                  onChange={(e) => setFormData({ ...formData, prize_amount: e.target.value })}
-                  placeholder="0.00"
+                  type="text"
+                  id="prize"
+                  value={formData.prize}
+                  onChange={(e) => setFormData({ ...formData, prize: e.target.value })}
+                  placeholder="e.g., $100 gift card, trophy, golf balls"
                   className={inputClass}
                 />
               </div>
