@@ -401,12 +401,13 @@ export default function Registration() {
         let tag2 = aliasTag(sharers[1]?.firstName) || 'ben';
         if (tag1 === tag2) { tag1 = `${tag1}1`; tag2 = `${tag2}2`; }
         const examples = domain
-          ? `${localPart}+${tag1}@${domain} and ${localPart}+${tag2}@${domain}`
-          : `yourname+${tag1}@gmail.com and yourname+${tag2}@gmail.com`;
+          ? `${localPart}+${tag1}@${domain}\n${localPart}+${tag2}@${domain}`
+          : `yourname+${tag1}@gmail.com\nyourname+${tag2}@gmail.com`;
         setError(
-          `Each attendee needs their own email address, but "${duplicatedEmail}" is used more than once. ` +
+          `Each attendee needs their own email address, but "${duplicatedEmail}" is used more than once.\n\n` +
           `If you'd like to register two people from one inbox, most email providers (Gmail, Outlook, iCloud) ` +
-          `support "+aliases": add "+" and any word before the @ — e.g. ${examples}. ` +
+          `support "+aliases": add "+" and any word before the @ — for example:\n` +
+          `${examples}\n\n` +
           `Both still deliver to your normal inbox, but count as separate addresses here.`
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -812,8 +813,9 @@ export default function Registration() {
     );
   }
 
-  // Show off-season message if registration is closed (no waitlist)
-  if (registrationStatus === 'closed') {
+  // Show off-season message if registration is closed or the tournament has been
+  // completed (both are terminal, no-waitlist states).
+  if (registrationStatus === 'closed' || registrationStatus === 'completed') {
     // Show success message if contact was submitted
     if (contactSubmitted) {
       return (
@@ -1115,7 +1117,7 @@ export default function Registration() {
                 <ScrollToError />
                 {error && (
                   <div className="rounded-lg bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800">
-                    <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                    <p className="text-sm text-red-800 dark:text-red-300 whitespace-pre-line">{error}</p>
                   </div>
                 )}
 
