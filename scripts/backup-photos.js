@@ -16,17 +16,39 @@ const { createClient } = require('@supabase/supabase-js');
 const BUCKET = 'event-photos';
 const OUTPUT_DIR = path.join(__dirname, '..', 'photos');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Trim to guard against secrets pasted with a trailing newline/space.
+const rawUrl = (process.env.SUPABASE_URL || '').trim();
+const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
-if (!supabaseUrl || !serviceRoleKey) {
+if (!rawUrl || !serviceRoleKey) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var.');
   process.exit(1);
 }
 
+// Reduce to the project origin (scheme + host). The Supabase client appends its own
+// /storage/v1, /rest/v1, etc., so any path accidentally included in the secret
+// (e.g. ".../rest/v1") must be stripped — otherwise storage calls get routed to
+// PostgREST and fail with "Invalid path specified in request URL" (PGRST125).
+let supabaseUrl;
+try {
+  const parsed = new URL(rawUrl);
+  supabaseUrl = parsed.origin;
+  if (parsed.pathname && parsed.pathname !== '/') {
+    console.log(`Note: stripped stray path "${parsed.pathname}" from SUPABASE_URL.`);
+  }
+} catch {
+  console.error(`SUPABASE_URL is not a valid URL: "${rawUrl}"`);
+  process.exit(1);
+}
+
+// Non-sensitive diagnostics so a misconfigured secret is obvious in the CI log.
+console.log(`SUPABASE_URL origin: ${supabaseUrl}`);
+console.log(`Service key: length=${serviceRoleKey.length}, prefix="${serviceRoleKey.slice(0, 6)}…"`);
+
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 // storage.list() is per-folder (not recursive); an entry with a null `id` is a folder.
+// The root is listed with no prefix arg (matches the working call in EventForm.js).
 async function walk(prefix = '') {
   const files = [];
   const pageSize = 100;
@@ -35,12 +57,15 @@ async function walk(prefix = '') {
   for (;;) {
     const { data, error } = await supabase.storage
       .from(BUCKET)
-      .list(prefix, { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
+      .list(prefix || undefined, { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
 
-    if (error) throw new Error(`list "${prefix}": ${error.message}`);
+    if (error) {
+      throw new Error(`list "${prefix}": ${error.message} (status=${error.statusCode ?? '?'}, name=${error.name ?? '?'})`);
+    }
     if (!data || data.length === 0) break;
 
     for (const entry of data) {
+      if (entry.name === '.emptyFolderPlaceholder') continue;
       const entryPath = prefix ? `${prefix}/${entry.name}` : entry.name;
       if (entry.id === null) {
         // Folder — recurse into it.
