@@ -125,6 +125,8 @@ export default function TournamentList() {
         return 'bg-green-100 text-green-800';
       case 'full':
         return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-blue-100 text-blue-800';
       case 'closed':
         return 'bg-gray-100 dark:bg-night-900 text-gray-800 dark:text-gray-100';
       default:
@@ -138,6 +140,8 @@ export default function TournamentList() {
         return 'Open';
       case 'full':
         return 'Full (Waitlist)';
+      case 'completed':
+        return 'Completed';
       case 'closed':
         return 'Closed (Off-Season)';
       default:
@@ -234,6 +238,7 @@ export default function TournamentList() {
                   >
                     <option value="open">Open</option>
                     <option value="full">Full (Waitlist)</option>
+                    <option value="completed">Completed</option>
                     <option value="closed">Closed (Off-Season)</option>
                   </select>
                 </td>

@@ -159,7 +159,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 required
                 value={formData.tournament_event_id}
                 onChange={(e) => setFormData({ ...formData, tournament_event_id: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Select event</option>
                 {events.map((event) => (
@@ -182,7 +182,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.tee_date}
                   onChange={(e) => setFormData({ ...formData, tee_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
@@ -196,7 +196,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.tee_time_input}
                   onChange={(e) => setFormData({ ...formData, tee_time_input: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.hole_number}
                   onChange={(e) => setFormData({ ...formData, hole_number: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   {Array.from({ length: 18 }, (_, i) => i + 1).map(hole => (
                     <option key={hole} value={hole}>Hole {hole}</option>
@@ -228,7 +228,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   id="team_id"
                   value={formData.team_id}
                   onChange={(e) => setFormData({ ...formData, team_id: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="">No team yet</option>
                   {teams.map((team) => (
@@ -255,7 +255,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Optional notes about this tee time..."
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
           </div>

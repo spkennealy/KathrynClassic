@@ -209,7 +209,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 required
                 value={formData.tournament_id}
                 onChange={(e) => setFormData({ ...formData, tournament_id: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Select a tournament</option>
                 {tournaments.map((tournament) => (
@@ -232,7 +232,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   value={formData.event_name}
                   onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
                   placeholder="e.g., The Kathryn Class Golf Tournament"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
@@ -245,7 +245,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   required
                   value={formData.event_type}
                   onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="">Select type</option>
                   {eventTypes.map((type) => (
@@ -268,7 +268,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   required
                   value={formData.event_date}
                   onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
@@ -281,7 +281,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   id="start_time"
                   value={formData.start_time}
                   onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -297,7 +297,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="e.g., Cape May National Golf Club"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
@@ -311,7 +311,7 @@ export default function EventForm({ event, onClose, onSave }) {
                   value={formData.host}
                   onChange={(e) => setFormData({ ...formData, host: e.target.value })}
                   placeholder="e.g., Jane Smith"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -326,7 +326,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 value={formData.map_link}
                 onChange={(e) => setFormData({ ...formData, map_link: e.target.value })}
                 placeholder="https://maps.google.com/..."
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
 
@@ -360,7 +360,7 @@ export default function EventForm({ event, onClose, onSave }) {
                     value={formData.adult_price}
                     onChange={(e) => setFormData({ ...formData, adult_price: e.target.value })}
                     placeholder="0.00"
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                 </div>
 
@@ -377,7 +377,7 @@ export default function EventForm({ event, onClose, onSave }) {
                     value={formData.child_price}
                     onChange={(e) => setFormData({ ...formData, child_price: e.target.value })}
                     placeholder="0.00"
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -394,7 +394,7 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.adult_price_min}
                       onChange={(e) => setFormData({ ...formData, adult_price_min: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -406,7 +406,7 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.adult_price_max}
                       onChange={(e) => setFormData({ ...formData, adult_price_max: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -420,7 +420,7 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.child_price_min}
                       onChange={(e) => setFormData({ ...formData, child_price_min: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                   <div>
@@ -432,7 +432,7 @@ export default function EventForm({ event, onClose, onSave }) {
                       value={formData.child_price_max}
                       onChange={(e) => setFormData({ ...formData, child_price_max: e.target.value })}
                       placeholder="0.00"
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -541,7 +541,7 @@ export default function EventForm({ event, onClose, onSave }) {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Optional description of the event"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
           </div>

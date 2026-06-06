@@ -155,7 +155,7 @@ export default function AdminDashboard() {
               View all →
             </Link>
           </div>
-          <div className="mt-4 overflow-hidden">
+          <div className="mt-4 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-300">
               <thead className="bg-gray-50 dark:bg-night-700">
                 <tr>
@@ -204,7 +204,7 @@ export default function AdminDashboard() {
               View all →
             </Link>
           </div>
-          <div className="mt-4 overflow-hidden">
+          <div className="mt-4 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-300">
               <thead className="bg-gray-50 dark:bg-night-700">
                 <tr>

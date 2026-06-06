@@ -466,7 +466,7 @@ export default function ContactList() {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
           {selectedContactIds.size > 0 && (
@@ -528,7 +528,7 @@ export default function ContactList() {
                 <select
                   value={filters.hasEmail}
                   onChange={(e) => setFilters({ ...filters, hasEmail: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Email</option>
@@ -542,7 +542,7 @@ export default function ContactList() {
                 <select
                   value={filters.hasPhone}
                   onChange={(e) => setFilters({ ...filters, hasPhone: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Phone</option>
@@ -556,7 +556,7 @@ export default function ContactList() {
                 <select
                   value={filters.hasRegistrations}
                   onChange={(e) => setFilters({ ...filters, hasRegistrations: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Registered</option>
@@ -570,7 +570,7 @@ export default function ContactList() {
                 <select
                   value={filters.hasTournaments}
                   onChange={(e) => setFilters({ ...filters, hasTournaments: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Attended</option>
@@ -584,7 +584,7 @@ export default function ContactList() {
                 <select
                   value={filters.hasAwards}
                   onChange={(e) => setFilters({ ...filters, hasAwards: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Awards</option>
@@ -598,7 +598,7 @@ export default function ContactList() {
                 <select
                   value={filters.tournamentYear}
                   onChange={(e) => setFilters({ ...filters, tournamentYear: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
                 >
                   <option value="all">All Years</option>
                   {availableYears.map(year => (

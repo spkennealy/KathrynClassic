@@ -104,7 +104,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
 
@@ -120,7 +120,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="0.00"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
                 type="date"
                 value={formData.expense_date}
                 onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Select...</option>
                 {CATEGORY_OPTIONS.map((c) => (
@@ -153,7 +153,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
               <select
                 value={formData.payment_method}
                 onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               >
                 <option value="">Select...</option>
                 {PAYMENT_METHOD_OPTIONS.map((m) => (
@@ -169,7 +169,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
               type="text"
               value={formData.vendor}
               onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
 
@@ -179,7 +179,7 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
               rows={2}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
 

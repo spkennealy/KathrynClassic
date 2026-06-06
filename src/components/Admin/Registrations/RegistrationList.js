@@ -431,7 +431,7 @@ export default function RegistrationList() {
             placeholder="Search by name, email, tournament, events, payment status, or date..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
           />
         </div>
 
@@ -443,7 +443,7 @@ export default function RegistrationList() {
             <select
               value={filter.tournamentYear}
               onChange={(e) => setFilter({ ...filter, tournamentYear: e.target.value })}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Years</option>
               {tournaments.map((tournament) => (
@@ -461,7 +461,7 @@ export default function RegistrationList() {
             <select
               value={filter.paymentStatus}
               onChange={(e) => setFilter({ ...filter, paymentStatus: e.target.value })}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             >
               <option value="all">All Statuses</option>
               <option value="paid">Paid</option>

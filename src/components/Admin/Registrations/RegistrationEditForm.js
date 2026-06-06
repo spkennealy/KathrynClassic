@@ -577,7 +577,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   required
                   value={formData.tournament_id}
                   onChange={(e) => setFormData({ ...formData, tournament_id: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="">Select a tournament...</option>
                   {tournaments.map((tournament) => (
@@ -637,7 +637,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                 onChange={(e) => updateAttendee(index, {
                                   newContactData: { ...attendee.newContactData, first_name: e.target.value }
                                 })}
-                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                               />
                             </div>
                             <div>
@@ -650,7 +650,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                 onChange={(e) => updateAttendee(index, {
                                   newContactData: { ...attendee.newContactData, last_name: e.target.value }
                                 })}
-                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                               />
                             </div>
                           </div>
@@ -662,7 +662,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                               onChange={(e) => updateAttendee(index, {
                                 newContactData: { ...attendee.newContactData, email: e.target.value }
                               })}
-                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                             />
                           </div>
                           <div>
@@ -673,7 +673,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                               onChange={(e) => updateAttendee(index, {
                                 newContactData: { ...attendee.newContactData, phone: e.target.value }
                               })}
-                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                             />
                           </div>
                           <button
@@ -698,7 +698,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                             onFocus={() => updateAttendee(index, { showContactDropdown: true })}
                             onBlur={() => setTimeout(() => updateAttendee(index, { showContactDropdown: false }), 200)}
                             placeholder="Search by name or email..."
-                            className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                             autoComplete="off"
                           />
                           {attendee.showContactDropdown && attendee.contactSearchTerm && (
@@ -747,7 +747,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                       <select
                         value={attendee.payment_status}
                         onChange={(e) => updateAttendee(index, { payment_status: e.target.value })}
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       >
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
@@ -768,7 +768,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                         value={attendee.golf_handicap}
                         onChange={(e) => updateAttendee(index, { golf_handicap: e.target.value })}
                         placeholder={events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) ? "Required for golf (e.g., 18.5)" : "e.g., 18.5"}
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       />
                     </div>
 
@@ -782,7 +782,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                         value={attendee.preferred_teammates}
                         onChange={(e) => updateAttendee(index, { preferred_teammates: e.target.value })}
                         placeholder="Names of preferred golf teammates"
-                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       />
                     </div>
 
@@ -842,7 +842,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                                     [event.id]: e.target.value,
                                   },
                                 })}
-                                className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                                className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                               />
                             </div>
                           ))}
@@ -894,7 +894,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                           type="text"
                           value={newContactData.first_name}
                           onChange={(e) => setNewContactData({ ...newContactData, first_name: e.target.value })}
-                          className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                          className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                         />
                       </div>
                       <div>
@@ -905,7 +905,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                           type="text"
                           value={newContactData.last_name}
                           onChange={(e) => setNewContactData({ ...newContactData, last_name: e.target.value })}
-                          className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                          className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                         />
                       </div>
                     </div>
@@ -915,7 +915,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                         type="email"
                         value={newContactData.email}
                         onChange={(e) => setNewContactData({ ...newContactData, email: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                       />
                     </div>
                     <div>
@@ -924,7 +924,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                         type="tel"
                         value={newContactData.phone}
                         onChange={(e) => setNewContactData({ ...newContactData, phone: e.target.value })}
-                        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
                       />
                     </div>
                     <button
@@ -947,7 +947,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                       onFocus={() => setShowContactDropdown(true)}
                       onBlur={() => setTimeout(() => setShowContactDropdown(false), 200)}
                       placeholder="Search by name or email..."
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                       autoComplete="off"
                     />
                     {showContactDropdown && contactSearchTerm && (
@@ -993,7 +993,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   required
                   value={formData.payment_status}
                   onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 >
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
@@ -1014,7 +1014,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   value={formData.golf_handicap}
                   onChange={(e) => setFormData({ ...formData, golf_handicap: e.target.value })}
                   placeholder={events.some(event => event.event_type === 'golf_tournament' && selectedEvents[event.id]) ? "Required for golf (e.g., 18.5)" : "e.g., 18.5"}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
@@ -1028,7 +1028,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   value={formData.preferred_teammates}
                   onChange={(e) => setFormData({ ...formData, preferred_teammates: e.target.value })}
                   placeholder="Names of preferred golf teammates"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                 />
               </div>
 
@@ -1076,7 +1076,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                           min="0"
                           value={registrationEvents[event.id] || 0}
                           onChange={(e) => handleChildCountChange(event.id, e.target.value)}
-                          className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                          className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                         />
                       </div>
                     ))}
