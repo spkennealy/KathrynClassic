@@ -24,13 +24,14 @@ export default function SetPassword() {
 
         console.log('URL params:', { token: !!token, type });
 
-        // If we have a token in query params, verify it using verifyOtp
-        if (token && type === 'invite') {
-          console.log('Verifying invite token...');
+        // If we have a token in query params, verify it using verifyOtp.
+        // Handles both invite (new admin) and recovery (password reset) links.
+        if (token && (type === 'invite' || type === 'recovery')) {
+          console.log(`Verifying ${type} token...`);
 
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash: token,
-            type: 'invite'
+            type
           });
 
           if (error) {
@@ -55,7 +56,8 @@ export default function SetPassword() {
         console.log('Hash params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type: hashType });
 
         // If we have OAuth tokens in the hash, set the session
-        if (accessToken && hashType === 'invite') {
+        // (invite or password-recovery implicit flow).
+        if (accessToken && (hashType === 'invite' || hashType === 'recovery')) {
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
