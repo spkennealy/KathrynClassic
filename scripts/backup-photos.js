@@ -97,6 +97,16 @@ async function main() {
 
   console.log(`Listing bucket "${BUCKET}"...`);
   const files = await walk();
+
+  // Greppable count line so empty vs. non-empty runs are obvious in CI logs and can
+  // be surfaced in the GitHub step summary. An empty bucket and a silently broken
+  // listing both yield a ~110-byte tar.gz, so make the object count explicit.
+  console.log(`PHOTO_BACKUP_OBJECT_COUNT=${files.length}`);
+  if (files.length === 0) {
+    // Empty is a legitimate state (no event photos uploaded yet) — do NOT fail.
+    console.warn(`Bucket "${BUCKET}" is empty — archive will contain no photos.`);
+  }
+
   console.log(`Found ${files.length} object(s). Downloading...`);
 
   let done = 0;

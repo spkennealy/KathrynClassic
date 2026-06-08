@@ -47,9 +47,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          node scripts/backup-photos.js
+          node scripts/backup-photos.js | tee photos-backup.log
           tar -czf "kathryn-${{ steps.date.outputs.date }}.tar.gz" -C photos .
           ls -lh "kathryn-${{ steps.date.outputs.date }}.tar.gz"
+          # Surface the object count in the step summary so empty vs. non-empty runs
+          # are visible at a glance without opening the full log.
+          COUNT="$(grep -oE 'PHOTO_BACKUP_OBJECT_COUNT=[0-9]+' photos-backup.log | tail -n1 | cut -d= -f2 || echo '?')"
+          echo "Photos backed up: **${COUNT}** object(s)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload to object storage
         env:
