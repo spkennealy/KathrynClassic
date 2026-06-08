@@ -21,6 +21,7 @@ export default function AdminLayout() {
     { name: 'Registrations', href: '/admin/registrations', icon: '✍️' },
     { name: 'Financials', href: '/admin/financials', icon: '💰' },
     { name: 'Contacts', href: '/admin/contacts', icon: '👥' },
+    { name: 'Communications', href: '/admin/communications', icon: '📧' },
     { name: 'Teams', href: '/admin/teams', icon: '👫' },
     { name: 'Team Builder', href: '/admin/team-builder', icon: '🧩' },
     { name: 'Tee Times', href: '/admin/tee-times', icon: '🕐' },

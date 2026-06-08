@@ -21,6 +21,8 @@ import AdminDashboard from './components/Admin/AdminDashboard';
 import RegistrationList from './components/Admin/Registrations/RegistrationList';
 import FinancialsList from './components/Admin/Financials/FinancialsList';
 import ContactList from './components/Admin/Contacts/ContactList';
+import EmailCampaign from './components/Admin/Communications/EmailCampaign';
+import CampaignHistory from './components/Admin/Communications/CampaignHistory';
 import TournamentList from './components/Admin/Tournaments/TournamentList';
 import EventList from './components/Admin/Events/EventList';
 import AwardList from './components/Admin/Awards/AwardList';
@@ -121,6 +123,8 @@ function App() {
                 <Route path="registrations" element={<RegistrationList />} />
                 <Route path="financials" element={<FinancialsList />} />
                 <Route path="contacts" element={<ContactList />} />
+                <Route path="communications" element={<EmailCampaign />} />
+                <Route path="communications/history" element={<CampaignHistory />} />
                 <Route path="tee-times" element={<TeeTimesManagement />} />
                 <Route path="leaderboard" element={<LeaderboardManagement />} />
                 <Route path="teams" element={<TeamList />} />
