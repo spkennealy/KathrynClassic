@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import ConfirmDialog from '../ConfirmDialog';
+import { formatPhone } from '../../../utils/phone';
 
 export default function RecycleBin() {
   const [deletedRecords, setDeletedRecords] = useState({
@@ -282,7 +283,7 @@ export default function RecycleBin() {
                   <div className="text-gray-500 dark:text-gray-400">{record.email}</div>
                 </td>
                 <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {record.phone || 'No phone'}
+                  {formatPhone(record.phone) || 'No phone'}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatDate(record.deleted_at)}

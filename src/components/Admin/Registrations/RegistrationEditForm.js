@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { normalizePhone } from '../../../utils/phone';
 
 const createBlankAttendee = () => ({
   contact_id: '',
@@ -170,7 +171,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           first_name: newContactData.first_name,
           last_name: newContactData.last_name,
           email: newContactData.email || null,
-          phone: newContactData.phone || null,
+          phone: normalizePhone(newContactData.phone),
         })
         .select()
         .single();
@@ -325,7 +326,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           first_name: ncd.first_name,
           last_name: ncd.last_name,
           email: ncd.email || null,
-          phone: ncd.phone || null,
+          phone: normalizePhone(ncd.phone),
         })
         .select()
         .single();

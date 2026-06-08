@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { normalizePhone, formatPhone } from '../../../utils/phone';
 
 export default function ContactEditForm({ contact, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -17,7 +18,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
         first_name: contact.first_name || '',
         last_name: contact.last_name || '',
         email: contact.email || '',
-        phone: contact.phone || '',
+        phone: formatPhone(contact.phone),
       });
     }
   }, [contact]);
@@ -36,7 +37,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
             first_name: formData.first_name,
             last_name: formData.last_name,
             email: formData.email || null,
-            phone: formData.phone || null,
+            phone: normalizePhone(formData.phone),
             updated_at: new Date().toISOString(),
           })
           .eq('id', contact.contact_id);
@@ -50,7 +51,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
             first_name: formData.first_name,
             last_name: formData.last_name,
             email: formData.email || null,
-            phone: formData.phone || null,
+            phone: normalizePhone(formData.phone),
           });
 
         if (insertError) throw insertError;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import ContactEditForm from './ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
+import { formatPhone } from '../../../utils/phone';
 
 const PAGE_SIZE = 50;
 
@@ -734,7 +735,7 @@ export default function ContactList() {
                   )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {contact.phone || '-'}
+                  {formatPhone(contact.phone) || '-'}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                   <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">

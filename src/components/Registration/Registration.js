@@ -3,6 +3,7 @@ import { Formik, Form, Field, ErrorMessage, FieldArray, useFormikContext } from 
 import * as Yup from 'yup';
 import { supabase } from '../../supabaseClient';
 import { getCurrentTournamentYear, getTournamentEvents, formatDate } from '../../utils/tournamentUtils';
+import { normalizePhone } from '../../utils/phone';
 import { reportError } from '../../utils/reportError';
 import { safeUuid } from '../../utils/uuid';
 import BookYourStay from './BookYourStay';
@@ -278,7 +279,7 @@ export default function Registration() {
           .update({
             first_name: values.firstName,
             last_name: values.lastName,
-            phone: values.phone || null,
+            phone: normalizePhone(values.phone),
             updated_at: new Date().toISOString()
           })
           .eq('id', contactId);
@@ -290,7 +291,7 @@ export default function Registration() {
             first_name: values.firstName,
             last_name: values.lastName,
             email: values.email,
-            phone: values.phone || null
+            phone: normalizePhone(values.phone)
           }])
           .select()
           .single();
@@ -348,7 +349,7 @@ export default function Registration() {
           .update({
             first_name: values.firstName,
             last_name: values.lastName,
-            phone: values.phone || null,
+            phone: normalizePhone(values.phone),
             updated_at: new Date().toISOString()
           })
           .eq('id', existingContact.id);
@@ -363,7 +364,7 @@ export default function Registration() {
             first_name: values.firstName,
             last_name: values.lastName,
             email: values.email,
-            phone: values.phone || null
+            phone: normalizePhone(values.phone)
           }]);
 
         if (insertError) throw insertError;
@@ -439,7 +440,7 @@ export default function Registration() {
               first_name: adult.firstName,
               last_name: adult.lastName,
               email: adult.email,
-              phone: adult.phone || null
+              phone: normalizePhone(adult.phone)
             });
           }
           return acc;
@@ -469,7 +470,7 @@ export default function Registration() {
               email: adult.email,
               first_name: adult.firstName,
               last_name: adult.lastName,
-              phone: adult.phone || null,
+              phone: normalizePhone(adult.phone),
               updated_at: new Date().toISOString()
             });
           }
