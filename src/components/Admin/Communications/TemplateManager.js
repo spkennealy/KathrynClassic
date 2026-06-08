@@ -4,7 +4,7 @@ import ConfirmDialog from '../ConfirmDialog';
 
 // Save / load / delete reusable email templates. `subject` and `bodyHtml` are
 // the current compose values; `onLoad({ subject, body_html })` populates them.
-export default function TemplateManager({ subject, bodyHtml, onLoad }) {
+export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateChange }) {
   const [templates, setTemplates] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [error, setError] = useState(null);
@@ -30,6 +30,13 @@ export default function TemplateManager({ subject, bodyHtml, onLoad }) {
   useEffect(() => {
     fetchTemplates();
   }, [fetchTemplates]);
+
+  // Tell the parent which template is currently selected (or none) so it can be
+  // recorded on the campaign when sent.
+  useEffect(() => {
+    if (!onTemplateChange) return;
+    onTemplateChange(templates.find((t) => t.id === selectedId) || null);
+  }, [selectedId, templates, onTemplateChange]);
 
   const flash = (msg) => {
     setMessage(msg);

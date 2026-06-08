@@ -16,6 +16,7 @@ export default function EmailCampaign() {
   const [ccRaw, setCcRaw] = useState('');
   const [bccRaw, setBccRaw] = useState('');
   const [recipients, setRecipients] = useState([]);
+  const [template, setTemplate] = useState(null); // selected saved template, if any
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null); // { sent, recipientCount, failed, status }
@@ -24,8 +25,9 @@ export default function EmailCampaign() {
   const cc = parseAddressList(ccRaw);
   const bcc = parseAddressList(bccRaw);
 
-  // Stable callback so RecipientSelector's effect doesn't re-run every render.
+  // Stable callbacks so child effects don't re-run every render.
   const handleRecipientsChange = useCallback((list) => setRecipients(list), []);
+  const handleTemplateChange = useCallback((tpl) => setTemplate(tpl), []);
 
   const handleLoadTemplate = ({ subject: s, body_html }) => {
     setSubject(s || '');
@@ -51,6 +53,8 @@ export default function EmailCampaign() {
           recipient_count: recipients.length,
           status: 'sending',
           sent_by: user?.id ?? null,
+          template_id: template?.id ?? null,
+          template_name: template?.name ?? null,
         })
         .select()
         .single();
@@ -141,7 +145,7 @@ export default function EmailCampaign() {
       <section className="bg-white dark:bg-night-800 rounded-lg shadow p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">2. Content</h2>
-          <TemplateManager subject={subject} bodyHtml={bodyHtml} onLoad={handleLoadTemplate} />
+          <TemplateManager subject={subject} bodyHtml={bodyHtml} onLoad={handleLoadTemplate} onTemplateChange={handleTemplateChange} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
