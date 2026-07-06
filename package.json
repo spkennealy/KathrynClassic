@@ -19,6 +19,7 @@
     "postcss": "^8.4.26",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-helmet-async": "^3.0.0",
     "react-router-dom": "^7.5.3",
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.3.3",
