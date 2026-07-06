@@ -44,19 +44,28 @@ deploy_env() {
   echo "▶  Deploying to ${name}  (${ref})"
   echo "=============================================="
 
-  if [[ "$FLAG" == "--functions-only" ]]; then
-    echo "   • Skipping migrations (--functions-only)"
-  elif [[ -n "$db_url" ]]; then
+  # Migrations are best-effort: a failure here (bad DB URL, history mismatch)
+  # must NOT block the function deploys below, which are the usual reason to run
+  # this. Report and continue.
+  if [[ "$FLAG" == "--migrations-only" ]] || [[ "$FLAG" != "--functions-only" && -n "$db_url" ]]; then
     echo "   • Pushing database migrations…"
-    supabase db push --db-url "$db_url"
+    if supabase db push --db-url "$db_url"; then
+      echo "     ✓ migrations up to date"
+    else
+      echo "     ⚠  migration push failed — continuing to functions (see message above)"
+    fi
   else
-    echo "   • Skipping migrations (set the ${name^^}_DB_URL env var to enable)"
+    [[ "$FLAG" == "--functions-only" ]] \
+      && echo "   • Skipping migrations (--functions-only)" \
+      || echo "   • Skipping migrations (set ${name^^}_DB_URL to enable)"
   fi
 
-  for fn in "${FUNCTIONS[@]}"; do
-    echo "   • Deploying function: ${fn}"
-    supabase functions deploy "$fn" --project-ref "$ref"
-  done
+  if [[ "$FLAG" != "--migrations-only" ]]; then
+    for fn in "${FUNCTIONS[@]}"; do
+      echo "   • Deploying function: ${fn}"
+      supabase functions deploy "$fn" --project-ref "$ref"
+    done
+  fi
 
   echo "✔  ${name} done"
 }
