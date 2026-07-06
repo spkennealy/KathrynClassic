@@ -8,6 +8,17 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('adminSidebarCollapsed') === '1'
+  );
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('adminSidebarCollapsed', next ? '1' : '0');
+      return next;
+    });
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -39,15 +50,30 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-night-900 flex">
-      {/* Left Sidebar */}
+    <div className="h-screen overflow-hidden bg-gray-100 dark:bg-night-900 flex">
+      {/* Left Sidebar (fixed full height; only the main area scrolls) */}
       <div className="hidden md:flex md:flex-shrink-0">
-        <div className="flex flex-col w-64">
+        <div className={`flex flex-col transition-all duration-200 ${collapsed ? 'w-16' : 'w-64'}`}>
           <div className="flex flex-col flex-grow bg-white dark:bg-night-800 border-r border-gray-200 dark:border-night-700 pt-5 pb-4 overflow-y-auto">
-            {/* Logo */}
-            <div className="flex items-center justify-between flex-shrink-0 px-4">
-              <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">Kathryn Classic</h1>
-              <ThemeToggle />
+            {/* Logo + collapse toggle */}
+            <div className={`flex items-center flex-shrink-0 px-3 ${collapsed ? 'flex-col gap-3' : 'justify-between'}`}>
+              {!collapsed && (
+                <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400 truncate">Kathryn Classic</h1>
+              )}
+              <div className={`flex items-center gap-1 ${collapsed ? 'flex-col' : ''}`}>
+                <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-400 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-600 dark:hover:text-white"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={collapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7M19 19l-7-7 7-7'} />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Navigation Links */}
@@ -56,43 +82,57 @@ export default function AdminLayout() {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                  title={collapsed ? item.name : undefined}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${collapsed ? 'justify-center' : ''} ${
                     isActive(item.href)
                       ? 'bg-primary-100 dark:bg-night-700 text-primary-900 dark:text-primary-300'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-night-700 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
-                  <span className="mr-3 text-lg">{item.icon}</span>
-                  {item.name}
+                  <span className={`text-lg ${collapsed ? '' : 'mr-3'}`}>{item.icon}</span>
+                  {!collapsed && item.name}
                 </Link>
               ))}
             </nav>
 
             {/* User Section */}
-            <div className="flex-shrink-0 flex border-t border-gray-200 dark:border-night-700 p-4">
-              <div className="flex-shrink-0 w-full group block">
-                <div className="flex items-center">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-                      {user?.email}
-                    </p>
+            <div className="flex-shrink-0 border-t border-gray-200 dark:border-night-700 p-4">
+              {collapsed ? (
+                <button
+                  onClick={handleSignOut}
+                  title="Sign out"
+                  aria-label="Sign out"
+                  className="mx-auto flex items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-700 dark:hover:text-gray-200"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              ) : (
+                <div className="w-full group block">
+                  <div className="flex items-center">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <Link
+                      to="/admin/change-password"
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 block"
+                    >
+                      Change Password
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 block text-left w-full"
+                    >
+                      Sign out
+                    </button>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1">
-                  <Link
-                    to="/admin/change-password"
-                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 block"
-                  >
-                    Change Password
-                  </Link>
-                  <button
-                    onClick={handleSignOut}
-                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 block text-left w-full"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

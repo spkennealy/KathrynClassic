@@ -17,10 +17,53 @@ const todayStr = () => new Date().toISOString().split('T')[0];
 const getPaymentDisplay = (amountPaid, totalCost) => {
   const paid = Number(amountPaid) || 0;
   const total = Number(totalCost) || 0;
-  if (paid >= total && total > 0) return { label: 'Paid', classes: 'bg-green-100 text-green-800' };
-  if (paid > 0) return { label: 'Partial', classes: 'bg-amber-100 text-amber-800' };
-  return { label: 'Unpaid', classes: 'bg-yellow-100 text-yellow-800' };
+  if (paid >= total && total > 0) return { label: 'Paid', classes: 'bg-green-100 text-green-800', rank: 2 };
+  if (paid > 0) return { label: 'Partial', classes: 'bg-amber-100 text-amber-800', rank: 1 };
+  return { label: 'Unpaid', classes: 'bg-yellow-100 text-yellow-800', rank: 0 };
 };
+
+const formatDate = (value) =>
+  value ? new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+
+// Sortable columns → how to extract a comparable value from a registrant row.
+const getSortValue = (r, key) => {
+  switch (key) {
+    case 'name':
+      return `${r.last_name || ''} ${r.first_name || ''}`.trim().toLowerCase();
+    case 'registration_date':
+      return r.registration_date ? new Date(r.registration_date).getTime() : 0;
+    case 'status':
+      return getPaymentDisplay(r.amount_paid, r.total_cost).rank;
+    case 'balance':
+      return (Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0);
+    case 'total_cost':
+      return Number(r.total_cost) || 0;
+    case 'amount_paid':
+      return Number(r.amount_paid) || 0;
+    default:
+      return 0;
+  }
+};
+
+// Clickable table header that toggles sort on its column.
+function SortHeader({ label, columnKey, sortKey, sortDir, onSort, align = 'left', thClass = '' }) {
+  const active = sortKey === columnKey;
+  const alignCls = align === 'right' ? 'text-right' : 'text-left';
+  return (
+    <th className={`py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-100 ${alignCls} ${thClass}`}>
+      <button
+        type="button"
+        onClick={() => onSort(columnKey)}
+        className={`group inline-flex items-center gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}
+      >
+        <span>{label}</span>
+        <span className={`text-xs ${active ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 opacity-0 group-hover:opacity-100'}`}>
+          {active ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 // --- Record Payment modal ---
 function PaymentModal({ registrant, onClose, onSave }) {
@@ -173,8 +216,20 @@ export default function FinancialsList() {
 
   const [statusFilter, setStatusFilter] = useState('all'); // all | unpaid | partial | paid
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState('registration_date');
+  const [sortDir, setSortDir] = useState('desc'); // most recent registration first by default
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 25;
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      // Dates default newest-first; everything else defaults A→Z / low→high.
+      setSortDir(key === 'registration_date' ? 'desc' : 'asc');
+    }
+  };
 
   const selectedTournament = useMemo(
     () => tournaments.find((t) => String(t.year) === String(selectedYear)) || null,
@@ -290,16 +345,33 @@ export default function FinancialsList() {
     });
   }, [registrants, statusFilter, searchTerm]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRegistrants.length / PAGE_SIZE));
+  // Sort the filtered list, tie-breaking by name for stable ordering.
+  const sortedRegistrants = useMemo(() => {
+    const arr = [...filteredRegistrants];
+    arr.sort((a, b) => {
+      const av = getSortValue(a, sortKey);
+      const bv = getSortValue(b, sortKey);
+      let cmp;
+      if (typeof av === 'string') cmp = av.localeCompare(bv);
+      else cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      if (cmp === 0 && sortKey !== 'name') {
+        cmp = getSortValue(a, 'name').localeCompare(getSortValue(b, 'name'));
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filteredRegistrants, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRegistrants.length / PAGE_SIZE));
   const pagedRegistrants = useMemo(
-    () => filteredRegistrants.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filteredRegistrants, currentPage]
+    () => sortedRegistrants.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [sortedRegistrants, currentPage]
   );
 
-  // Reset to first page whenever the filter/search/year changes.
+  // Reset to first page whenever the filter/search/sort/year changes.
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, searchTerm, selectedYear]);
+  }, [statusFilter, searchTerm, sortKey, sortDir, selectedYear]);
 
   const handleDeleteExpense = async () => {
     if (!expenseToDelete) return;
@@ -426,11 +498,12 @@ export default function FinancialsList() {
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Name</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Total Cost</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount Paid</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Balance</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
+              <SortHeader label="Name" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="pl-4 pr-3" />
+              <SortHeader label="Registered" columnKey="registration_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
+              <SortHeader label="Total Cost" columnKey="total_cost" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+              <SortHeader label="Amount Paid" columnKey="amount_paid" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+              <SortHeader label="Balance" columnKey="balance" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+              <SortHeader label="Status" columnKey="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
               <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
             </tr>
           </thead>
@@ -459,6 +532,9 @@ export default function FinancialsList() {
                         {r.events.join(', ')}
                       </div>
                     )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {formatDate(r.registration_date)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                     {formatCurrency(totalCost)}
@@ -492,6 +568,7 @@ export default function FinancialsList() {
                 <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {statusFilter === 'all' && !searchTerm ? 'Totals' : 'Filtered totals'}
                 </td>
+                <td className="px-3 py-3"></td>
                 <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                   {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0))}
                 </td>

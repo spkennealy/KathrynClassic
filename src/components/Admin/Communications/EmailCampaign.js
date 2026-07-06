@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -16,6 +16,8 @@ export default function EmailCampaign() {
   const [ccRaw, setCcRaw] = useState('');
   const [bccRaw, setBccRaw] = useState('');
   const [recipients, setRecipients] = useState([]);
+  const [tournamentYears, setTournamentYears] = useState([]);
+  const [campaignYear, setCampaignYear] = useState(''); // year this email is "about"
   const [template, setTemplate] = useState(null); // selected saved template, if any
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending, setSending] = useState(false);
@@ -24,6 +26,23 @@ export default function EmailCampaign() {
 
   const cc = parseAddressList(ccRaw);
   const bcc = parseAddressList(bccRaw);
+
+  // Load tournament years; default the campaign year to the open (else latest)
+  // tournament. This is the year the unsubscribe link's "this year" option uses.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('tournaments')
+        .select('year, registration_status')
+        .is('deleted_at', null)
+        .order('year', { ascending: false });
+      if (data && data.length > 0) {
+        setTournamentYears(data.map((t) => t.year));
+        const open = data.find((t) => t.registration_status === 'open');
+        setCampaignYear(String((open || data[0]).year));
+      }
+    })();
+  }, []);
 
   // Stable callbacks so child effects don't re-run every render.
   const handleRecipientsChange = useCallback((list) => setRecipients(list), []);
@@ -55,6 +74,7 @@ export default function EmailCampaign() {
           sent_by: user?.id ?? null,
           template_id: template?.id ?? null,
           template_name: template?.name ?? null,
+          tournament_year: campaignYear ? parseInt(campaignYear, 10) : null,
         })
         .select()
         .single();
@@ -64,6 +84,7 @@ export default function EmailCampaign() {
       const { data, error: fnErr } = await supabase.functions.invoke('send-bulk-email', {
         body: {
           campaignId: campaign.id,
+          campaignYear: campaignYear ? parseInt(campaignYear, 10) : null,
           subject: subject.trim(),
           bodyHtml,
           recipients,
@@ -101,6 +122,7 @@ export default function EmailCampaign() {
             {result.status === 'sent' && `✓ Email sent to ${result.recipientCount} recipient(s).`}
             {result.status === 'partial' && `⚠️ Sent with some failures. ${result.failed?.length || 0} recipient(s) failed.`}
             {result.status === 'failed' && `✗ Sending failed. ${result.failed?.length || 0} recipient(s) failed.`}
+            {result.skipped > 0 && ` ${result.skipped} unsubscribed contact(s) were skipped.`}
           </p>
           {result.failed?.length > 0 && (
             <ul className="mt-2 text-xs text-red-700 list-disc pl-5 max-h-40 overflow-y-auto">
@@ -137,8 +159,26 @@ export default function EmailCampaign() {
 
       {/* 1. Recipients */}
       <section className="bg-white dark:bg-night-800 rounded-lg shadow p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">1. Recipients</h2>
-        <RecipientSelector onChange={handleRecipientsChange} />
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">1. Recipients</h2>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Campaign year</label>
+            <select
+              value={campaignYear}
+              onChange={(e) => setCampaignYear(e.target.value)}
+              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500 text-sm"
+            >
+              {tournamentYears.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          The unsubscribe link in this email lets recipients opt out of <strong>{campaignYear || 'this year'}</strong> emails
+          or all emails. Contacts already unsubscribed (for {campaignYear || 'this year'} or entirely) are hidden below.
+        </p>
+        <RecipientSelector onChange={handleRecipientsChange} campaignYear={campaignYear} />
       </section>
 
       {/* 2. Content */}

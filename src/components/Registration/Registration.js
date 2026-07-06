@@ -1397,6 +1397,11 @@ export default function Registration() {
                   >
                     {isSubmitting ? 'Submitting...' : 'Complete Registration'}
                   </button>
+                  <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Having trouble registering? Email us at{' '}
+                    <a href="mailto:info@kathrynclassic.com" className="text-primary-600 dark:text-primary-400 hover:underline">info@kathrynclassic.com</a>{' '}
+                    and we'll be happy to help.
+                  </p>
                 </div>
               </Form>
             )}
