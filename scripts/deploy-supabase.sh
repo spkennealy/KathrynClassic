@@ -9,8 +9,8 @@
 #   scripts/deploy-supabase.sh prod --functions-only   # skip DB migrations
 #
 # Project refs (override via env if they ever change):
-#   DEV_PROJECT_REF   (default: wgdjjpimubqbplzrdqpg)
-#   PROD_PROJECT_REF  (default: zknpsrphbfdbzsjilzpg)
+#   DEV_PROJECT_REF   (default: zknpsrphbfdbzsjilzpg  — local app / kathryn-classic-dev)
+#   PROD_PROJECT_REF  (default: wgdjjpimubqbplzrdqpg  — Vercel / www.kathrynclassic.com)
 #
 # DB migrations are pushed with `supabase db push --db-url`, so set the pooler
 # connection strings (keep these OUT of git — e.g. in a sourced ~/.zshrc or a
@@ -28,8 +28,8 @@ if [[ -f "$SCRIPT_DIR/.deploy.env" ]]; then
   source "$SCRIPT_DIR/.deploy.env"
 fi
 
-DEV_PROJECT_REF="${DEV_PROJECT_REF:-wgdjjpimubqbplzrdqpg}"
-PROD_PROJECT_REF="${PROD_PROJECT_REF:-zknpsrphbfdbzsjilzpg}"
+DEV_PROJECT_REF="${DEV_PROJECT_REF:-zknpsrphbfdbzsjilzpg}"
+PROD_PROJECT_REF="${PROD_PROJECT_REF:-wgdjjpimubqbplzrdqpg}"
 
 FUNCTIONS=(send-bulk-email send-registration-confirmation report-error)
 
