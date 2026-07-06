@@ -3,6 +3,7 @@ import { supabase } from '../../../supabaseClient';
 import ContactEditForm from './ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
 import { formatPhone } from '../../../utils/phone';
+import { logAudit } from '../../../utils/audit';
 
 const PAGE_SIZE = 50;
 
@@ -198,6 +199,13 @@ export default function ContactList() {
         .eq('id', contactToDelete.contact_id);
 
       if (deleteError) throw deleteError;
+
+      await logAudit({
+        action: 'contact.deleted',
+        entityType: 'contact',
+        entityId: contactToDelete.contact_id,
+        entityLabel: `${contactToDelete.first_name} ${contactToDelete.last_name}`,
+      });
 
       // Close dialog and refresh list
       setShowDeleteConfirm(false);

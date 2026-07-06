@@ -28,6 +28,7 @@ export default function AdminLayout() {
     { name: 'Leaderboard', href: '/admin/leaderboard', icon: '⛳' },
     { name: 'Awards', href: '/admin/awards', icon: '🏅' },
     { name: 'Recycle Bin', href: '/admin/recycle-bin', icon: '🗑️' },
+    { name: 'Audit Log', href: '/admin/audit', icon: '🧾' },
   ];
 
   const isActive = (path) => {

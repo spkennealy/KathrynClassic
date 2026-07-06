@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit, diffFields } from '../../../utils/audit';
 
 export default function EventForm({ event, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -156,13 +157,34 @@ export default function EventForm({ event, onClose, onSave }) {
           .eq('id', event.id);
 
         if (error) throw error;
+
+        const changes = diffFields(event, eventData, Object.keys(eventData));
+        if (changes) {
+          await logAudit({
+            action: 'tournament_event.updated',
+            entityType: 'tournament_event',
+            entityId: event.id,
+            entityLabel: eventData.event_name,
+            changes,
+          });
+        }
       } else {
         // Create new event
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from('tournament_events')
-          .insert([eventData]);
+          .insert([eventData])
+          .select('id')
+          .single();
 
         if (error) throw error;
+
+        await logAudit({
+          action: 'tournament_event.created',
+          entityType: 'tournament_event',
+          entityId: inserted?.id,
+          entityLabel: eventData.event_name,
+          changes: eventData,
+        });
       }
 
       onSave();

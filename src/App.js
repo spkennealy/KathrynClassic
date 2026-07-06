@@ -32,6 +32,7 @@ import TeamList from './components/Admin/Teams/TeamList';
 import TeamBuilder from './components/Admin/TeamBuilder/TeamBuilder';
 import ChangePassword from './components/Admin/ChangePassword';
 import RecycleBin from './components/Admin/RecycleBin/RecycleBin';
+import AuditLog from './components/Admin/Audit/AuditLog';
 import ProtectedRoute from './components/Admin/ProtectedRoute';
 
 // Component for external redirects (can't use Navigate for full URLs)
@@ -131,6 +132,7 @@ function App() {
                 <Route path="team-builder" element={<TeamBuilder />} />
                 <Route path="awards" element={<AwardList />} />
                 <Route path="recycle-bin" element={<RecycleBin />} />
+                <Route path="audit" element={<AuditLog />} />
                 <Route path="change-password" element={<ChangePassword />} />
               </Route>
 

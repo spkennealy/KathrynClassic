@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { normalizePhone, formatPhone } from '../../../utils/phone';
+import { logAudit, diffFields } from '../../../utils/audit';
+import RecordHistory from '../Audit/RecordHistory';
+
+const CONTACT_FIELDS = ['first_name', 'last_name', 'email', 'phone'];
 
 export default function ContactEditForm({ contact, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -11,6 +15,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (contact) {
@@ -29,32 +34,54 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
     setError(null);
 
     try {
+      const newValues = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email || null,
+        phone: normalizePhone(formData.phone),
+      };
+
       if (contact) {
         // Update existing contact
         const { error: updateError } = await supabase
           .from('contacts')
-          .update({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            email: formData.email || null,
-            phone: normalizePhone(formData.phone),
-            updated_at: new Date().toISOString(),
-          })
+          .update({ ...newValues, updated_at: new Date().toISOString() })
           .eq('id', contact.contact_id);
 
         if (updateError) throw updateError;
+
+        // Normalize the old phone so a format-only edit doesn't register a change.
+        const changes = diffFields(
+          { ...contact, phone: normalizePhone(contact.phone) },
+          newValues,
+          CONTACT_FIELDS
+        );
+        if (changes) {
+          await logAudit({
+            action: 'contact.updated',
+            entityType: 'contact',
+            entityId: contact.contact_id,
+            entityLabel: `${newValues.first_name} ${newValues.last_name}`,
+            changes,
+          });
+        }
       } else {
         // Create new contact
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('contacts')
-          .insert({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            email: formData.email || null,
-            phone: normalizePhone(formData.phone),
-          });
+          .insert(newValues)
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+
+        await logAudit({
+          action: 'contact.created',
+          entityType: 'contact',
+          entityId: inserted?.id,
+          entityLabel: `${newValues.first_name} ${newValues.last_name}`,
+          changes: newValues,
+        });
       }
 
       onSave();
@@ -68,12 +95,22 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-lg w-full">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {contact ? 'Edit Contact' : 'New Contact'}
           </h2>
+          {contact && (
+            <button
+              type="button"
+              onClick={() => setShowHistory(true)}
+              className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-900"
+            >
+              History
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-4">
@@ -162,5 +199,14 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
         </form>
       </div>
     </div>
+    {showHistory && contact && (
+      <RecordHistory
+        entityType="contact"
+        entityId={contact.contact_id}
+        entityLabel={`${formData.first_name} ${formData.last_name}`}
+        onClose={() => setShowHistory(false)}
+      />
+    )}
+    </>
   );
 }

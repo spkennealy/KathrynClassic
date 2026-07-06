@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import TournamentForm from './TournamentForm';
 import ConfirmDialog from '../ConfirmDialog';
+import { logAudit } from '../../../utils/audit';
 
 export default function TournamentList() {
   const [tournaments, setTournaments] = useState([]);
@@ -88,6 +89,13 @@ export default function TournamentList() {
         .eq('id', tournamentToDelete.id);
 
       if (deleteError) throw deleteError;
+
+      await logAudit({
+        action: 'tournament.deleted',
+        entityType: 'tournament',
+        entityId: tournamentToDelete.id,
+        entityLabel: `Tournament ${tournamentToDelete.year}`,
+      });
 
       setShowDeleteConfirm(false);
       setTournamentToDelete(null);
