@@ -87,21 +87,27 @@ export default function RecipientSelector({ onChange, campaignYear }) {
       query = query.limit(5000);
 
       // Emails to hide because the contact has unsubscribed — from everything,
-      // or from this campaign's year. Enforced again server-side at send time.
-      const { data: unsubData, error: unsubErr } = await supabase
+      // or from this campaign's year — and the per-contact unsubscribe token,
+      // which we pass through to the send function so the email's unsubscribe
+      // link never depends on a server-side lookup. Suppression is enforced
+      // again server-side at send time.
+      const { data: contactMeta, error: metaErr } = await supabase
         .from('contacts')
-        .select('email, unsubscribed_all, unsubscribed_years')
+        .select('email, unsubscribe_token, unsubscribed_all, unsubscribed_years')
         .is('deleted_at', null)
-        .not('email', 'is', null)
-        .or(
-          campaignYear
-            ? `unsubscribed_all.eq.true,unsubscribed_years.cs.{${parseInt(campaignYear, 10)}}`
-            : 'unsubscribed_all.eq.true'
-        );
-      if (unsubErr) throw unsubErr;
-      const suppressed = new Set(
-        (unsubData || []).map((c) => (c.email || '').trim().toLowerCase()).filter(Boolean)
-      );
+        .not('email', 'is', null);
+      if (metaErr) throw metaErr;
+      const yr = campaignYear ? parseInt(campaignYear, 10) : null;
+      const suppressed = new Set();
+      const tokenByEmail = new Map();
+      (contactMeta || []).forEach((c) => {
+        const key = (c.email || '').trim().toLowerCase();
+        if (!key) return;
+        if (c.unsubscribe_token) tokenByEmail.set(key, c.unsubscribe_token);
+        if (c.unsubscribed_all || (yr && (c.unsubscribed_years || []).includes(yr))) {
+          suppressed.add(key);
+        }
+      });
 
       const { data, error: err } = await query;
       if (err) throw err;
@@ -133,6 +139,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
             firstName: r.first_name || '',
             lastName: r.last_name || '',
             contact_id: r.contact_id,
+            unsubscribeToken: tokenByEmail.get(key) || null,
           });
         }
       });
@@ -157,7 +164,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   useEffect(() => {
     const recipients = rows
       .filter((r) => selected.has(r.email.toLowerCase()))
-      .map((r) => ({ email: r.email, name: r.name, firstName: r.firstName, lastName: r.lastName }));
+      .map((r) => ({ email: r.email, name: r.name, firstName: r.firstName, lastName: r.lastName, unsubscribeToken: r.unsubscribeToken }));
     onChange(recipients);
   }, [rows, selected, onChange]);
 

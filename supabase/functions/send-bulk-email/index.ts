@@ -50,6 +50,7 @@ interface Recipient {
   firstName?: string | null;
   lastName?: string | null;
   name?: string | null;
+  unsubscribeToken?: string | null;
 }
 
 interface Payload {
@@ -161,7 +162,13 @@ serve(async (req) => {
       if (!seen.has(key)) {
         const name =
           (r?.name ?? `${r?.firstName ?? ""} ${r?.lastName ?? ""}`).trim();
-        seen.set(key, { email, firstName: r?.firstName ?? "", lastName: r?.lastName ?? "", name });
+        seen.set(key, {
+          email,
+          firstName: r?.firstName ?? "",
+          lastName: r?.lastName ?? "",
+          name,
+          unsubscribeToken: r?.unsubscribeToken ?? null,
+        });
       }
     }
     const allRecipients = [...seen.values()];
@@ -212,9 +219,11 @@ serve(async (req) => {
       return !isUnsubscribed;
     });
 
-    // Per-recipient opt-out link (only when we have a token for them).
-    const unsubscribeUrl = (email: string) => {
-      const token = meta.get(email.toLowerCase())?.token;
+    // Per-recipient opt-out link. Prefer the token the admin app already passed
+    // in; fall back to the service-role lookup. This keeps the link working even
+    // if the service-role client is unavailable.
+    const unsubscribeUrl = (r: Recipient) => {
+      const token = r.unsubscribeToken || meta.get(r.email.toLowerCase())?.token;
       if (!token) return undefined;
       const yearParam = campaignYear != null ? `&year=${campaignYear}` : "";
       return `${PUBLIC_SITE_URL}/unsubscribe?token=${encodeURIComponent(token)}${yearParam}`;
@@ -235,7 +244,7 @@ serve(async (req) => {
         from: FROM_EMAIL,
         to: [r.email],
         subject: render(subjectTmpl, vars),
-        html: shell(render(bodyTmpl, vars), unsubscribeUrl(r.email)),
+        html: shell(render(bodyTmpl, vars), unsubscribeUrl(r)),
       };
       if (REPLY_TO_EMAIL) msg.reply_to = REPLY_TO_EMAIL;
       if (i === 0) {

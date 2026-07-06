@@ -86,6 +86,7 @@ export default function CampaignHistory() {
           <thead className="bg-gray-50 dark:bg-night-700">
             <tr>
               <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Sent</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Tournament</th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Subject</th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Template</th>
               <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">Recipients</th>
@@ -98,6 +99,7 @@ export default function CampaignHistory() {
               <React.Fragment key={c.id}>
                 <tr className="hover:bg-gray-50 dark:hover:bg-night-700">
                   <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400">{fmtDate(c.sent_at || c.created_at)}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{c.tournament_year || '—'}</td>
                   <td className="px-3 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">{c.subject}</td>
                   <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{c.template_name || '—'}</td>
                   <td className="px-3 py-4 text-sm text-center text-gray-500 dark:text-gray-400">{c.recipient_count}</td>
@@ -114,7 +116,7 @@ export default function CampaignHistory() {
                 </tr>
                 {expandedId === c.id && (
                   <tr className="bg-gray-50 dark:bg-night-900">
-                    <td colSpan={6} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       {c.error && <p className="text-sm text-red-700 mb-2">Error: {c.error}</p>}
                       {loadingRecipients ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400">Loading recipients…</p>
@@ -147,7 +149,7 @@ export default function CampaignHistory() {
               </React.Fragment>
             ))}
             {campaigns.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-12 text-gray-500 dark:text-gray-400">No emails sent yet.</td></tr>
+              <tr><td colSpan={7} className="text-center py-12 text-gray-500 dark:text-gray-400">No emails sent yet.</td></tr>
             )}
           </tbody>
         </table>
