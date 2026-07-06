@@ -124,6 +124,11 @@ export default function EmailCampaign() {
             {result.status === 'failed' && `✗ Sending failed. ${result.failed?.length || 0} recipient(s) failed.`}
             {result.skipped > 0 && ` ${result.skipped} unsubscribed contact(s) were skipped.`}
           </p>
+          {result.warnings?.length > 0 && (
+            <ul className="mt-2 text-xs text-amber-800 list-disc pl-5">
+              {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          )}
           {result.failed?.length > 0 && (
             <ul className="mt-2 text-xs text-red-700 list-disc pl-5 max-h-40 overflow-y-auto">
               {result.failed.map((f, i) => <li key={i}>{f.email}: {f.error}</li>)}

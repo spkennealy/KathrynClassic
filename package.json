@@ -33,7 +33,10 @@
     "prebuild": "node scripts/generate-photo-manifest.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy:dev": "bash scripts/deploy-supabase.sh dev",
+    "deploy:prod": "bash scripts/deploy-supabase.sh prod",
+    "deploy:both": "bash scripts/deploy-supabase.sh both"
   },
   "eslintConfig": {
     "extends": [

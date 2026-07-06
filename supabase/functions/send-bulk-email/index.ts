@@ -29,8 +29,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "onboarding@resend.dev";
 const REPLY_TO_EMAIL = Deno.env.get("REPLY_TO_EMAIL") ?? "";
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+// Supabase injects SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY automatically, but
+// fall back to custom-named secrets (PROJECT_URL / SERVICE_ROLE_KEY) in case the
+// auto-injected ones aren't present in this deployment.
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("PROJECT_URL") ?? "";
+const SERVICE_ROLE_KEY =
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY") ?? "";
 // Public site where the unsubscribe page lives (no trailing slash).
 const PUBLIC_SITE_URL =
   (Deno.env.get("PUBLIC_SITE_URL") ?? "https://www.kathrynclassic.com").replace(/\/+$/, "");
@@ -301,11 +305,23 @@ serve(async (req) => {
       failed.length === 0 ? "sent" : sentCount === 0 ? "failed" : "partial";
 
     // Persist the log (best-effort; never fail the send because logging broke).
-    if (admin && campaignId) {
+    // Any problem here is surfaced in `warnings` so the admin sees it in the UI
+    // instead of the campaign silently staying "sending".
+    const warnings: string[] = [];
+    if (!admin) {
+      warnings.push(
+        "Service-role database access is not configured, so this send was not " +
+          "logged and its status was not updated. Set the SERVICE_ROLE_KEY secret " +
+          "on the send-bulk-email function."
+      );
+    } else if (campaignId) {
       const { error: recErr } = await admin
         .from("email_campaign_recipients")
         .insert(recipientRows.map((r) => ({ ...r, campaign_id: campaignId })));
-      if (recErr) console.error("send-bulk-email: recipient log failed", recErr);
+      if (recErr) {
+        console.error("send-bulk-email: recipient log failed", recErr);
+        warnings.push(`Recipient logging failed: ${recErr.message}`);
+      }
 
       const notes: string[] = [];
       if (failed.length > 0) notes.push(`${failed.length} recipient(s) failed`);
@@ -320,7 +336,10 @@ serve(async (req) => {
           error: notes.length > 0 ? notes.join("; ") : null,
         })
         .eq("id", campaignId);
-      if (campErr) console.error("send-bulk-email: campaign update failed", campErr);
+      if (campErr) {
+        console.error("send-bulk-email: campaign update failed", campErr);
+        warnings.push(`Status update failed: ${campErr.message}`);
+      }
     }
 
     // Always 200 so the client receives this body (with per-recipient failures).
@@ -331,6 +350,7 @@ serve(async (req) => {
         failed,
         skipped: skipped.length,
         status,
+        warnings,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
