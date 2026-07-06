@@ -31,6 +31,9 @@ const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "onboarding@resend.dev";
 const REPLY_TO_EMAIL = Deno.env.get("REPLY_TO_EMAIL") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+// Public site where the unsubscribe page lives (no trailing slash).
+const PUBLIC_SITE_URL =
+  (Deno.env.get("PUBLIC_SITE_URL") ?? "https://www.kathrynclassic.com").replace(/\/+$/, "");
 
 // Resend's batch endpoint accepts up to 100 messages per request.
 const BATCH_SIZE = 100;
@@ -51,6 +54,7 @@ interface Recipient {
 
 interface Payload {
   campaignId?: string;
+  campaignYear?: number | string | null;
   subject: string;
   bodyHtml: string;
   recipients: Recipient[];
@@ -59,17 +63,27 @@ interface Payload {
 }
 
 // Email-safe wrapper so the visual-editor HTML renders consistently across
-// clients. Mirrors emailShell.js on the client.
-const shell = (inner: string) => `<!DOCTYPE html>
+// clients. Mirrors emailShell.js on the client. `unsubscribeUrl` is the
+// recipient-specific opt-out link shown in the footer (omitted for cc/bcc-only
+// messages that have no single recipient).
+const shell = (inner: string, unsubscribeUrl?: string) => `<!DOCTYPE html>
 <html>
 <body style="margin:0;padding:0;background:#f4f6f6;font-family:Arial,Helvetica,sans-serif;color:#222;">
   <div style="max-width:600px;margin:0 auto;padding:24px;">
     <div style="background:#fff;border-radius:10px;padding:28px;border:1px solid #e3e8e8;">
       ${inner}
     </div>
-    <p style="text-align:center;font-size:12px;color:#999;margin:16px 0 0;">
+    <p style="text-align:center;font-size:12px;color:#999;margin:16px 0 4px;">
       The Kathryn Classic
     </p>
+    ${
+      unsubscribeUrl
+        ? `<p style="text-align:center;font-size:12px;color:#999;margin:0;line-height:1.5;">
+      Don't want these emails?
+      <a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+    </p>`
+        : ""
+    }
   </div>
 </body>
 </html>`;
@@ -133,6 +147,10 @@ serve(async (req) => {
     const bodyTmpl = payload.bodyHtml ?? "";
     const cc = cleanList(payload.cc);
     const bcc = cleanList(payload.bcc);
+    const campaignYear =
+      payload.campaignYear != null && `${payload.campaignYear}`.trim() !== ""
+        ? parseInt(String(payload.campaignYear), 10)
+        : null;
 
     // De-duplicate recipients by lowercased email, keeping the first seen.
     const seen = new Map<string, Recipient>();
@@ -146,12 +164,61 @@ serve(async (req) => {
         seen.set(key, { email, firstName: r?.firstName ?? "", lastName: r?.lastName ?? "", name });
       }
     }
-    const recipients = [...seen.values()];
+    const allRecipients = [...seen.values()];
 
     if (!subjectTmpl) throw new Error("A subject is required.");
-    if (recipients.length === 0) {
+    if (allRecipients.length === 0) {
       throw new Error("No recipients with a valid email address.");
     }
+
+    // Look up each contact's unsubscribe token + opt-out state (keyed by
+    // lowercased email). Chunked so a large audience doesn't build one huge
+    // `in(...)` filter.
+    const meta = new Map<
+      string,
+      { token: string | null; all: boolean; years: number[] }
+    >();
+    if (admin) {
+      const emails = allRecipients.map((r) => r.email);
+      for (const group of chunk(emails, 200)) {
+        const { data, error } = await admin
+          .from("contacts")
+          .select("email, unsubscribe_token, unsubscribed_all, unsubscribed_years")
+          .in("email", group);
+        if (error) {
+          console.error("send-bulk-email: contact lookup failed", error);
+          continue;
+        }
+        for (const c of data ?? []) {
+          const key = String(c.email ?? "").trim().toLowerCase();
+          if (!key) continue;
+          meta.set(key, {
+            token: c.unsubscribe_token ?? null,
+            all: !!c.unsubscribed_all,
+            years: Array.isArray(c.unsubscribed_years) ? c.unsubscribed_years : [],
+          });
+        }
+      }
+    }
+
+    // Suppress anyone who has unsubscribed (from everything, or from this
+    // campaign's year). They're logged as "skipped", not sent or failed.
+    const skipped: { email: string; name: string | null }[] = [];
+    const recipients = allRecipients.filter((r) => {
+      const m = meta.get(r.email.toLowerCase());
+      const isUnsubscribed =
+        !!m && (m.all || (campaignYear != null && m.years.includes(campaignYear)));
+      if (isUnsubscribed) skipped.push({ email: r.email, name: r.name ?? null });
+      return !isUnsubscribed;
+    });
+
+    // Per-recipient opt-out link (only when we have a token for them).
+    const unsubscribeUrl = (email: string) => {
+      const token = meta.get(email.toLowerCase())?.token;
+      if (!token) return undefined;
+      const yearParam = campaignYear != null ? `&year=${campaignYear}` : "";
+      return `${PUBLIC_SITE_URL}/unsubscribe?token=${encodeURIComponent(token)}${yearParam}`;
+    };
 
     // Build one personalized message per recipient. Fixed cc/bcc are attached to
     // the first message only, so those addresses get a single copy (not one per
@@ -168,7 +235,7 @@ serve(async (req) => {
         from: FROM_EMAIL,
         to: [r.email],
         subject: render(subjectTmpl, vars),
-        html: shell(render(bodyTmpl, vars)),
+        html: shell(render(bodyTmpl, vars), unsubscribeUrl(r.email)),
       };
       if (REPLY_TO_EMAIL) msg.reply_to = REPLY_TO_EMAIL;
       if (i === 0) {
@@ -210,6 +277,17 @@ serve(async (req) => {
       }
     });
 
+    // Log unsubscribed recipients too, so history shows they were intentionally
+    // skipped rather than silently dropped.
+    for (const s of skipped) {
+      recipientRows.push({
+        email: s.email,
+        name: s.name,
+        status: "skipped",
+        error: "unsubscribed",
+      });
+    }
+
     const status =
       failed.length === 0 ? "sent" : sentCount === 0 ? "failed" : "partial";
 
@@ -220,13 +298,17 @@ serve(async (req) => {
         .insert(recipientRows.map((r) => ({ ...r, campaign_id: campaignId })));
       if (recErr) console.error("send-bulk-email: recipient log failed", recErr);
 
+      const notes: string[] = [];
+      if (failed.length > 0) notes.push(`${failed.length} recipient(s) failed`);
+      if (skipped.length > 0) notes.push(`${skipped.length} unsubscribed skipped`);
+
       const { error: campErr } = await admin
         .from("email_campaigns")
         .update({
           status,
           recipient_count: recipients.length,
           sent_at: new Date().toISOString(),
-          error: failed.length > 0 ? `${failed.length} recipient(s) failed` : null,
+          error: notes.length > 0 ? notes.join("; ") : null,
         })
         .eq("id", campaignId);
       if (campErr) console.error("send-bulk-email: campaign update failed", campErr);
@@ -234,7 +316,13 @@ serve(async (req) => {
 
     // Always 200 so the client receives this body (with per-recipient failures).
     return new Response(
-      JSON.stringify({ sent: sentCount, recipientCount: recipients.length, failed, status }),
+      JSON.stringify({
+        sent: sentCount,
+        recipientCount: recipients.length,
+        failed,
+        skipped: skipped.length,
+        status,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

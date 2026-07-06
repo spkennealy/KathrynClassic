@@ -127,8 +127,10 @@ export default function CampaignHistory() {
                                   <td className="py-1 pr-4 text-gray-900 dark:text-gray-100">{r.name || '—'}</td>
                                   <td className="py-1 pr-4 text-gray-500 dark:text-gray-400">{r.email}</td>
                                   <td className="py-1">
-                                    <span className={`text-xs ${r.status === 'failed' ? 'text-red-600' : 'text-green-600'}`}>{r.status}</span>
-                                    {r.error && <span className="text-xs text-red-500 ml-2">{r.error}</span>}
+                                    <span className={`text-xs ${r.status === 'failed' ? 'text-red-600' : r.status === 'skipped' ? 'text-amber-600' : 'text-green-600'}`}>{r.status}</span>
+                                    {r.error && (
+                                      <span className={`text-xs ml-2 ${r.status === 'failed' ? 'text-red-500' : 'text-gray-400'}`}>{r.error}</span>
+                                    )}
                                   </td>
                                 </tr>
                               ))}

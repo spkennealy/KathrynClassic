@@ -10,6 +10,7 @@ import Leaderboard from './components/Leaderboard/Leaderboard';
 import Donations from './components/Donations/Donations';
 import About from './components/About/About';
 import TournamentHistory from './components/TournamentHistory/TournamentHistory';
+import Unsubscribe from './components/Unsubscribe/Unsubscribe';
 import SEO from './components/SEO';
 
 // Admin imports
@@ -94,6 +95,7 @@ function App() {
                       <Route path="/donations" element={<><SEO title="Donate" path="/donations" description="Support CJD research by donating to The Kathryn Classic and the CJD Foundation." /><Donations /></>} />
                       <Route path="/about" element={<><SEO title="About" path="/about" description="Learn the story behind The Kathryn Classic — a charity golf tournament raising funds and awareness for CJD research." /><About /></>} />
                       <Route path="/history" element={<><SEO title="Tournament History" path="/history" description="Past winners and highlights from previous years of The Kathryn Classic charity golf tournament." /><TournamentHistory /></>} />
+                      <Route path="/unsubscribe" element={<><SEO title="Unsubscribe" path="/unsubscribe" description="Manage your email preferences for The Kathryn Classic." /><Unsubscribe /></>} />
                       {/* Redirect admin attempts to admin subdomain */}
                       <Route path="/admin/*" element={
                         <ExternalRedirect url={`${window.location.protocol}//admin.${window.location.hostname.replace('www.', '').replace('admin.', '')}${window.location.pathname}`} />

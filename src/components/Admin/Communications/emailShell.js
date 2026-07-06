@@ -9,8 +9,12 @@ export function emailShell(bodyHtml) {
     <div style="background:#fff;border-radius:10px;padding:28px;border:1px solid #e3e8e8;">
       ${bodyHtml || ''}
     </div>
-    <p style="text-align:center;font-size:12px;color:#999;margin:16px 0 0;">
+    <p style="text-align:center;font-size:12px;color:#999;margin:16px 0 4px;">
       The Kathryn Classic
+    </p>
+    <p style="text-align:center;font-size:12px;color:#999;margin:0;line-height:1.5;">
+      Don't want these emails?
+      <a href="#" style="color:#999;text-decoration:underline;">Unsubscribe</a>
     </p>
   </div>
 </body>
