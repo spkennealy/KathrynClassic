@@ -243,7 +243,7 @@ export default function TournamentList() {
                   <Select
                     value={tournament.registration_status || 'open'}
                     onChange={(e) => handleRegistrationStatusChange(tournament.id, e.target.value)}
-                    triggerClassName={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusBadgeColor(tournament.registration_status || 'open')}`}
+                    triggerClassName={`w-44 justify-between rounded-md px-3 py-1.5 text-xs font-semibold ${getStatusBadgeColor(tournament.registration_status || 'open')}`}
                   >
                     <option value="open">Open</option>
                     <option value="full">Full (Waitlist)</option>
