@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import AwardForm from './AwardForm';
 import ConfirmDialog from '../ConfirmDialog';
+import Select from '../Select';
 
 export default function AwardList() {
   const [awards, setAwards] = useState([]);
@@ -175,11 +176,11 @@ export default function AwardList() {
             <label htmlFor="year-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Year:
             </label>
-            <select
+            <Select
               id="year-filter"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="w-40"
             >
               <option value="all">All Years</option>
               {tournaments.map((tournament) => (
@@ -187,18 +188,18 @@ export default function AwardList() {
                   {tournament.year}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="flex items-center gap-2">
             <label htmlFor="category-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Category:
             </label>
-            <select
+            <Select
               id="category-filter"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="w-56"
             >
               <option value="all">All Categories</option>
               {getAwardCategories().map((category) => (
@@ -206,7 +207,7 @@ export default function AwardList() {
                   {category.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 ml-auto">

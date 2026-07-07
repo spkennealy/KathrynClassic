@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import EventForm from './EventForm';
+import Select from '../Select';
 
 export default function EventList() {
   const [events, setEvents] = useState([]);
@@ -151,11 +152,11 @@ export default function EventList() {
           <label htmlFor="year-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Filter by Year:
           </label>
-          <select
+          <Select
             id="year-filter"
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="w-40"
           >
             <option value="all">All Years</option>
             {tournaments.map((tournament) => (
@@ -163,7 +164,7 @@ export default function EventList() {
                 {tournament.year}
               </option>
             ))}
-          </select>
+          </Select>
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 ml-auto">
             Showing {filteredEvents.length} events
           </div>

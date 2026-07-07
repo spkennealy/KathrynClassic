@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
+import DatePicker from '../DatePicker';
 
 export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -154,12 +156,12 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
               <label htmlFor="tournament_event_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Golf Event <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 id="tournament_event_id"
                 required
                 value={formData.tournament_event_id}
                 onChange={(e) => setFormData({ ...formData, tournament_event_id: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               >
                 <option value="">Select event</option>
                 {events.map((event) => (
@@ -167,7 +169,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                     {event.event_name} - {new Date(event.event_date).toLocaleDateString()}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             {/* Tee Time */}
@@ -176,14 +178,13 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 <label htmlFor="tee_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  id="tee_date"
-                  required
-                  value={formData.tee_date}
-                  onChange={(e) => setFormData({ ...formData, tee_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
+                <div className="mt-1">
+                  <DatePicker
+                    id="tee_date"
+                    value={formData.tee_date}
+                    onChange={(e) => setFormData({ ...formData, tee_date: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div>
@@ -196,7 +197,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   required
                   value={formData.tee_time_input}
                   onChange={(e) => setFormData({ ...formData, tee_time_input: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 />
               </div>
             </div>
@@ -207,28 +208,28 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 <label htmlFor="hole_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Starting Hole <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   id="hole_number"
                   required
                   value={formData.hole_number}
                   onChange={(e) => setFormData({ ...formData, hole_number: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 >
                   {Array.from({ length: 18 }, (_, i) => i + 1).map(hole => (
                     <option key={hole} value={hole}>Hole {hole}</option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div>
                 <label htmlFor="team_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Assign Team
                 </label>
-                <select
+                <Select
                   id="team_id"
                   value={formData.team_id}
                   onChange={(e) => setFormData({ ...formData, team_id: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 >
                   <option value="">No team yet</option>
                   {teams.map((team) => (
@@ -237,7 +238,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                       {team.players && team.players.length > 0 && ` - ${team.players[0].player_name}`}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Optional - can be assigned later
                 </p>
@@ -255,7 +256,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Optional notes about this tee time..."
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
             </div>
           </div>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { ENTITY_TYPES, formatChanges } from '../../../utils/audit';
+import DatePicker from '../DatePicker';
+import Select from '../Select';
 
 const PAGE_SIZE = 50;
 
@@ -184,34 +186,29 @@ export default function AuditLog() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Entity</label>
-            <select
+            <Select
               value={filters.entityType}
               onChange={(e) => setFilters({ ...filters, entityType: e.target.value })}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500"
             >
               <option value="all">All</option>
               {ENTITY_TYPES.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">From</label>
-              <input
-                type="date"
+              <DatePicker
                 value={filters.dateFrom}
                 onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">To</label>
-              <input
-                type="date"
+              <DatePicker
                 value={filters.dateTo}
                 onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
           </div>

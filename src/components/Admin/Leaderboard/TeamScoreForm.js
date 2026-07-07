@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
 
 export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -492,12 +493,12 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                     value={teamSearch}
                     onChange={(e) => setTeamSearch(e.target.value)}
                     placeholder="Search teams..."
-                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full"
                   />
-                  <select
+                  <Select
                     value={selectedTeamId}
                     onChange={(e) => setSelectedTeamId(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full"
                     size={Math.min(6, availableTeams.filter(t =>
                       !teamSearch || t.name.toLowerCase().includes(teamSearch.toLowerCase())
                     ).length + 1)}
@@ -509,7 +510,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))
                     }
-                  </select>
+                  </Select>
                   <button
                     type="button"
                     onClick={() => setIsCreatingNewTeam(true)}
@@ -525,7 +526,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                     value={newTeamName}
                     onChange={(e) => setNewTeamName(e.target.value)}
                     placeholder="New team name"
-                    className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    className="block w-full"
                     autoFocus
                   />
                   <button
@@ -550,7 +551,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                 value={formData.team_number}
                 onChange={(e) => setFormData({ ...formData, team_number: e.target.value })}
                 placeholder="e.g., 1"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
             </div>
 
@@ -663,7 +664,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                   value={formData.total_score}
                   onChange={(e) => setFormData({ ...formData, total_score: e.target.value })}
                   placeholder="e.g., 68"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Total strokes for the round</p>
               </div>
@@ -711,7 +712,7 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 placeholder="F for finished, or Thru 15"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">F = Finished, or current hole</p>
             </div>

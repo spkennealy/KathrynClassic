@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
 import ConfirmDialog from '../ConfirmDialog';
+import Select from '../Select';
 
 // Save / load / delete reusable email templates. `subject` and `bodyHtml` are
 // the current compose values; `onLoad({ subject, body_html })` populates them.
@@ -124,16 +125,16 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
     <div className="flex flex-wrap items-end gap-2">
       <div>
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Template</label>
-        <select
+        <Select
           value={selectedId}
           onChange={(e) => handleLoad(e.target.value)}
-          className="rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500"
+          className="w-48"
         >
           <option value="">— Load a template —</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <button
         type="button"

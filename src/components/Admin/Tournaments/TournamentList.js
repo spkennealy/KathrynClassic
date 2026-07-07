@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import TournamentForm from './TournamentForm';
 import ConfirmDialog from '../ConfirmDialog';
+import Select from '../Select';
 import { logAudit } from '../../../utils/audit';
 
 export default function TournamentList() {
@@ -239,16 +240,16 @@ export default function TournamentList() {
                   {tournament.location || '-'}
                 </td>
                 <td className="px-3 py-4 text-sm">
-                  <select
+                  <Select
                     value={tournament.registration_status || 'open'}
                     onChange={(e) => handleRegistrationStatusChange(tournament.id, e.target.value)}
-                    className={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusBadgeColor(tournament.registration_status || 'open')} border-0 focus:ring-2 focus:ring-primary-500`}
+                    triggerClassName={`rounded-md px-2 py-1 text-xs font-semibold ${getStatusBadgeColor(tournament.registration_status || 'open')}`}
                   >
                     <option value="open">Open</option>
                     <option value="full">Full (Waitlist)</option>
                     <option value="completed">Completed</option>
                     <option value="closed">Closed (Off-Season)</option>
-                  </select>
+                  </Select>
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button

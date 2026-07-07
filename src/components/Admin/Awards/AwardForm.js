@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import DatePicker from '../DatePicker';
+import Select from '../Select';
 
 const AWARD_CATEGORIES = [
   { value: 'tournament_winner', label: 'Tournament Winner' },
@@ -201,8 +203,9 @@ export default function AwardForm({ award, onClose, onSave }) {
     }
   };
 
-  const inputClass =
-    'mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm';
+  // Inputs get their visual styling from the global `.admin-content` rules; the
+  // Select wrapper just needs layout classes.
+  const inputClass = 'mt-1 block w-full';
 
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
@@ -226,7 +229,7 @@ export default function AwardForm({ award, onClose, onSave }) {
                 <label htmlFor="tournament_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Year <span className="text-red-500">*</span>
                 </label>
-                <select
+                <Select
                   id="tournament_id"
                   required
                   value={formData.tournament_id}
@@ -239,19 +242,17 @@ export default function AwardForm({ award, onClose, onSave }) {
                       {t.year}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div>
                 <label htmlFor="award_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   id="award_date"
                   value={formData.award_date}
                   onChange={(e) => setFormData({ ...formData, award_date: e.target.value })}
-                  className={inputClass}
                 />
               </div>
             </div>
@@ -260,7 +261,7 @@ export default function AwardForm({ award, onClose, onSave }) {
               <label htmlFor="award_category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 What is the award for? <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 id="award_category"
                 value={formData.award_category}
                 onChange={(e) => setFormData({ ...formData, award_category: e.target.value })}
@@ -271,7 +272,7 @@ export default function AwardForm({ award, onClose, onSave }) {
                     {c.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               {formData.award_category === 'other' && (
                 <input
                   type="text"
@@ -345,7 +346,7 @@ export default function AwardForm({ award, onClose, onSave }) {
                 <label htmlFor="event_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Related Event (optional)
                 </label>
-                <select
+                <Select
                   id="event_id"
                   value={formData.event_id}
                   onChange={(e) => setFormData({ ...formData, event_id: e.target.value })}
@@ -358,7 +359,7 @@ export default function AwardForm({ award, onClose, onSave }) {
                       {ev.event_name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 {!formData.tournament_id && (
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Select a year first.</p>
                 )}

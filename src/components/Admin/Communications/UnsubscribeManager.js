@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
 import CommunicationsNav from './CommunicationsNav';
+import Select from '../Select';
 
 const fullName = (c) => `${c.first_name || ''} ${c.last_name || ''}`.trim();
 
@@ -140,17 +141,13 @@ export default function UnsubscribeManager() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Show</label>
-          <select
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
-            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-          >
+          <Select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} className="w-full sm:w-64">
             <option value="all">All unsubscribes</option>
             <option value="global">Unsubscribed from all emails</option>
             {years.map((y) => (
               <option key={y} value={y}>Unsubscribed from {y}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

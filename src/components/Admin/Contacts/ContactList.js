@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
 import ContactEditForm from './ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
 import { formatPhone } from '../../../utils/phone';
@@ -475,7 +476,7 @@ export default function ContactList() {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full"
             />
           </div>
           {selectedContactIds.size > 0 && (
@@ -534,86 +535,86 @@ export default function ContactList() {
               {/* Has Email Filter */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                <select
+                <Select
                   value={filters.hasEmail}
                   onChange={(e) => setFilters({ ...filters, hasEmail: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Email</option>
                   <option value="no">No Email</option>
-                </select>
+                </Select>
               </div>
 
               {/* Has Phone Filter */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                <select
+                <Select
                   value={filters.hasPhone}
                   onChange={(e) => setFilters({ ...filters, hasPhone: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Phone</option>
                   <option value="no">No Phone</option>
-                </select>
+                </Select>
               </div>
 
               {/* Has Registrations Filter */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registrations</label>
-                <select
+                <Select
                   value={filters.hasRegistrations}
                   onChange={(e) => setFilters({ ...filters, hasRegistrations: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Registered</option>
                   <option value="no">Never Registered</option>
-                </select>
+                </Select>
               </div>
 
               {/* Has Tournaments Filter */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tournaments</label>
-                <select
+                <Select
                   value={filters.hasTournaments}
                   onChange={(e) => setFilters({ ...filters, hasTournaments: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full"
                 >
                   <option value="all">All</option>
                   <option value="yes">Attended</option>
                   <option value="no">Never Attended</option>
-                </select>
+                </Select>
               </div>
 
               {/* Has Awards Filter */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Awards</label>
-                <select
+                <Select
                   value={filters.hasAwards}
                   onChange={(e) => setFilters({ ...filters, hasAwards: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full"
                 >
                   <option value="all">All</option>
                   <option value="yes">Has Awards</option>
                   <option value="no">No Awards</option>
-                </select>
+                </Select>
               </div>
 
               {/* Tournament Year Filter */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
-                <select
+                <Select
                   value={filters.tournamentYear}
                   onChange={(e) => setFilters({ ...filters, tournamentYear: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500"
+                  className="block w-full"
                 >
                   <option value="all">All Years</option>
                   {availableYears.map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
 import { logAudit, diffFields } from '../../../utils/audit';
+import DatePicker from '../DatePicker';
 
 export default function TournamentForm({ tournament, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -140,7 +142,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 max="2100"
                 value={formData.year}
                 onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
             </div>
 
@@ -149,28 +151,26 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Start Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  id="start_date"
-                  required
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
+                <div className="mt-1">
+                  <DatePicker
+                    id="start_date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div>
                 <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   End Date <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  id="end_date"
-                  required
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                />
+                <div className="mt-1">
+                  <DatePicker
+                    id="end_date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
 
@@ -184,7 +184,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="e.g., Pine Mountain Lake"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
             </div>
 
@@ -199,7 +199,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.golf_course}
                   onChange={(e) => setFormData({ ...formData, golf_course: e.target.value })}
                   placeholder="e.g., Pine Mountain Lake Golf Course"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 />
               </div>
 
@@ -215,7 +215,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.par}
                   onChange={(e) => setFormData({ ...formData, par: e.target.value })}
                   placeholder="72"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Typically 72</p>
               </div>
@@ -231,7 +231,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 placeholder="Optional notes about this tournament..."
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
             </div>
 
@@ -247,7 +247,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.total_raised}
                 onChange={(e) => setFormData({ ...formData, total_raised: e.target.value })}
                 placeholder="0.00"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
             </div>
 
@@ -263,7 +263,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.golfer_count}
                   onChange={(e) => setFormData({ ...formData, golfer_count: e.target.value })}
                   placeholder="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 />
               </div>
 
@@ -278,7 +278,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   value={formData.total_attendees}
                   onChange={(e) => setFormData({ ...formData, total_attendees: e.target.value })}
                   placeholder="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="mt-1 block w-full"
                 />
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 value={formData.tournament_summary}
                 onChange={(e) => setFormData({ ...formData, tournament_summary: e.target.value })}
                 placeholder="Write a 1-2 paragraph summary of the tournament, including the success of the event, who won, how much money was raised, and how many participated..."
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                className="mt-1 block w-full"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 This summary will appear on the public Tournament History page
@@ -305,17 +305,17 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                 <label htmlFor="registration_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Registration Status
                 </label>
-                <select
+                <Select
                   id="registration_status"
                   value={formData.registration_status}
                   onChange={(e) => setFormData({ ...formData, registration_status: e.target.value })}
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  className="block w-full"
                 >
                   <option value="open">Open - New registrations accepted</option>
                   <option value="full">Full - Waitlist only</option>
                   <option value="completed">Completed - Tournament has ended</option>
                   <option value="closed">Closed - Off-season (contact form only)</option>
-                </select>
+                </Select>
               </div>
 
               <div className="flex items-start">

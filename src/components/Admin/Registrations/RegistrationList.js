@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
 import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
@@ -431,7 +432,7 @@ export default function RegistrationList() {
             placeholder="Search by name, email, tournament, events, payment status, or date..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="block w-full"
           />
         </div>
 
@@ -440,10 +441,10 @@ export default function RegistrationList() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tournament Year
             </label>
-            <select
+            <Select
               value={filter.tournamentYear}
               onChange={(e) => setFilter({ ...filter, tournamentYear: e.target.value })}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full"
             >
               <option value="all">All Years</option>
               {tournaments.map((tournament) => (
@@ -451,22 +452,22 @@ export default function RegistrationList() {
                   {tournament.year}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Payment Status
             </label>
-            <select
+            <Select
               value={filter.paymentStatus}
               onChange={(e) => setFilter({ ...filter, paymentStatus: e.target.value })}
-              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              className="block w-full"
             >
               <option value="all">All Statuses</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
-            </select>
+            </Select>
           </div>
 
           <div className="flex items-end">

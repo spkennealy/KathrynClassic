@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
 import TeeTimeForm from './TeeTimeForm';
 
 export default function TeeTimesManagement() {
@@ -132,17 +133,17 @@ export default function TeeTimesManagement() {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Tournament
         </label>
-        <select
+        <Select
           value={selectedTournament}
           onChange={(e) => setSelectedTournament(e.target.value)}
-          className="block w-full max-w-xs rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+          className="block w-full max-w-xs"
         >
           {tournaments.map((tournament) => (
             <option key={tournament.id} value={tournament.id}>
               {tournament.year}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Tee Times Table */}

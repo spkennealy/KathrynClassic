@@ -214,7 +214,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="admin-content flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto bg-gray-100 dark:bg-night-900 pt-16 md:pt-0">
           <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
             <Outlet />

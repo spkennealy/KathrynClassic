@@ -3,6 +3,7 @@ import { supabase } from '../../../supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { parseAddressList, EMAIL_VARIABLES } from './emailShell';
 import CommunicationsNav from './CommunicationsNav';
+import Select from '../Select';
 import RecipientSelector from './RecipientSelector';
 import EmailEditor from './EmailEditor';
 import TemplateManager from './TemplateManager';
@@ -163,15 +164,11 @@ export default function EmailCampaign() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">1. Recipients</h2>
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Campaign year</label>
-            <select
-              value={campaignYear}
-              onChange={(e) => setCampaignYear(e.target.value)}
-              className="rounded-lg border border-gray-400 dark:border-night-600 py-2 pl-3 pr-9 shadow-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:outline-none focus:ring-0 text-sm"
-            >
+            <Select value={campaignYear} onChange={(e) => setCampaignYear(e.target.value)} className="w-28">
               {tournamentYears.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">

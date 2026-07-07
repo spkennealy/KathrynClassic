@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
-import MultiSelect from './MultiSelect';
+import MultiSelect from '../MultiSelect';
+import Select from '../Select';
 
 // Payment-status options for the multi-select (no "all" entry — an empty
 // selection means all statuses).
@@ -225,23 +226,17 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   // Human list of the selected years for the status message.
   const yearList = [...filters.years].sort((a, b) => b - a).join(', ');
 
-  const selectCls =
-    'block w-full rounded-lg border border-gray-400 dark:border-night-600 py-2.5 pl-3 pr-9 text-sm ' +
-    'bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 shadow-sm ' +
-    'focus:border-primary-500 focus:outline-none focus:ring-0 ' +
-    'disabled:opacity-50 disabled:cursor-not-allowed';
-
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registration</label>
-          <select className={selectCls} value={filters.registered} onChange={(e) => setFilters({ ...filters, registered: e.target.value })}>
+          <Select value={filters.registered} onChange={(e) => setFilters({ ...filters, registered: e.target.value })}>
             <option value="all">All</option>
             <option value="yes">Registered</option>
             <option value="no">Not registered yet</option>
-          </select>
+          </Select>
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registered Year</label>
@@ -264,11 +259,11 @@ export default function RecipientSelector({ onChange, campaignYear }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Kids attending</label>
-          <select className={selectCls} value={filters.hasKids} disabled={notRegistered} onChange={(e) => setFilters({ ...filters, hasKids: e.target.value })}>
+          <Select value={filters.hasKids} disabled={notRegistered} onChange={(e) => setFilters({ ...filters, hasKids: e.target.value })}>
             <option value="all">All</option>
             <option value="yes">Has kids</option>
             <option value="no">No kids</option>
-          </select>
+          </Select>
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Event</label>

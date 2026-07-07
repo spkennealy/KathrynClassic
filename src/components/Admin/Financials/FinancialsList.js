@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import ExpenseForm from './ExpenseForm';
 import ConfirmDialog from '../ConfirmDialog';
+import DatePicker from '../DatePicker';
+import MultiSelect from '../MultiSelect';
+import Select from '../Select';
 
 const formatCurrency = (value) =>
   (Number(value) || 0).toLocaleString('en-US', {
@@ -149,12 +152,9 @@ function PaymentModal({ registrant, onClose, onSave }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Date</label>
-            <input
-              type="date"
-              value={paymentDate}
-              onChange={(e) => setPaymentDate(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            />
+            <div className="mt-1">
+              <DatePicker value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+            </div>
           </div>
 
           <div>
@@ -214,7 +214,7 @@ export default function FinancialsList() {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
-  const [statusFilter, setStatusFilter] = useState('all'); // all | unpaid | partial | paid
+  const [statuses, setStatuses] = useState([]); // subset of ['unpaid','partial','paid']; empty = all
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('registration_date');
   const [sortDir, setSortDir] = useState('desc'); // most recent registration first by default
@@ -332,18 +332,14 @@ export default function FinancialsList() {
     const term = searchTerm.trim().toLowerCase();
     return registrants.filter((r) => {
       const status = getPaymentDisplay(r.amount_paid, r.total_cost).label.toLowerCase();
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'unpaid' && status !== 'unpaid') return false;
-        if (statusFilter === 'partial' && status !== 'partial') return false;
-        if (statusFilter === 'paid' && status !== 'paid') return false;
-      }
+      if (statuses.length > 0 && !statuses.includes(status)) return false;
       if (term) {
         const haystack = `${r.first_name || ''} ${r.last_name || ''} ${r.email || ''}`.toLowerCase();
         if (!haystack.includes(term)) return false;
       }
       return true;
     });
-  }, [registrants, statusFilter, searchTerm]);
+  }, [registrants, statuses, searchTerm]);
 
   // Sort the filtered list, tie-breaking by name for stable ordering.
   const sortedRegistrants = useMemo(() => {
@@ -371,7 +367,7 @@ export default function FinancialsList() {
   // Reset to first page whenever the filter/search/sort/year changes.
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, searchTerm, sortKey, sortDir, selectedYear]);
+  }, [statuses, searchTerm, sortKey, sortDir, selectedYear]);
 
   const handleDeleteExpense = async () => {
     if (!expenseToDelete) return;
@@ -411,17 +407,17 @@ export default function FinancialsList() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tournament Year</label>
-          <select
+          <Select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="block rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="w-40"
           >
             {tournaments.map((t) => (
               <option key={t.id} value={t.year}>
                 {t.year}{t.registration_status === 'open' ? ' (open)' : ''}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -480,18 +476,18 @@ export default function FinancialsList() {
                 className="block w-full sm:w-56 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
             </div>
-            <div>
+            <div className="sm:w-48">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Payment status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-              >
-                <option value="all">All</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="partial">Partially paid</option>
-                <option value="paid">Fully paid</option>
-              </select>
+              <MultiSelect
+                options={[
+                  { value: 'unpaid', label: 'Unpaid' },
+                  { value: 'partial', label: 'Partially paid' },
+                  { value: 'paid', label: 'Fully paid' },
+                ]}
+                selected={statuses}
+                onChange={setStatuses}
+                allLabel="All"
+              />
             </div>
           </div>
         </div>
@@ -566,7 +562,7 @@ export default function FinancialsList() {
             <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
               <tr>
                 <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  {statusFilter === 'all' && !searchTerm ? 'Totals' : 'Filtered totals'}
+                  {statuses.length === 0 && !searchTerm ? 'Totals' : 'Filtered totals'}
                 </td>
                 <td className="px-3 py-3"></td>
                 <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">

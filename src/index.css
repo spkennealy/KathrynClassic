@@ -25,6 +25,30 @@ body {
   .input-field {
     @apply border-gray-300 dark:bg-night-700 dark:border-night-600 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500;
   }
+
+  /* Unified admin form controls — everything in the admin portal (including
+     create/edit modals, which render inside .admin-content) matches the
+     Communications tab: rounded, subtle border that's visible in light mode,
+     comfortable padding, and no default blue focus ring. Scoped to
+     .admin-content so the public site and login screen are untouched.
+     Checkboxes/radios/file/range keep their own styling. */
+  .admin-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+  .admin-content select,
+  .admin-content textarea {
+    @apply rounded-lg border border-gray-400 bg-white text-gray-900 shadow-sm px-3 py-2.5 text-sm
+           dark:border-night-600 dark:bg-night-700 dark:text-gray-100;
+  }
+
+  .admin-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"])::placeholder,
+  .admin-content textarea::placeholder {
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .admin-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
+  .admin-content select:focus,
+  .admin-content textarea:focus {
+    @apply border-primary-500 outline-none ring-0;
+  }
 }
 
 code {

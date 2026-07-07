@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
+import Select from '../Select';
 import { buildTeamSuggestions } from './teamBuilderAlgorithm';
 import ConfirmDialog from '../ConfirmDialog';
 
@@ -491,13 +492,13 @@ export default function TeamBuilder() {
       <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tournament</label>
-          <select
+          <Select
             value={selectedTournament}
             onChange={e => setSelectedTournament(e.target.value)}
-            className="block w-full max-w-xs rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+            className="block w-full max-w-xs"
           >
             {tournaments.map(t => <option key={t.id} value={t.id}>{t.year}</option>)}
-          </select>
+          </Select>
         </div>
         <button
           onClick={handleAddNewTeam}
