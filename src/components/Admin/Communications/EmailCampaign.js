@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { parseAddressList, EMAIL_VARIABLES } from './emailShell';
+import CommunicationsNav from './CommunicationsNav';
 import RecipientSelector from './RecipientSelector';
 import EmailEditor from './EmailEditor';
 import TemplateManager from './TemplateManager';
@@ -154,12 +154,7 @@ export default function EmailCampaign() {
             Send a rich HTML email to registrants or contacts. Sent from info@kathrynclassic.com.
           </p>
         </div>
-        <Link
-          to="/admin/communications/history"
-          className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700"
-        >
-          View history →
-        </Link>
+        <CommunicationsNav />
       </div>
 
       {/* 1. Recipients */}
@@ -171,7 +166,7 @@ export default function EmailCampaign() {
             <select
               value={campaignYear}
               onChange={(e) => setCampaignYear(e.target.value)}
-              className="rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500 text-sm"
+              className="rounded-lg border border-gray-400 dark:border-night-600 py-2 pl-3 pr-9 shadow-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:outline-none focus:ring-0 text-sm"
             >
               {tournamentYears.map((y) => (
                 <option key={y} value={y}>{y}</option>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
+import MultiSelect from './MultiSelect';
 
-const PAYMENT_STATUSES = [
-  { value: 'all', label: 'Any payment status' },
+// Payment-status options for the multi-select (no "all" entry — an empty
+// selection means all statuses).
+const PAYMENT_STATUS_OPTIONS = [
   { value: 'paid', label: 'Paid' },
   { value: 'pending', label: 'Unpaid (pending)' },
   { value: 'partially_paid', label: 'Partially paid' },
@@ -22,14 +24,18 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   const [years, setYears] = useState([]);
   const [eventNames, setEventNames] = useState([]);
   const [filters, setFilters] = useState({
-    registered: 'all', // 'all' | 'no' (contacts who have never registered)
-    year: 'all',
-    paymentStatus: 'all',
+    registered: 'all', // 'all' | 'yes' | 'no'
+    years: [], // selected tournament years (empty = all)
+    paymentStatuses: [], // selected payment statuses (empty = all)
     hasKids: 'all', // 'all' | 'yes' | 'no'
-    event: 'all', // event_name, or 'all'
+    events: [], // selected event names (empty = all)
   });
   const [rows, setRows] = useState([]); // deduped [{email, name, contact_id}]
-  const [selected, setSelected] = useState(new Set()); // set of emails (lowercased)
+  // Selected recipients persist across filter changes so the admin can build a
+  // list by filtering + selecting repeatedly. Keyed by lowercased email → full
+  // recipient object (so we can report them upward even when a later filter no
+  // longer includes them in `rows`).
+  const [selectedMap, setSelectedMap] = useState(new Map());
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -37,13 +43,16 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   // "Not registered" isolates contacts with zero registrations, so the
   // registration-based filters below don't apply and are disabled in the UI.
   const notRegistered = filters.registered === 'no';
+  // "Registered" limits to actual registrants (for the selected year, or any).
+  const onlyRegistered = filters.registered === 'yes';
 
   const registrationFilterActive =
     !notRegistered &&
-    (filters.year !== 'all' ||
-      filters.paymentStatus !== 'all' ||
+    (onlyRegistered ||
+      filters.years.length > 0 ||
+      filters.paymentStatuses.length > 0 ||
       filters.hasKids !== 'all' ||
-      filters.event !== 'all');
+      filters.events.length > 0);
 
   // Load available tournament years + event names once.
   useEffect(() => {
@@ -71,11 +80,11 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           .from('admin_registration_details')
           .select('contact_id, first_name, last_name, email, payment_status, events, total_children')
           .not('email', 'is', null);
-        if (filters.year !== 'all') query = query.eq('tournament_year', parseInt(filters.year));
-        if (filters.paymentStatus !== 'all') query = query.eq('payment_status', filters.paymentStatus);
+        if (filters.years.length > 0) query = query.in('tournament_year', filters.years.map((y) => parseInt(y, 10)));
+        if (filters.paymentStatuses.length > 0) query = query.in('payment_status', filters.paymentStatuses);
         if (filters.hasKids === 'yes') query = query.gt('total_children', 0);
         if (filters.hasKids === 'no') query = query.or('total_children.is.null,total_children.eq.0');
-        if (filters.event !== 'all') query = query.contains('events', [filters.event]);
+        if (filters.events.length > 0) query = query.overlaps('events', filters.events);
       } else {
         // Every contact that has an email address. Includes the registration
         // history columns so the "not registered" filter can be applied below.
@@ -112,16 +121,18 @@ export default function RecipientSelector({ onChange, campaignYear }) {
       const { data, error: err } = await query;
       if (err) throw err;
 
-      // "Not registered" narrows to contacts with no registration. With a year
-      // selected it means "not registered for that year" (they may have
-      // registered in other years); with no year it means never registered.
+      // "Not registered" narrows to contacts with no registration. With years
+      // selected it means "not registered for any of those years" (they may have
+      // registered in other years); with none it means never registered at all.
       let records = data || [];
       if (notRegistered) {
-        if (filters.year === 'all') {
+        if (filters.years.length === 0) {
           records = records.filter((r) => !r.total_registrations);
         } else {
-          const yearNum = parseInt(filters.year, 10);
-          records = records.filter((r) => !(r.tournament_years || []).includes(yearNum));
+          const yearNums = filters.years.map((y) => parseInt(y, 10));
+          records = records.filter(
+            (r) => !yearNums.some((y) => (r.tournament_years || []).includes(y))
+          );
         }
       }
 
@@ -145,11 +156,11 @@ export default function RecipientSelector({ onChange, campaignYear }) {
       });
       const deduped = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
       setRows(deduped);
-      setSelected(new Set(seen.keys())); // select all by default
+      // NOTE: selections are intentionally NOT reset here — they accumulate
+      // across filter changes so the admin can build a list over several passes.
     } catch (err) {
       setError(err.message || 'Failed to load recipients');
       setRows([]);
-      setSelected(new Set());
     } finally {
       setLoading(false);
     }
@@ -159,21 +170,28 @@ export default function RecipientSelector({ onChange, campaignYear }) {
     fetchRecipients();
   }, [fetchRecipients]);
 
-  // Report selection upward whenever it changes (include the fields used for
-  // {{variable}} personalization).
+  // Report the accumulated selection upward (include the fields used for
+  // {{variable}} personalization). Sourced from the persistent map so recipients
+  // picked under earlier filters are still included.
   useEffect(() => {
-    const recipients = rows
-      .filter((r) => selected.has(r.email.toLowerCase()))
-      .map((r) => ({ email: r.email, name: r.name, firstName: r.firstName, lastName: r.lastName, unsubscribeToken: r.unsubscribeToken }));
+    const recipients = [...selectedMap.values()].map((r) => ({
+      email: r.email,
+      name: r.name,
+      firstName: r.firstName,
+      lastName: r.lastName,
+      unsubscribeToken: r.unsubscribeToken,
+    }));
     onChange(recipients);
-  }, [rows, selected, onChange]);
+  }, [selectedMap, onChange]);
 
-  const toggle = (email) => {
-    const key = email.toLowerCase();
-    setSelected((prev) => {
-      const next = new Set(prev);
+  const isSelected = (email) => selectedMap.has(email.toLowerCase());
+
+  const toggle = (row) => {
+    const key = row.email.toLowerCase();
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
       if (next.has(key)) next.delete(key);
-      else next.add(key);
+      else next.set(key, row);
       return next;
     });
   };
@@ -184,24 +202,34 @@ export default function RecipientSelector({ onChange, campaignYear }) {
     ? rows.filter((r) => r.name.toLowerCase().includes(term) || r.email.toLowerCase().includes(term))
     : rows;
 
-  // "Select all" acts on whatever is currently visible (so searching then
-  // selecting only adds the matches, without dropping prior selections).
+  // "Select all" acts on whatever is currently visible (so searching/filtering
+  // then selecting only adds the matches, without dropping prior selections).
   const allVisibleSelected =
-    visibleRows.length > 0 && visibleRows.every((r) => selected.has(r.email.toLowerCase()));
+    visibleRows.length > 0 && visibleRows.every((r) => isSelected(r.email));
   const toggleAll = () => {
-    setSelected((prev) => {
-      const next = new Set(prev);
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
       if (allVisibleSelected) visibleRows.forEach((r) => next.delete(r.email.toLowerCase()));
-      else visibleRows.forEach((r) => next.add(r.email.toLowerCase()));
+      else visibleRows.forEach((r) => next.set(r.email.toLowerCase(), r));
       return next;
     });
   };
 
+  // Count of currently-visible rows that are selected (for the header summary).
+  const selectedInView = visibleRows.filter((r) => isSelected(r.email)).length;
+  const clearSelection = () => setSelectedMap(new Map());
+
   const clearFilters = () =>
-    setFilters({ registered: 'all', year: 'all', paymentStatus: 'all', hasKids: 'all', event: 'all' });
+    setFilters({ registered: 'all', years: [], paymentStatuses: [], hasKids: 'all', events: [] });
+
+  // Human list of the selected years for the status message.
+  const yearList = [...filters.years].sort((a, b) => b - a).join(', ');
 
   const selectCls =
-    'block w-full rounded-md border-gray-300 dark:border-night-600 text-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed';
+    'block w-full rounded-lg border border-gray-400 dark:border-night-600 py-2.5 pl-3 pr-9 text-sm ' +
+    'bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 shadow-sm ' +
+    'focus:border-primary-500 focus:outline-none focus:ring-0 ' +
+    'disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
     <div className="space-y-4">
@@ -210,46 +238,60 @@ export default function RecipientSelector({ onChange, campaignYear }) {
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registration</label>
           <select className={selectCls} value={filters.registered} onChange={(e) => setFilters({ ...filters, registered: e.target.value })}>
-            <option value="all">Any</option>
+            <option value="all">All</option>
+            <option value="yes">Registered</option>
             <option value="no">Not registered yet</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registered year</label>
-          <select className={selectCls} value={filters.year} onChange={(e) => setFilters({ ...filters, year: e.target.value })}>
-            <option value="all">Any year</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registered Year</label>
+          <MultiSelect
+            options={years.map((y) => ({ value: y, label: String(y) }))}
+            selected={filters.years}
+            onChange={(vals) => setFilters({ ...filters, years: vals })}
+            allLabel="All years"
+          />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Payment</label>
-          <select className={selectCls} value={filters.paymentStatus} disabled={notRegistered} onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}>
-            {PAYMENT_STATUSES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          <MultiSelect
+            options={PAYMENT_STATUS_OPTIONS}
+            selected={filters.paymentStatuses}
+            onChange={(vals) => setFilters({ ...filters, paymentStatuses: vals })}
+            allLabel="All payment statuses"
+            disabled={notRegistered}
+          />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Kids attending</label>
           <select className={selectCls} value={filters.hasKids} disabled={notRegistered} onChange={(e) => setFilters({ ...filters, hasKids: e.target.value })}>
-            <option value="all">Any</option>
+            <option value="all">All</option>
             <option value="yes">Has kids</option>
             <option value="no">No kids</option>
           </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Event</label>
-          <select className={selectCls} value={filters.event} disabled={notRegistered} onChange={(e) => setFilters({ ...filters, event: e.target.value })}>
-            <option value="all">Any event</option>
-            {eventNames.map((name) => <option key={name} value={name}>{name}</option>)}
-          </select>
+          <MultiSelect
+            options={eventNames.map((name) => ({ value: name, label: name }))}
+            selected={filters.events}
+            onChange={(vals) => setFilters({ ...filters, events: vals })}
+            allLabel="All events"
+            disabled={notRegistered}
+          />
         </div>
       </div>
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {notRegistered
-            ? filters.year === 'all'
+            ? filters.years.length === 0
               ? 'Showing contacts who have never registered for any tournament. Pick a year to see who hasn’t registered for that year.'
-              : `Showing contacts who have not registered for ${filters.year}.`
+              : `Showing contacts who have not registered for ${yearList}.`
+            : onlyRegistered
+            ? filters.years.length === 0
+              ? 'Showing contacts who have registered for any tournament.'
+              : `Showing contacts who registered for ${yearList}.`
             : registrationFilterActive
             ? 'Showing contacts whose registrations match these filters (any matching year).'
             : 'Showing all contacts with an email address. Add a filter to narrow to registrants.'}
@@ -269,8 +311,20 @@ export default function RecipientSelector({ onChange, campaignYear }) {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search recipients by name or email…"
-        className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+        className="block w-full rounded-lg border border-gray-400 dark:border-night-600 py-2.5 px-3 shadow-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-0 sm:text-sm"
       />
+
+      {/* Selection summary + clear (total persists across filters) */}
+      {selectedMap.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg bg-primary-50 dark:bg-primary-900/20 px-4 py-2 text-sm">
+          <span className="font-medium text-primary-800 dark:text-primary-300">
+            {selectedMap.size} recipient{selectedMap.size === 1 ? '' : 's'} selected
+          </span>
+          <button type="button" onClick={clearSelection} className="text-xs font-medium text-primary-700 dark:text-primary-400 hover:underline">
+            Clear selection
+          </button>
+        </div>
+      )}
 
       {/* Recipient list */}
       <div className="border border-gray-200 dark:border-night-700 rounded-lg">
@@ -282,7 +336,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {loading
               ? 'Loading…'
-              : `${selected.size} of ${rows.length} selected${term ? ` · ${visibleRows.length} shown` : ''}`}
+              : `${selectedInView} of ${visibleRows.length} shown selected`}
           </span>
         </div>
         <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-night-700">
@@ -290,8 +344,8 @@ export default function RecipientSelector({ onChange, campaignYear }) {
             <label key={r.email} className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-night-700 cursor-pointer">
               <input
                 type="checkbox"
-                checked={selected.has(r.email.toLowerCase())}
-                onChange={() => toggle(r.email)}
+                checked={isSelected(r.email)}
+                onChange={() => toggle(r)}
                 className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
               <span className="font-medium text-gray-900 dark:text-gray-100">{r.name || '(no name)'}</span>

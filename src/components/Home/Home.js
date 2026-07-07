@@ -95,6 +95,18 @@ export default function Home() {
             <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight text-white font-serif md:text-center">
               The Kathryn Classic
             </h1>
+            {tournament && (
+              <div className="mt-3 sm:mt-4 text-center">
+                <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white font-serif">
+                  {formatDateRange(tournament.start_date, tournament.end_date)}
+                </p>
+                {tournament.location && (
+                  <p className="mt-1 text-lg sm:text-xl text-white/90 font-serif">
+                    {tournament.location}
+                  </p>
+                )}
+              </div>
+            )}
             <p className="mt-4 sm:mt-6 text-base sm:text-xl leading-7 sm:leading-8 text-white/90">
               Join us for a weekend of golf, community, and giving back. The annual Kathryn Classic tournament brings together golfers of all skill levels for a memorable experience while supporting CJD research through the CJD Foundation.<br /><br />
               Even if you don't play golf, we would love to have you join us for the welcome dinner, beach day, or other family activities.

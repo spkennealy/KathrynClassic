@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
+import CommunicationsNav from './CommunicationsNav';
 
 const STATUS_STYLES = {
   sent: 'bg-green-100 text-green-800',
@@ -67,12 +67,10 @@ export default function CampaignHistory() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Email history</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Email History</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Every campaign sent from the portal.</p>
         </div>
-        <Link to="/admin/communications" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700">
-          ← New email
-        </Link>
+        <CommunicationsNav />
       </div>
 
       {error && (
