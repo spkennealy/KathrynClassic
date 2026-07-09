@@ -5,12 +5,12 @@ export function emailShell(bodyHtml) {
   return `<!DOCTYPE html>
 <html>
 <body style="margin:0;padding:0;background:#f4f6f6;font-family:Arial,Helvetica,sans-serif;color:#222;">
-  <div style="max-width:600px;margin:0 auto;padding:24px;">
-    <div style="background:#fff;border-radius:10px;padding:28px;border:1px solid #e3e8e8;">
+  <div style="padding:24px;">
+    <div style="background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e3e8e8;">
       ${bodyHtml || ''}
     </div>
     <p style="text-align:center;font-size:12px;color:#999;margin:16px 0 4px;">
-      The Kathryn Classic
+      <a href="https://www.kathrynclassic.com/" style="color:#999;text-decoration:underline;">The Kathryn Classic</a>
     </p>
     <p style="text-align:center;font-size:12px;color:#999;margin:0;line-height:1.5;">
       Don't want these emails?
