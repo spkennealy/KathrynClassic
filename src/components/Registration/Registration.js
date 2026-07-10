@@ -3,16 +3,25 @@ import { Formik, Form, Field, ErrorMessage, FieldArray, useFormikContext } from 
 import * as Yup from 'yup';
 import { supabase } from '../../supabaseClient';
 import { getCurrentTournamentYear, getTournamentEvents, formatDate } from '../../utils/tournamentUtils';
-import { normalizePhone } from '../../utils/phone';
+import { normalizePhone, isValidPhone } from '../../utils/phone';
+import { normalizeEmail, isValidEmail } from '../../utils/email';
 import { reportError } from '../../utils/reportError';
 import { safeUuid } from '../../utils/uuid';
 import BookYourStay from './BookYourStay';
 
+// Shared field validators. Email is required and must be well-formed; phone is
+// optional but, when anything is entered, must be a valid number.
+const emailField = Yup.string()
+  .required('Email is required')
+  .test('email-format', 'Please enter a valid email address', (v) => !v || isValidEmail(v));
+const phoneField = Yup.string()
+  .test('phone-format', 'Please enter a valid phone number', (v) => !v || isValidPhone(v));
+
 const AdultSchema = Yup.object().shape({
   firstName: Yup.string().required('First name is required'),
   lastName: Yup.string().required('Last name is required'),
-  email: Yup.string().email('Invalid email').required('Email is required'),
-  phone: Yup.string(),
+  email: emailField,
+  phone: phoneField,
   events: Yup.array().min(1, 'Select at least one event'),
   golfHandicap: Yup.number().when('events', {
     is: (events) => events && events.includes('golf_tournament'),
@@ -31,8 +40,8 @@ const RegistrationSchema = Yup.object().shape({
 const WaitlistSchema = Yup.object().shape({
   firstName: Yup.string().required('First name is required'),
   lastName: Yup.string().required('Last name is required'),
-  email: Yup.string().email('Invalid email').required('Email is required'),
-  phone: Yup.string(),
+  email: emailField,
+  phone: phoneField,
   notes: Yup.string(),
 });
 
@@ -260,11 +269,13 @@ export default function Registration() {
     try {
       setError(null);
 
-      // STEP 1: Check if contact exists or create new one
+      // STEP 1: Check if contact exists or create new one (email match is
+      // case-insensitive so we don't create duplicate contacts).
+      const email = normalizeEmail(values.email);
       const { data: existingContact, error: lookupError } = await supabase
         .from('contacts')
         .select('id')
-        .eq('email', values.email)
+        .ilike('email', email)
         .maybeSingle();
 
       if (lookupError) throw lookupError;
@@ -290,7 +301,7 @@ export default function Registration() {
           .insert([{
             first_name: values.firstName,
             last_name: values.lastName,
-            email: values.email,
+            email,
             phone: normalizePhone(values.phone)
           }])
           .select()
@@ -333,11 +344,12 @@ export default function Registration() {
       setError(null);
       setContactAlreadyExists(false);
 
-      // Check if contact already exists
+      // Check if contact already exists (case-insensitive email match).
+      const email = normalizeEmail(values.email);
       const { data: existingContact, error: lookupError } = await supabase
         .from('contacts')
         .select('id')
-        .eq('email', values.email)
+        .ilike('email', email)
         .maybeSingle();
 
       if (lookupError) throw lookupError;
@@ -363,7 +375,7 @@ export default function Registration() {
           .insert([{
             first_name: values.firstName,
             last_name: values.lastName,
-            email: values.email,
+            email,
             phone: normalizePhone(values.phone)
           }]);
 
@@ -415,31 +427,38 @@ export default function Registration() {
         return;
       }
 
-      // STEP 1: Get unique emails and batch lookup contacts
-      const emails = [...new Set(values.adults.map(a => a.email))];
+      // STEP 1: Get unique emails and batch lookup contacts. Email matching is
+      // case-insensitive (normalized keys + ilike) so we reuse existing contacts
+      // instead of creating case-variant duplicates (e.g. Awalls@ vs awalls@).
+      const emails = [...new Set(values.adults.map(a => normalizeEmail(a.email)))];
+      const emailSet = new Set(emails);
 
       const { data: existingContacts, error: lookupError } = await supabase
         .from('contacts')
         .select('id, email')
-        .in('email', emails);
+        .or(emails.map(e => `email.ilike.${e}`).join(','));
 
       if (lookupError) throw lookupError;
 
-      // Map existing contact_ids
+      // Map existing contact_ids by normalized (lowercased) email. Filter to
+      // exact normalized matches so an ilike wildcard can never mismap.
       const contactMap = new Map(
-        (existingContacts || []).map(c => [c.email, c.id])
+        (existingContacts || [])
+          .filter(c => emailSet.has(normalizeEmail(c.email)))
+          .map(c => [normalizeEmail(c.email), c.id])
       );
 
       // STEP 2: Identify new contacts to create
       const newContactsData = values.adults
-        .filter(a => !contactMap.has(a.email))
+        .filter(a => !contactMap.has(normalizeEmail(a.email)))
         .reduce((acc, adult) => {
+          const email = normalizeEmail(adult.email);
           // Deduplicate by email
-          if (!acc.find(c => c.email === adult.email)) {
+          if (!acc.find(c => c.email === email)) {
             acc.push({
               first_name: adult.firstName,
               last_name: adult.lastName,
-              email: adult.email,
+              email,
               phone: normalizePhone(adult.phone)
             });
           }
@@ -455,19 +474,20 @@ export default function Registration() {
 
         if (insertError) throw insertError;
 
-        (insertedContacts || []).forEach(c => contactMap.set(c.email, c.id));
+        (insertedContacts || []).forEach(c => contactMap.set(normalizeEmail(c.email), c.id));
       }
 
       // STEP 3: Update existing contacts with latest info
       const contactUpdates = values.adults
-        .filter(a => existingContacts && existingContacts.find(c => c.email === a.email))
+        .filter(a => contactMap.has(normalizeEmail(a.email)))
         .reduce((acc, adult) => {
+          const email = normalizeEmail(adult.email);
           // Deduplicate by email
-          const existing = acc.find(u => u.email === adult.email);
+          const existing = acc.find(u => u.email === email);
           if (!existing) {
             acc.push({
-              id: contactMap.get(adult.email),
-              email: adult.email,
+              id: contactMap.get(email),
+              email,
               first_name: adult.firstName,
               last_name: adult.lastName,
               phone: normalizePhone(adult.phone),
@@ -487,7 +507,7 @@ export default function Registration() {
       }
 
       // STEP 3.5: Check for duplicate registrations
-      const allContactIds = values.adults.map(a => contactMap.get(a.email));
+      const allContactIds = values.adults.map(a => contactMap.get(normalizeEmail(a.email)));
 
       const { data: existingRegIds, error: dupCheckError } = await supabase
         .rpc('check_existing_registrations', {
@@ -499,8 +519,8 @@ export default function Registration() {
 
       const existingRegSet = new Set(existingRegIds || []);
 
-      const duplicateAdults = values.adults.filter(a => existingRegSet.has(contactMap.get(a.email)));
-      const newAdults = values.adults.filter(a => !existingRegSet.has(contactMap.get(a.email)));
+      const duplicateAdults = values.adults.filter(a => existingRegSet.has(contactMap.get(normalizeEmail(a.email))));
+      const newAdults = values.adults.filter(a => !existingRegSet.has(contactMap.get(normalizeEmail(a.email))));
 
       // If ALL attendees are already registered, show error and return
       if (newAdults.length === 0) {
@@ -533,7 +553,7 @@ export default function Registration() {
         const isGolfer = adult.events.includes('golf_tournament');
 
         return {
-          contact_id: contactMap.get(adult.email),
+          contact_id: contactMap.get(normalizeEmail(adult.email)),
           golf_handicap: adult.golfHandicap || null,
           preferred_teammates: isGolfer && adult.preferredTeammates
             ? adult.preferredTeammates
@@ -891,8 +911,8 @@ export default function Registration() {
               validationSchema={Yup.object().shape({
                 firstName: Yup.string().required('First name is required'),
                 lastName: Yup.string().required('Last name is required'),
-                email: Yup.string().email('Invalid email').required('Email is required'),
-                phone: Yup.string(),
+                email: emailField,
+                phone: phoneField,
               })}
               onSubmit={handleContactSubmit}
             >

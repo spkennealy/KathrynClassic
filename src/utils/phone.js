@@ -16,6 +16,18 @@ export function normalizePhone(raw) {
   return (hasPlus ? '+' : '') + digits;
 }
 
+// Validate a phone number. Accepts US 10-digit, US 11-digit with a leading 1,
+// or an international "+" number (8–15 digits, per E.164). Empty/no-digit input
+// returns false — callers that treat phone as optional should skip empties
+// (e.g. `!value || isValidPhone(value)`).
+export function isValidPhone(value) {
+  const str = String(value ?? '').trim();
+  const hasPlus = str.startsWith('+');
+  const digits = str.replace(/\D/g, '');
+  if (hasPlus) return digits.length >= 8 && digits.length <= 15;
+  return digits.length === 10 || (digits.length === 11 && digits.startsWith('1'));
+}
+
 // Format a stored phone for display. US 10-digit -> "(510) 555-1234";
 // US 11-digit (leading 1) -> "(510) 555-1234"; anything else is returned as-is
 // (with a "+" preserved for international) so we never hide data.

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { normalizePhone, formatPhone } from '../../../utils/phone';
+import { normalizeEmail } from '../../../utils/email';
 import { logAudit, diffFields } from '../../../utils/audit';
 import RecordHistory from '../Audit/RecordHistory';
 
@@ -37,7 +38,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
       const newValues = {
         first_name: formData.first_name,
         last_name: formData.last_name,
-        email: formData.email || null,
+        email: normalizeEmail(formData.email) || null,
         phone: normalizePhone(formData.phone),
       };
 

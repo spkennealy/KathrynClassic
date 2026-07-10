@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import Select from '../Select';
 import { normalizePhone } from '../../../utils/phone';
+import { normalizeEmail } from '../../../utils/email';
 
 const createBlankAttendee = () => ({
   contact_id: '',
@@ -146,13 +147,13 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
       setLoading(true);
       setError(null);
 
-      // Check if contact with this email already exists
+      // Check if contact with this email already exists (case-insensitive).
       if (newContactData.email) {
         const { data: existingContact, error: searchError } = await supabase
           .from('contacts')
           .select('*')
-          .eq('email', newContactData.email)
-          .single();
+          .ilike('email', normalizeEmail(newContactData.email))
+          .maybeSingle();
 
         if (existingContact && !searchError) {
           // Contact already exists, select it instead
@@ -171,7 +172,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
         .insert({
           first_name: newContactData.first_name,
           last_name: newContactData.last_name,
-          email: newContactData.email || null,
+          email: normalizeEmail(newContactData.email) || null,
           phone: normalizePhone(newContactData.phone),
         })
         .select()
@@ -304,8 +305,8 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
         const { data: existingContact, error: searchError } = await supabase
           .from('contacts')
           .select('*')
-          .eq('email', ncd.email)
-          .single();
+          .ilike('email', normalizeEmail(ncd.email))
+          .maybeSingle();
 
         if (existingContact && !searchError) {
           updateAttendee(index, {
@@ -326,7 +327,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
         .insert({
           first_name: ncd.first_name,
           last_name: ncd.last_name,
-          email: ncd.email || null,
+          email: normalizeEmail(ncd.email) || null,
           phone: normalizePhone(ncd.phone),
         })
         .select()
