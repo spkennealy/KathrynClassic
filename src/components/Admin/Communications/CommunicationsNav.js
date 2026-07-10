@@ -5,6 +5,7 @@ import { NavLink } from 'react-router-dom';
 // switch between composing, unsubscribes, and history from any of the pages.
 const TABS = [
   { to: '/admin/communications', label: 'New Email', end: true },
+  { to: '/admin/communications/templates', label: 'Templates', end: false },
   { to: '/admin/communications/unsubscribes', label: 'Unsubscribes', end: false },
   { to: '/admin/communications/history', label: 'History', end: false },
 ];

@@ -26,6 +26,7 @@ import ContactList from './components/Admin/Contacts/ContactList';
 import EmailCampaign from './components/Admin/Communications/EmailCampaign';
 import CampaignHistory from './components/Admin/Communications/CampaignHistory';
 import UnsubscribeManager from './components/Admin/Communications/UnsubscribeManager';
+import TemplateList from './components/Admin/Communications/TemplateList';
 import TournamentList from './components/Admin/Tournaments/TournamentList';
 import EventList from './components/Admin/Events/EventList';
 import AwardList from './components/Admin/Awards/AwardList';
@@ -129,6 +130,7 @@ function App() {
                 <Route path="financials" element={<FinancialsList />} />
                 <Route path="contacts" element={<ContactList />} />
                 <Route path="communications" element={<EmailCampaign />} />
+                <Route path="communications/templates" element={<TemplateList />} />
                 <Route path="communications/history" element={<CampaignHistory />} />
                 <Route path="communications/unsubscribes" element={<UnsubscribeManager />} />
                 <Route path="tee-times" element={<TeeTimesManagement />} />

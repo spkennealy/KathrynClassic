@@ -3,6 +3,7 @@ import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
 import CommunicationsNav from './CommunicationsNav';
 import Select from '../Select';
+import AddUnsubscribeModal from './AddUnsubscribeModal';
 
 const fullName = (c) => `${c.first_name || ''} ${c.last_name || ''}`.trim();
 
@@ -15,6 +16,7 @@ export default function UnsubscribeManager() {
   const [yearFilter, setYearFilter] = useState('all'); // 'all' | 'global' | <year>
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState(null); // contact id being updated
+  const [addOpen, setAddOpen] = useState(false); // "Add unsubscribe" modal
 
   const fetchUnsubscribed = useCallback(async () => {
     setLoading(true);
@@ -149,6 +151,13 @@ export default function UnsubscribeManager() {
             ))}
           </Select>
         </div>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="inline-flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        >
+          Add unsubscribe
+        </button>
       </div>
 
       {/* Table */}
@@ -229,6 +238,12 @@ export default function UnsubscribeManager() {
         Tip: the year buttons re-subscribe a contact to just that tournament year; “All” clears every opt-out
         (including “all emails”). Re-subscribing is logged in the Audit Log.
       </p>
+
+      <AddUnsubscribeModal
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSaved={fetchUnsubscribed}
+      />
     </div>
   );
 }
