@@ -13,7 +13,7 @@ export function emailShell(bodyHtml) {
       <a href="https://www.kathrynclassic.com/" style="color:#999;text-decoration:underline;">The Kathryn Classic</a>
     </p>
     <p style="text-align:center;font-size:12px;color:#999;margin:0;line-height:1.5;">
-      Don't want these emails?
+      Can't make it this year?
       <a href="#" style="color:#999;text-decoration:underline;">Unsubscribe</a>
     </p>
   </div>
