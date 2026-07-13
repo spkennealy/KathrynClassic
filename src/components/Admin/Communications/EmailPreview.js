@@ -3,8 +3,11 @@ import { emailShell, renderTemplate, recipientVars } from './emailShell';
 
 // Renders the email as a recipient will see it (variables substituted, wrapped
 // in the shared shell) inside a sandboxed iframe, plus a header summary.
-export default function EmailPreview({ subject, bodyHtml, recipientCount, cc, bcc, sampleRecipient }) {
-  const vars = recipientVars(sampleRecipient || {});
+// `extraVars` layers additional token values (e.g. the registration templates'
+// sample blocks) over the recipient-derived ones; `shellFn` swaps the wrapper
+// when the email is sent by a function that uses a different shell.
+export default function EmailPreview({ subject, bodyHtml, recipientCount, cc, bcc, sampleRecipient, extraVars, shellFn }) {
+  const vars = { ...recipientVars(sampleRecipient || {}), ...(extraVars || {}) };
   const renderedSubject = renderTemplate(subject, vars);
   const renderedBody = renderTemplate(bodyHtml, vars);
 
@@ -25,7 +28,7 @@ export default function EmailPreview({ subject, bodyHtml, recipientCount, cc, bc
       <iframe
         title="Email preview"
         sandbox=""
-        srcDoc={emailShell(renderedBody)}
+        srcDoc={(shellFn || emailShell)(renderedBody)}
         className="w-full h-96 border border-gray-200 dark:border-night-700 rounded-lg bg-white"
       />
     </div>

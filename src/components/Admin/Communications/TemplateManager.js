@@ -17,10 +17,13 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
+    // Exclude system (registration) templates: their {{tokens}} only resolve in
+    // the send-registration-confirmation edge function, not in bulk emails.
     const { data, error: err } = await supabase
       .from('email_templates')
       .select('*')
       .is('deleted_at', null)
+      .is('template_key', null)
       .order('name');
     if (err) {
       setError(err.message);
