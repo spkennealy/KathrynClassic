@@ -12,14 +12,14 @@ const TABS = [
 
 export default function CommunicationsNav() {
   return (
-    <nav className="inline-flex rounded-lg bg-gray-100 dark:bg-night-700 p-1">
+    <nav className="inline-flex shrink-0 rounded-lg bg-gray-100 dark:bg-night-700 p-1">
       {TABS.map((t) => (
         <NavLink
           key={t.to}
           to={t.to}
           end={t.end}
           className={({ isActive }) =>
-            `px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            `px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-colors ${
               isActive
                 ? 'bg-white dark:bg-night-800 text-primary-700 dark:text-primary-300 shadow-sm'
                 : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
