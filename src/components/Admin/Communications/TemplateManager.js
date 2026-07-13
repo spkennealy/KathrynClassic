@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import ConfirmDialog from '../ConfirmDialog';
 import Select from '../Select';
 
@@ -68,6 +69,13 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
         .select()
         .single();
       if (err) throw err;
+      await logAudit({
+        action: 'email_template.created',
+        entityType: 'email_template',
+        entityId: data.id,
+        entityLabel: name,
+        changes: { name, subject: subject || '', body_html: `${(bodyHtml || '').length} chars` },
+      });
       setShowSaveModal(false);
       await fetchTemplates();
       setSelectedId(data.id);
@@ -89,6 +97,20 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
         .update({ subject: subject || '', body_html: bodyHtml || '', updated_at: new Date().toISOString() })
         .eq('id', selectedId);
       if (err) throw err;
+      const changes = {};
+      if ((selectedTemplate?.subject || '') !== (subject || '')) {
+        changes.subject = { from: selectedTemplate?.subject ?? null, to: subject || '' };
+      }
+      if ((selectedTemplate?.body_html || '') !== (bodyHtml || '')) {
+        changes.body_html = { from: `${(selectedTemplate?.body_html || '').length} chars`, to: `${(bodyHtml || '').length} chars` };
+      }
+      await logAudit({
+        action: 'email_template.updated',
+        entityType: 'email_template',
+        entityId: selectedId,
+        entityLabel: selectedTemplate?.name,
+        changes: Object.keys(changes).length ? changes : undefined,
+      });
       await fetchTemplates();
       flash('Template updated');
     } catch (err) {
@@ -108,6 +130,13 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', selectedId);
       if (err) throw err;
+      await logAudit({
+        action: 'email_template.deleted',
+        entityType: 'email_template',
+        entityId: selectedId,
+        entityLabel: selectedTemplate?.name,
+        changes: { name: selectedTemplate?.name, subject: selectedTemplate?.subject || '' },
+      });
       setShowDeleteConfirm(false);
       setSelectedId('');
       await fetchTemplates();

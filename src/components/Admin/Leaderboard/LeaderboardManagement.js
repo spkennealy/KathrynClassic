@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import TeamScoreForm from './TeamScoreForm';
 import Select from '../Select';
 
@@ -69,7 +70,7 @@ export default function LeaderboardManagement() {
     setShowForm(true);
   };
 
-  const handleDeleteTeam = async (teamId) => {
+  const handleDeleteTeam = async (team) => {
     if (!window.confirm('Are you sure you want to delete this team?')) {
       return;
     }
@@ -78,9 +79,22 @@ export default function LeaderboardManagement() {
       const { error } = await supabase
         .from('golf_teams')
         .delete()
-        .eq('id', teamId);
+        .eq('id', team.team_id);
 
       if (error) throw error;
+
+      await logAudit({
+        action: 'golf_team.deleted',
+        entityType: 'golf_team',
+        entityId: team.team_id,
+        entityLabel: team.team_name || `Team #${team.team_number ?? ''}`.trim(),
+        changes: {
+          team: team.team_name,
+          score: team.total_score ?? team.score,
+          position: team.position,
+        },
+      });
+
       fetchTeams();
     } catch (err) {
       console.error('Error deleting team:', err);
@@ -222,7 +236,7 @@ export default function LeaderboardManagement() {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteTeam(team.team_id)}
+                      onClick={() => handleDeleteTeam(team)}
                       className="text-red-600 hover:text-red-900 font-medium"
                     >
                       Delete

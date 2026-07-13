@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 
 export default function TeamForm({ team, onClose, onSave }) {
   const [name, setName] = useState('');
@@ -27,11 +28,21 @@ export default function TeamForm({ team, onClose, onSave }) {
       }
 
       if (isCreateMode) {
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('teams')
-          .insert({ name: name.trim() });
+          .insert({ name: name.trim() })
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+
+        await logAudit({
+          action: 'team.created',
+          entityType: 'team',
+          entityId: inserted?.id,
+          entityLabel: name.trim(),
+          changes: { name: name.trim() },
+        });
       } else {
         const { error: updateError } = await supabase
           .from('teams')
@@ -39,6 +50,16 @@ export default function TeamForm({ team, onClose, onSave }) {
           .eq('id', team.team_id);
 
         if (updateError) throw updateError;
+
+        if ((team.team_name || '') !== name.trim()) {
+          await logAudit({
+            action: 'team.updated',
+            entityType: 'team',
+            entityId: team.team_id,
+            entityLabel: name.trim(),
+            changes: { name: { from: team.team_name || null, to: name.trim() } },
+          });
+        }
       }
 
       onSave();

@@ -93,6 +93,7 @@ export default function TemplateList() {
           entityType: 'email_template',
           entityId: data.id,
           entityLabel: name,
+          changes: { name, subject: draft.subject || '', body_html: `${(draft.body_html || '').length} chars` },
         });
         await fetchTemplates();
         selectTemplate(data);
@@ -108,11 +109,19 @@ export default function TemplateList() {
           })
           .eq('id', selectedId);
         if (err) throw err;
+        const old = templates.find((t) => t.id === selectedId) || {};
+        const changes = {};
+        if ((old.name || '') !== name) changes.name = { from: old.name ?? null, to: name };
+        if ((old.subject || '') !== (draft.subject || '')) changes.subject = { from: old.subject ?? null, to: draft.subject || '' };
+        if ((old.body_html || '') !== (draft.body_html || '')) {
+          changes.body_html = { from: `${(old.body_html || '').length} chars`, to: `${(draft.body_html || '').length} chars` };
+        }
         await logAudit({
           action: 'email_template.updated',
           entityType: 'email_template',
           entityId: selectedId,
           entityLabel: name,
+          changes: Object.keys(changes).length ? changes : undefined,
         });
         await fetchTemplates();
         flash('Template saved');
@@ -139,6 +148,7 @@ export default function TemplateList() {
         entityType: 'email_template',
         entityId: selectedId,
         entityLabel: draft.name.trim(),
+        changes: { name: draft.name.trim(), subject: draft.subject || '' },
       });
       setShowDeleteConfirm(false);
       cancelEdit();

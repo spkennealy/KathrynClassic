@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import Select from '../Select';
 import TeeTimeForm from './TeeTimeForm';
 
@@ -69,7 +70,7 @@ export default function TeeTimesManagement() {
     setShowForm(true);
   };
 
-  const handleDeleteTeeTime = async (teeTimeId) => {
+  const handleDeleteTeeTime = async (teeTime) => {
     if (!window.confirm('Are you sure you want to delete this tee time?')) {
       return;
     }
@@ -78,9 +79,22 @@ export default function TeeTimesManagement() {
       const { error } = await supabase
         .from('tee_times')
         .delete()
-        .eq('id', teeTimeId);
+        .eq('id', teeTime.tee_time_id);
 
       if (error) throw error;
+
+      await logAudit({
+        action: 'tee_time.deleted',
+        entityType: 'tee_time',
+        entityId: teeTime.tee_time_id,
+        entityLabel: `${formatTeeTime(teeTime.tee_time)} (hole ${teeTime.hole_number})`,
+        changes: {
+          tee_time: teeTime.tee_time,
+          hole_number: teeTime.hole_number,
+          team: teeTime.team_name || null,
+        },
+      });
+
       fetchTeeTimes();
     } catch (err) {
       console.error('Error deleting tee time:', err);
@@ -224,7 +238,7 @@ export default function TeeTimesManagement() {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteTeeTime(teeTime.tee_time_id)}
+                      onClick={() => handleDeleteTeeTime(teeTime)}
                       className="text-red-600 hover:text-red-900 font-medium"
                     >
                       Delete

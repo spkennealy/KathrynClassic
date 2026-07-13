@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit, diffFields } from '../../../utils/audit';
 import Select from '../Select';
 import DatePicker from '../DatePicker';
+
+const TEE_TIME_FIELDS = ['tournament_event_id', 'team_id', 'tee_time', 'hole_number', 'notes'];
 
 export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -108,6 +111,8 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
         updated_at: new Date().toISOString(),
       };
 
+      const teeLabel = `${formData.tee_date} ${formData.tee_time_input} (hole ${formData.hole_number})`;
+
       if (teeTime) {
         // Update existing
         const { error: updateError } = await supabase
@@ -116,13 +121,44 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
           .eq('id', teeTime.tee_time_id);
 
         if (updateError) throw updateError;
+
+        const changes = diffFields(
+          {
+            tournament_event_id: teeTime.tournament_event_id,
+            team_id: teeTime.team_id,
+            tee_time: teeTime.tee_time,
+            hole_number: teeTime.hole_number,
+            notes: teeTime.notes,
+          },
+          teeTimeData,
+          TEE_TIME_FIELDS
+        );
+        if (changes) {
+          await logAudit({
+            action: 'tee_time.updated',
+            entityType: 'tee_time',
+            entityId: teeTime.tee_time_id,
+            entityLabel: teeLabel,
+            changes,
+          });
+        }
       } else {
         // Create new
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('tee_times')
-          .insert([teeTimeData]);
+          .insert([teeTimeData])
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+
+        await logAudit({
+          action: 'tee_time.created',
+          entityType: 'tee_time',
+          entityId: inserted?.id,
+          entityLabel: teeLabel,
+          changes: { tee_time: teeTimeData.tee_time, hole_number: teeTimeData.hole_number, team_id: teeTimeData.team_id },
+        });
       }
 
       onSave();

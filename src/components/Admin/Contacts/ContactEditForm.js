@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { normalizePhone, formatPhone } from '../../../utils/phone';
 import { normalizeEmail } from '../../../utils/email';
@@ -17,6 +17,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const firstNameRef = useRef(null);
 
   useEffect(() => {
     if (contact) {
@@ -26,6 +27,9 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
         email: contact.email || '',
         phone: formatPhone(contact.phone),
       });
+    } else {
+      // Creating a new contact: put the cursor in the first name field.
+      firstNameRef.current?.focus();
     }
   }, [contact]);
 
@@ -36,8 +40,8 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
 
     try {
       const newValues = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
         email: normalizeEmail(formData.email) || null,
         phone: normalizePhone(formData.phone),
       };
@@ -130,6 +134,7 @@ export default function ContactEditForm({ contact, onClose, onSave }) {
                 <input
                   type="text"
                   id="first_name"
+                  ref={firstNameRef}
                   required
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}

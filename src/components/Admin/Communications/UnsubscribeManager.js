@@ -87,6 +87,7 @@ export default function UnsubscribeManager() {
         entityType: 'contact',
         entityId: contact.id,
         entityLabel: `${fullName(contact)} — ${auditLabel}`,
+        changes: patch,
       });
       await fetchUnsubscribed();
     } catch (err) {

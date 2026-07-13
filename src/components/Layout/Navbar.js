@@ -6,13 +6,16 @@ import ThemeToggle from './ThemeToggle';
 
 const navigation = [
   { name: 'Home', href: '/' },
+  { name: 'About', href: '/about' },
   { name: 'Schedule', href: '/schedule' },
   { name: 'Registration', href: '/registration' },
+  { name: 'Rules', href: '/rules' },
   { name: 'Leaderboard', href: '/leaderboard' },
   { name: 'History', href: '/history' },
-  { name: 'Donations', href: '/donations' },
-  { name: 'About', href: '/about' },
 ];
+
+// External donation page (CJD Foundation via QGiv).
+const DONATE_URL = 'https://secure.qgiv.com/event/cjdfoundation/account/2161631/';
 
 export default function Navbar() {
   const location = useLocation();
@@ -22,15 +25,15 @@ export default function Navbar() {
       {({ open, close }) => (
         <>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-20 items-center justify-between">
-              <div className="flex-1 md:flex-none text-center md:text-left">
+            <div className="flex items-center justify-between gap-2 md:gap-4 py-4 md:py-5">
+              <div className="min-w-0 flex-1 md:flex-none text-left">
                 <Link to="/" className="block">
-                  <h1 className="text-primary-600 dark:text-primary-400 font-serif text-3xl font-bold leading-tight">The Kathryn Classic</h1>
-                  <p className="text-primary-600 dark:text-primary-400 text-sm font-medium md:text-center">A weekend of family, golf & giving</p>
+                  <h1 className="text-primary-600 dark:text-primary-400 font-serif text-xl sm:text-2xl lg:text-3xl font-bold leading-tight">The Kathryn Classic</h1>
+                  <p className="text-primary-600 dark:text-primary-400 text-xs sm:text-sm font-medium md:text-center">A weekend of family, golf &amp; giving</p>
                 </Link>
               </div>
               <div className="hidden md:block">
-                <div className="flex items-center space-x-8">
+                <div className="flex items-center gap-x-3 lg:gap-x-5 xl:gap-x-8">
                   {navigation.map((item) => (
                     <Link
                       key={item.name}
@@ -39,15 +42,31 @@ export default function Navbar() {
                         location.pathname === item.href
                           ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
                           : 'text-primary-600 dark:text-primary-400 hover:border-b-2 hover:border-primary-600 dark:hover:border-primary-400'
-                      } pb-1 text-base font-serif transition-all duration-200`}
+                      } whitespace-nowrap pb-1 text-sm lg:text-base font-serif transition-all duration-200`}
                     >
                       {item.name}
                     </Link>
                   ))}
                   <ThemeToggle />
+                  <a
+                    href={DONATE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center whitespace-nowrap rounded-lg bg-primary-600 px-3 lg:px-4 py-2 text-sm lg:text-base font-serif font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
+                  >
+                    Donate
+                  </a>
                 </div>
               </div>
-              <div className="-mr-2 flex md:hidden">
+              <div className="-mr-2 flex items-center gap-2 md:hidden">
+                <a
+                  href={DONATE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded-lg bg-primary-600 px-3 py-2 text-sm font-serif font-semibold text-white shadow-sm hover:bg-primary-700 transition-colors"
+                >
+                  Donate
+                </a>
                 <Disclosure.Button className="inline-flex items-center justify-center rounded-lg bg-primary-600 p-2 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 transition-colors">
                   <span className="sr-only">Open main menu</span>
                   {open ? (

@@ -171,7 +171,7 @@ export default function TournamentHistory() {
   return (
     <div className="bg-primary-50 dark:bg-night-900 min-h-screen">
       {/* Main Content */}
-      <div className="py-24 sm:py-32">
+      <div className="pt-10 pb-24 sm:pt-14 sm:pb-32">
         <div className="mx-auto max-w-6xl px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-16">

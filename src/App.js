@@ -7,8 +7,8 @@ import Home from './components/Home/Home';
 import Schedule from './components/Schedule/Schedule';
 import Registration from './components/Registration/Registration';
 import Leaderboard from './components/Leaderboard/Leaderboard';
-import Donations from './components/Donations/Donations';
 import About from './components/About/About';
+import TournamentRules from './components/TournamentRules/TournamentRules';
 import TournamentHistory from './components/TournamentHistory/TournamentHistory';
 import Unsubscribe from './components/Unsubscribe/Unsubscribe';
 import SEO from './components/SEO';
@@ -27,6 +27,7 @@ import EmailCampaign from './components/Admin/Communications/EmailCampaign';
 import CampaignHistory from './components/Admin/Communications/CampaignHistory';
 import UnsubscribeManager from './components/Admin/Communications/UnsubscribeManager';
 import TemplateList from './components/Admin/Communications/TemplateList';
+import RulesEditor from './components/Admin/Rules/RulesEditor';
 import TournamentList from './components/Admin/Tournaments/TournamentList';
 import EventList from './components/Admin/Events/EventList';
 import AwardList from './components/Admin/Awards/AwardList';
@@ -94,8 +95,8 @@ function App() {
                       <Route path="/schedule" element={<><SEO title="Schedule" path="/schedule" description="Weekend schedule for The Kathryn Classic charity golf tournament — events, tee times, and festivities." /><Schedule /></>} />
                       <Route path="/registration" element={<><SEO title="Registration" path="/registration" description="Register to play in The Kathryn Classic charity golf tournament supporting CJD research through the CJD Foundation." /><Registration /></>} />
                       <Route path="/leaderboard" element={<><SEO title="Leaderboard" path="/leaderboard" description="Live leaderboard and results for The Kathryn Classic charity golf tournament." /><Leaderboard /></>} />
-                      <Route path="/donations" element={<><SEO title="Donate" path="/donations" description="Support CJD research by donating to The Kathryn Classic and the CJD Foundation." /><Donations /></>} />
                       <Route path="/about" element={<><SEO title="About" path="/about" description="Learn the story behind The Kathryn Classic — a charity golf tournament raising funds and awareness for CJD research." /><About /></>} />
+                      <Route path="/rules" element={<><SEO title="Tournament Rules" path="/rules" description="Format, handicaps, award holes, and mulligans for The Kathryn Classic charity golf tournament." /><TournamentRules /></>} />
                       <Route path="/history" element={<><SEO title="Tournament History" path="/history" description="Past winners and highlights from previous years of The Kathryn Classic charity golf tournament." /><TournamentHistory /></>} />
                       <Route path="/unsubscribe" element={<><SEO title="Unsubscribe" path="/unsubscribe" description="Manage your email preferences for The Kathryn Classic." /><Unsubscribe /></>} />
                       {/* Redirect admin attempts to admin subdomain */}
@@ -133,6 +134,7 @@ function App() {
                 <Route path="communications/templates" element={<TemplateList />} />
                 <Route path="communications/history" element={<CampaignHistory />} />
                 <Route path="communications/unsubscribes" element={<UnsubscribeManager />} />
+                <Route path="rules" element={<RulesEditor />} />
                 <Route path="tee-times" element={<TeeTimesManagement />} />
                 <Route path="leaderboard" element={<LeaderboardManagement />} />
                 <Route path="teams" element={<TeamList />} />

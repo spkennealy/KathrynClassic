@@ -62,16 +62,30 @@ code {
 .ProseMirror:focus {
   outline: none;
 }
-.ProseMirror h1 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; }
-.ProseMirror h2 { font-size: 1.25em; font-weight: 700; margin: 0.5em 0; }
-.ProseMirror p { margin: 0.5em 0; }
-.ProseMirror ul { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
-.ProseMirror ol { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
-.ProseMirror blockquote {
+.ProseMirror h1, .rich-content h1 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0; }
+.ProseMirror h2, .rich-content h2 { font-size: 1.25em; font-weight: 700; margin: 0.5em 0; }
+.rich-content h3 { font-size: 1.1em; font-weight: 600; margin: 0.5em 0; }
+.rich-content h4 { font-size: 1em; font-weight: 600; margin: 0.5em 0; }
+.ProseMirror p, .rich-content p { margin: 0.5em 0; }
+.ProseMirror ul, .rich-content ul { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
+.ProseMirror ol, .rich-content ol { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
+.rich-content li { margin: 0.25em 0; }
+.rich-content strong { font-weight: 700; }
+.rich-content em { font-style: italic; }
+.ProseMirror blockquote, .rich-content blockquote {
   border-left: 3px solid #cbd5e1;
   padding-left: 0.75em;
   color: #64748b;
   margin: 0.5em 0;
 }
-.ProseMirror a { color: #0d9488; text-decoration: underline; }
-.ProseMirror img { max-width: 100%; height: auto; }
+.ProseMirror a, .rich-content a { color: #0d9488; text-decoration: underline; }
+.ProseMirror img, .rich-content img { max-width: 100%; height: auto; }
+
+/* Public-facing rendered rich text (Tournament Rules): brand headings + theme text. */
+.rich-content h1, .rich-content h2, .rich-content h3, .rich-content h4 { color: #0f766e; }
+/* Keep list markers next to their text (content is center-aligned site-wide). */
+.rich-content ul, .rich-content ol { list-style-position: inside; padding-left: 0; }
+.rich-content li { padding-left: 0; }
+.dark .rich-content { color: #d1d5db; }
+.dark .rich-content h1, .dark .rich-content h2, .dark .rich-content h3, .dark .rich-content h4 { color: #5eead4; }
+.dark .rich-content blockquote { border-color: #475569; color: #9ca3af; }

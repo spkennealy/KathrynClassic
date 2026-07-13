@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import Select from '../Select';
 import { buildTeamSuggestions } from './teamBuilderAlgorithm';
 import ConfirmDialog from '../ConfirmDialog';
@@ -220,37 +221,6 @@ export default function TeamBuilder() {
     setDragOver(null);
   };
 
-  const handleDropOnExisting = async (teamId) => {
-    if (!draggedGolfer) return;
-    const team = existingTeams.find(t => t.id === teamId);
-    if (!team || team.members.length >= 4) return;
-
-    setSaving(true);
-    try {
-      const { error } = await supabase.from('golf_team_players').insert({
-        team_id: teamId,
-        player_name: `${draggedGolfer.first_name} ${draggedGolfer.last_name}`,
-        contact_id: draggedGolfer.contact_id,
-        handicap: draggedGolfer.golf_handicap || null,
-        player_order: team.members.length + 1,
-      });
-      if (error) throw error;
-
-      setExistingTeamContactIds(prev => new Set([...prev, draggedGolfer.contact_id]));
-      setExistingTeams(prev => prev.map(t =>
-        t.id === teamId
-          ? { ...t, members: [...t.members, { player_name: `${draggedGolfer.first_name} ${draggedGolfer.last_name}`, handicap: draggedGolfer.golf_handicap, contact_id: draggedGolfer.contact_id }] }
-          : t
-      ));
-    } catch (err) {
-      setError(err.message || 'Failed to add player');
-    } finally {
-      setSaving(false);
-    }
-    setDraggedGolfer(null);
-    setDragOver(null);
-  };
-
   // --- Edit existing saved team ---
   const handleStartEdit = (team) => {
     setEditingTeamId(team.id);
@@ -325,6 +295,17 @@ export default function TeamBuilder() {
         if (insErr) throw insErr;
       }
 
+      await logAudit({
+        action: 'golf_team.updated',
+        entityType: 'golf_team',
+        entityId: editingTeamId,
+        entityLabel: editingTeamData.name,
+        changes: originalTeam && originalTeam.name !== editingTeamData.name
+          ? { name: { from: originalTeam.name, to: editingTeamData.name } }
+          : undefined,
+        metadata: { player_count: editingTeamData.members.length },
+      });
+
       // Rebuild existingTeamContactIds from scratch after edit
       await fetchData();
       setEditingTeamId(null);
@@ -383,6 +364,14 @@ export default function TeamBuilder() {
         if (pe) throw pe;
       }
 
+      await logAudit({
+        action: 'golf_team.assigned',
+        entityType: 'golf_team',
+        entityId: newTeam.id,
+        entityLabel: team.name,
+        metadata: { member_count: team.members.length },
+      });
+
       const newIds = new Set(existingTeamContactIds);
       team.members.forEach(m => { if (m.contact_id) newIds.add(m.contact_id); });
       setExistingTeamContactIds(newIds);
@@ -411,6 +400,7 @@ export default function TeamBuilder() {
     setError(null);
     // Work through a snapshot since indices shift on each accept
     const snapshot = [...pendingTeams];
+    let acceptedCount = 0;
     try {
       for (const team of snapshot) {
         if (!team.name.trim()) continue;
@@ -441,7 +431,19 @@ export default function TeamBuilder() {
           const { error: pe } = await supabase.from('golf_team_players').insert(playerInserts);
           if (pe) throw pe;
         }
+        acceptedCount += 1;
       }
+
+      // One summary entry for the bulk accept (not one per team).
+      if (acceptedCount > 0) {
+        await logAudit({
+          action: 'golf_team.assigned',
+          entityType: 'golf_team',
+          entityLabel: `${acceptedCount} teams`,
+          metadata: { team_count: acceptedCount, bulk: true },
+        });
+      }
+
       // Refresh all data
       await fetchData();
     } catch (err) {

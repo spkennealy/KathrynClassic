@@ -206,6 +206,12 @@ export default function ContactList() {
         entityType: 'contact',
         entityId: contactToDelete.contact_id,
         entityLabel: `${contactToDelete.first_name} ${contactToDelete.last_name}`,
+        changes: {
+          first_name: contactToDelete.first_name,
+          last_name: contactToDelete.last_name,
+          email: contactToDelete.email,
+          phone: contactToDelete.phone,
+        },
       });
 
       // Close dialog and refresh list

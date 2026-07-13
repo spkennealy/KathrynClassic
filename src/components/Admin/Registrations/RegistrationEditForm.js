@@ -3,6 +3,25 @@ import { supabase } from '../../../supabaseClient';
 import Select from '../Select';
 import { normalizePhone } from '../../../utils/phone';
 import { normalizeEmail } from '../../../utils/email';
+import { logAudit, diffFields } from '../../../utils/audit';
+import { sendGroupConfirmationEmails } from '../../../utils/registrationEmail';
+
+const REGISTRATION_FIELDS = ['contact_id', 'payment_status', 'golf_handicap', 'preferred_teammates'];
+
+// Log a contact.created audit entry for a contact inserted from the registration form.
+const logContactCreated = (contact) =>
+  logAudit({
+    action: 'contact.created',
+    entityType: 'contact',
+    entityId: contact.id,
+    entityLabel: `${contact.first_name} ${contact.last_name}`,
+    changes: {
+      first_name: contact.first_name,
+      last_name: contact.last_name,
+      email: contact.email,
+      phone: contact.phone,
+    },
+  });
 
 const createBlankAttendee = () => ({
   contact_id: '',
@@ -16,6 +35,288 @@ const createBlankAttendee = () => ({
   selectedEvents: {},
   childCounts: {},
 });
+
+// A single attendee card (contact select/create, payment status, handicap,
+// preferred teammates, event selection, child counts). Shared between create mode
+// (registering several people at once) and the edit-mode "add to this group"
+// section. All state lives in the parent; this is purely presentational.
+function AttendeeCard({
+  attendee,
+  index,
+  events,
+  filteredContacts,
+  onUpdate,
+  onRemove,
+  onCreateContact,
+  loading,
+  canRemove,
+  label,
+}) {
+  const idPrefix = `att-${label.replace(/\s+/g, '-').toLowerCase()}-${index}`;
+  return (
+    <div className="border border-gray-200 dark:border-night-700 rounded-lg p-4 space-y-4">
+      {/* Card header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {label} {index + 1}
+        </h3>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="text-sm text-red-600 hover:text-red-700 font-medium"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      {/* Contact Selection */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Contact <span className="text-red-500">*</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => onUpdate(index, { showNewContactForm: !attendee.showNewContactForm })}
+            className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300 font-medium"
+          >
+            {attendee.showNewContactForm ? 'Cancel' : '+ New Contact'}
+          </button>
+        </div>
+
+        {attendee.showNewContactForm ? (
+          <div className="bg-gray-50 dark:bg-night-700 p-4 rounded-md space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  First Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={attendee.newContactData.first_name}
+                  onChange={(e) => onUpdate(index, {
+                    newContactData: { ...attendee.newContactData, first_name: e.target.value }
+                  })}
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Last Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={attendee.newContactData.last_name}
+                  onChange={(e) => onUpdate(index, {
+                    newContactData: { ...attendee.newContactData, last_name: e.target.value }
+                  })}
+                  className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+              <input
+                type="email"
+                value={attendee.newContactData.email}
+                onChange={(e) => onUpdate(index, {
+                  newContactData: { ...attendee.newContactData, email: e.target.value }
+                })}
+                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+              <input
+                type="tel"
+                value={attendee.newContactData.phone}
+                onChange={(e) => onUpdate(index, {
+                  newContactData: { ...attendee.newContactData, phone: e.target.value }
+                })}
+                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => onCreateContact(index)}
+              disabled={loading}
+              className="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+            >
+              Create and Select
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              type="text"
+              value={attendee.contactSearchTerm}
+              onChange={(e) => onUpdate(index, {
+                contactSearchTerm: e.target.value,
+                showContactDropdown: true,
+                contact_id: '',
+              })}
+              onFocus={() => onUpdate(index, { showContactDropdown: true })}
+              onBlur={() => setTimeout(() => onUpdate(index, { showContactDropdown: false }), 200)}
+              placeholder="Search by name or email..."
+              className="mt-1 block w-full"
+              autoComplete="off"
+            />
+            {attendee.showContactDropdown && attendee.contactSearchTerm && (
+              <div className="absolute z-10 mt-1 w-full bg-white dark:bg-night-800 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                {filteredContacts.length > 0 ? (
+                  filteredContacts.map((contact) => (
+                    <button
+                      key={contact.id}
+                      type="button"
+                      onClick={() => onUpdate(index, {
+                        contact_id: contact.id,
+                        contactSearchTerm: `${contact.first_name} ${contact.last_name}`,
+                        showContactDropdown: false,
+                      })}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:bg-night-900 focus:bg-gray-100 dark:bg-night-900 focus:outline-none"
+                    >
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                        {contact.first_name} {contact.last_name}
+                      </div>
+                      {contact.email && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{contact.email}</div>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                    No contacts found
+                  </div>
+                )}
+              </div>
+            )}
+            {!attendee.contact_id && attendee.contactSearchTerm && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Please select a contact from the dropdown
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Payment Status */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Payment Status <span className="text-red-500">*</span>
+        </label>
+        <Select
+          value={attendee.payment_status}
+          onChange={(e) => onUpdate(index, { payment_status: e.target.value })}
+          className="mt-1 block w-full"
+        >
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+        </Select>
+      </div>
+
+      {/* Golf Handicap */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Golf Handicap
+          {events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) && (
+            <span className="text-red-500 ml-1">*</span>
+          )}
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          value={attendee.golf_handicap}
+          onChange={(e) => onUpdate(index, { golf_handicap: e.target.value })}
+          placeholder={events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) ? "Required for golf (e.g., 18.5)" : "e.g., 18.5"}
+          className="mt-1 block w-full"
+        />
+      </div>
+
+      {/* Preferred Teammates */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Preferred Teammates
+        </label>
+        <textarea
+          rows={2}
+          value={attendee.preferred_teammates}
+          onChange={(e) => onUpdate(index, { preferred_teammates: e.target.value })}
+          placeholder="Names of preferred golf teammates"
+          className="mt-1 block w-full"
+        />
+      </div>
+
+      {/* Events Attending */}
+      {events.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Events Attending
+          </label>
+          <div className="space-y-2 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
+            {events.map((event) => (
+              <div key={event.id} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`${idPrefix}-select-event-${event.id}`}
+                  checked={attendee.selectedEvents[event.id] || false}
+                  onChange={() => onUpdate(index, {
+                    selectedEvents: {
+                      ...attendee.selectedEvents,
+                      [event.id]: !attendee.selectedEvents[event.id],
+                    },
+                  })}
+                  className="h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
+                />
+                <label htmlFor={`${idPrefix}-select-event-${event.id}`} className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                  {event.event_name}
+                </label>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Select which events this attendee is registered for
+          </p>
+        </div>
+      )}
+
+      {/* Child Counts by Event */}
+      {events.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Child Counts by Event
+          </label>
+          <div className="space-y-3 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
+            {events.map((event) => (
+              <div key={event.id} className="flex items-center justify-between">
+                <label htmlFor={`${idPrefix}-event-${event.id}`} className="text-sm text-gray-700 dark:text-gray-300">
+                  {event.event_name}
+                </label>
+                <input
+                  type="number"
+                  id={`${idPrefix}-event-${event.id}`}
+                  min="0"
+                  value={attendee.childCounts[event.id] || 0}
+                  onChange={(e) => onUpdate(index, {
+                    childCounts: {
+                      ...attendee.childCounts,
+                      [event.id]: e.target.value,
+                    },
+                  })}
+                  className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                />
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Enter the number of children attending each event
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RegistrationEditForm({ registration, onClose, onSave }) {
   // --- Shared state ---
@@ -48,6 +349,9 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
   // --- Create mode multi-attendee state ---
   const [attendees, setAttendees] = useState([createBlankAttendee()]);
+
+  // --- Edit mode: registrants being added to this registration's group ---
+  const [groupAttendees, setGroupAttendees] = useState([]);
 
   useEffect(() => {
     // Always fetch contacts for both create and edit modes
@@ -170,8 +474,8 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
       const { data: newContact, error: insertError } = await supabase
         .from('contacts')
         .insert({
-          first_name: newContactData.first_name,
-          last_name: newContactData.last_name,
+          first_name: newContactData.first_name.trim(),
+          last_name: newContactData.last_name.trim(),
           email: normalizeEmail(newContactData.email) || null,
           phone: normalizePhone(newContactData.phone),
         })
@@ -179,6 +483,8 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
         .single();
 
       if (insertError) throw insertError;
+
+      await logContactCreated(newContact);
 
       // Refresh contacts list
       await fetchContacts();
@@ -274,22 +580,27 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
     });
   };
 
-  // === Create mode multi-attendee functions ===
+  // === Multi-attendee helpers (shared by create mode and edit-mode group) ===
 
-  const updateAttendee = (index, updates) => {
-    setAttendees(prev => prev.map((a, i) => i === index ? { ...a, ...updates } : a));
+  // Generic list mutators, parameterized by which setter (create vs group list).
+  const updateInList = (setList) => (index, updates) => {
+    setList(prev => prev.map((a, i) => i === index ? { ...a, ...updates } : a));
+  };
+  const removeInList = (setList) => (index) => {
+    setList(prev => prev.filter((_, i) => i !== index));
   };
 
-  const addAttendee = () => {
-    setAttendees(prev => [...prev, createBlankAttendee()]);
-  };
+  const updateAttendee = updateInList(setAttendees);
+  const removeAttendee = removeInList(setAttendees);
+  const addAttendee = () => setAttendees(prev => [...prev, createBlankAttendee()]);
 
-  const removeAttendee = (index) => {
-    setAttendees(prev => prev.filter((_, i) => i !== index));
-  };
+  const updateGroupAttendee = updateInList(setGroupAttendees);
+  const removeGroupAttendee = removeInList(setGroupAttendees);
+  const addGroupAttendee = () => setGroupAttendees(prev => [...prev, createBlankAttendee()]);
 
-  const handleCreateNewContactForAttendee = async (index) => {
-    const attendee = attendees[index];
+  // Create (or select an existing) contact for one attendee. `applyUpdate` writes
+  // the resolved contact back into whichever list the attendee lives in.
+  const createContactForAttendee = async (attendee, applyUpdate) => {
     const ncd = attendee.newContactData;
 
     if (!ncd.first_name || !ncd.last_name) {
@@ -309,7 +620,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           .maybeSingle();
 
         if (existingContact && !searchError) {
-          updateAttendee(index, {
+          applyUpdate({
             contact_id: existingContact.id,
             contactSearchTerm: `${existingContact.first_name} ${existingContact.last_name}`,
             showContactDropdown: false,
@@ -325,8 +636,8 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
       const { data: newContact, error: insertError } = await supabase
         .from('contacts')
         .insert({
-          first_name: ncd.first_name,
-          last_name: ncd.last_name,
+          first_name: ncd.first_name.trim(),
+          last_name: ncd.last_name.trim(),
           email: normalizeEmail(ncd.email) || null,
           phone: normalizePhone(ncd.phone),
         })
@@ -335,9 +646,11 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
       if (insertError) throw insertError;
 
+      await logContactCreated(newContact);
+
       await fetchContacts();
 
-      updateAttendee(index, {
+      applyUpdate({
         contact_id: newContact.id,
         contactSearchTerm: `${newContact.first_name} ${newContact.last_name}`,
         showContactDropdown: false,
@@ -356,6 +669,12 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
       setLoading(false);
     }
   };
+
+  const handleCreateNewContactForAttendee = (index) =>
+    createContactForAttendee(attendees[index], (u) => updateAttendee(index, u));
+
+  const handleCreateNewContactForGroup = (index) =>
+    createContactForAttendee(groupAttendees[index], (u) => updateGroupAttendee(index, u));
 
   const getFilteredContactsFor = (searchTerm) => {
     const searchLower = searchTerm.toLowerCase();
@@ -423,6 +742,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           if (insertError) throw insertError;
 
           // Insert registration_events for this attendee
+          const attEventNames = [];
           for (const event of events) {
             if (att.selectedEvents[event.id]) {
               const { error: insertEvError } = await supabase
@@ -434,8 +754,22 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                 });
 
               if (insertEvError) throw insertEvError;
+              attEventNames.push(event.event_name);
             }
           }
+
+          await logAudit({
+            action: 'registration.created',
+            entityType: 'registration',
+            entityId: newReg.id,
+            entityLabel: att.contactSearchTerm || 'Registration',
+            changes: {
+              payment_status: att.payment_status,
+              golf_handicap: att.golf_handicap || null,
+              events: attEventNames.join(', ') || null,
+            },
+            metadata: groupId ? { registration_group_id: groupId } : undefined,
+          });
         }
 
         onSave();
@@ -468,17 +802,38 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
         const registrationId = registration.registration_id;
 
+        const registrationUpdate = {
+          contact_id: formData.contact_id,
+          payment_status: formData.payment_status,
+          golf_handicap: formData.golf_handicap || null,
+          preferred_teammates: formData.preferred_teammates || null,
+        };
         const { error: updateError } = await supabase
           .from('registrations')
-          .update({
-            contact_id: formData.contact_id,
-            payment_status: formData.payment_status,
-            golf_handicap: formData.golf_handicap || null,
-            preferred_teammates: formData.preferred_teammates || null,
-          })
+          .update(registrationUpdate)
           .eq('id', registrationId);
 
         if (updateError) throw updateError;
+
+        const registrationChanges = diffFields(
+          {
+            contact_id: registration.contact_id,
+            payment_status: registration.payment_status,
+            golf_handicap: registration.golf_handicap,
+            preferred_teammates: registration.preferred_teammates,
+          },
+          registrationUpdate,
+          REGISTRATION_FIELDS
+        );
+        if (registrationChanges) {
+          await logAudit({
+            action: 'registration.updated',
+            entityType: 'registration',
+            entityId: registrationId,
+            entityLabel: `${registration.first_name} ${registration.last_name}`,
+            changes: registrationChanges,
+          });
+        }
 
         // Handle registration_events for each tournament event
         for (const event of events) {
@@ -527,6 +882,88 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
               if (deleteError) throw deleteError;
             }
+          }
+        }
+
+        // --- Add any new registrants to this registration's group ---
+        if (groupAttendees.length > 0) {
+          // Validate each new group member.
+          for (let i = 0; i < groupAttendees.length; i++) {
+            const att = groupAttendees[i];
+            if (!att.contact_id) {
+              setError(`New registrant ${i + 1}: Please select a contact`);
+              setLoading(false);
+              return;
+            }
+            const attSelectedEvents = events.filter(ev => att.selectedEvents[ev.id]);
+            if (attSelectedEvents.length === 0) {
+              setError(`New registrant ${i + 1}: Please select at least one event`);
+              setLoading(false);
+              return;
+            }
+            const golfSelected = attSelectedEvents.some(ev => ev.event_type === 'golf_tournament');
+            if (golfSelected && !att.golf_handicap) {
+              setError(`New registrant ${i + 1}: Golf handicap is required when golf tournament is selected. Enter 20 if you don't have one.`);
+              setLoading(false);
+              return;
+            }
+          }
+
+          // Reuse the existing group id, or create one and back-fill the edited
+          // registration so the original + new members share a group.
+          let groupId = registration.registration_group_id || null;
+          if (!groupId) {
+            groupId = crypto.randomUUID();
+            const { error: groupErr } = await supabase
+              .from('registrations')
+              .update({ registration_group_id: groupId })
+              .eq('id', registrationId);
+            if (groupErr) throw groupErr;
+          }
+
+          // Insert each new registrant into the group (mirrors create mode).
+          for (const att of groupAttendees) {
+            const { data: newReg, error: insErr } = await supabase
+              .from('registrations')
+              .insert({
+                contact_id: att.contact_id,
+                tournament_id: registration.tournament_id,
+                payment_status: att.payment_status,
+                golf_handicap: att.golf_handicap || null,
+                preferred_teammates: att.preferred_teammates || null,
+                registration_group_id: groupId,
+              })
+              .select()
+              .single();
+            if (insErr) throw insErr;
+
+            for (const event of events) {
+              if (att.selectedEvents[event.id]) {
+                const { error: evErr } = await supabase
+                  .from('registration_events')
+                  .insert({
+                    registration_id: newReg.id,
+                    tournament_event_id: event.id,
+                    child_count: parseInt(att.childCounts[event.id]) || 0,
+                  });
+                if (evErr) throw evErr;
+              }
+            }
+          }
+
+          await logAudit({
+            action: 'registration.group_member_added',
+            entityType: 'registration',
+            entityId: registrationId,
+            entityLabel: `${registration.first_name} ${registration.last_name}`,
+            changes: { added_registrants: groupAttendees.length },
+          });
+
+          // Email the whole (updated) group. A failure here shouldn't fail the save.
+          try {
+            await sendGroupConfirmationEmails(groupId, registration.tournament_id);
+          } catch (emailErr) {
+            console.error('Failed to send group confirmation emails:', emailErr);
           }
         }
 
@@ -592,272 +1029,21 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               </div>
 
               {/* Attendee cards */}
-              {attendees.map((attendee, index) => {
-                const filteredForAttendee = getFilteredContactsFor(attendee.contactSearchTerm);
-                return (
-                  <div key={index} className="border border-gray-200 dark:border-night-700 rounded-lg p-4 space-y-4">
-                    {/* Card header */}
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        Attendee {index + 1}
-                      </h3>
-                      {attendees.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeAttendee(index)}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Contact Selection */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Contact <span className="text-red-500">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => updateAttendee(index, { showNewContactForm: !attendee.showNewContactForm })}
-                          className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300 font-medium"
-                        >
-                          {attendee.showNewContactForm ? 'Cancel' : '+ New Contact'}
-                        </button>
-                      </div>
-
-                      {attendee.showNewContactForm ? (
-                        <div className="bg-gray-50 dark:bg-night-700 p-4 rounded-md space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                First Name <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                value={attendee.newContactData.first_name}
-                                onChange={(e) => updateAttendee(index, {
-                                  newContactData: { ...attendee.newContactData, first_name: e.target.value }
-                                })}
-                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Last Name <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                value={attendee.newContactData.last_name}
-                                onChange={(e) => updateAttendee(index, {
-                                  newContactData: { ...attendee.newContactData, last_name: e.target.value }
-                                })}
-                                className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                            <input
-                              type="email"
-                              value={attendee.newContactData.email}
-                              onChange={(e) => updateAttendee(index, {
-                                newContactData: { ...attendee.newContactData, email: e.target.value }
-                              })}
-                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                            <input
-                              type="tel"
-                              value={attendee.newContactData.phone}
-                              onChange={(e) => updateAttendee(index, {
-                                newContactData: { ...attendee.newContactData, phone: e.target.value }
-                              })}
-                              className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleCreateNewContactForAttendee(index)}
-                            disabled={loading}
-                            className="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                          >
-                            Create and Select
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={attendee.contactSearchTerm}
-                            onChange={(e) => updateAttendee(index, {
-                              contactSearchTerm: e.target.value,
-                              showContactDropdown: true,
-                              contact_id: '',
-                            })}
-                            onFocus={() => updateAttendee(index, { showContactDropdown: true })}
-                            onBlur={() => setTimeout(() => updateAttendee(index, { showContactDropdown: false }), 200)}
-                            placeholder="Search by name or email..."
-                            className="mt-1 block w-full"
-                            autoComplete="off"
-                          />
-                          {attendee.showContactDropdown && attendee.contactSearchTerm && (
-                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-night-800 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                              {filteredForAttendee.length > 0 ? (
-                                filteredForAttendee.map((contact) => (
-                                  <button
-                                    key={contact.id}
-                                    type="button"
-                                    onClick={() => updateAttendee(index, {
-                                      contact_id: contact.id,
-                                      contactSearchTerm: `${contact.first_name} ${contact.last_name}`,
-                                      showContactDropdown: false,
-                                    })}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:bg-night-900 focus:bg-gray-100 dark:bg-night-900 focus:outline-none"
-                                  >
-                                    <div className="font-medium text-gray-900 dark:text-gray-100">
-                                      {contact.first_name} {contact.last_name}
-                                    </div>
-                                    {contact.email && (
-                                      <div className="text-sm text-gray-500 dark:text-gray-400">{contact.email}</div>
-                                    )}
-                                  </button>
-                                ))
-                              ) : (
-                                <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                                  No contacts found
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {!attendee.contact_id && attendee.contactSearchTerm && (
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                              Please select a contact from the dropdown
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Payment Status */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Payment Status <span className="text-red-500">*</span>
-                      </label>
-                      <Select
-                        value={attendee.payment_status}
-                        onChange={(e) => updateAttendee(index, { payment_status: e.target.value })}
-                        className="mt-1 block w-full"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="paid">Paid</option>
-                      </Select>
-                    </div>
-
-                    {/* Golf Handicap */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Golf Handicap
-                        {events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={attendee.golf_handicap}
-                        onChange={(e) => updateAttendee(index, { golf_handicap: e.target.value })}
-                        placeholder={events.some(ev => ev.event_type === 'golf_tournament' && attendee.selectedEvents[ev.id]) ? "Required for golf (e.g., 18.5)" : "e.g., 18.5"}
-                        className="mt-1 block w-full"
-                      />
-                    </div>
-
-                    {/* Preferred Teammates */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Preferred Teammates
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={attendee.preferred_teammates}
-                        onChange={(e) => updateAttendee(index, { preferred_teammates: e.target.value })}
-                        placeholder="Names of preferred golf teammates"
-                        className="mt-1 block w-full"
-                      />
-                    </div>
-
-                    {/* Events Attending */}
-                    {events.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Events Attending
-                        </label>
-                        <div className="space-y-2 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
-                          {events.map((event) => (
-                            <div key={event.id} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`att-${index}-select-event-${event.id}`}
-                                checked={attendee.selectedEvents[event.id] || false}
-                                onChange={() => updateAttendee(index, {
-                                  selectedEvents: {
-                                    ...attendee.selectedEvents,
-                                    [event.id]: !attendee.selectedEvents[event.id],
-                                  },
-                                })}
-                                className="h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
-                              />
-                              <label htmlFor={`att-${index}-select-event-${event.id}`} className="ml-3 text-sm text-gray-700 dark:text-gray-300">
-                                {event.event_name}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                          Select which events this attendee is registered for
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Child Counts by Event */}
-                    {events.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Child Counts by Event
-                        </label>
-                        <div className="space-y-3 bg-gray-50 dark:bg-night-700 p-4 rounded-md">
-                          {events.map((event) => (
-                            <div key={event.id} className="flex items-center justify-between">
-                              <label htmlFor={`att-${index}-event-${event.id}`} className="text-sm text-gray-700 dark:text-gray-300">
-                                {event.event_name}
-                              </label>
-                              <input
-                                type="number"
-                                id={`att-${index}-event-${event.id}`}
-                                min="0"
-                                value={attendee.childCounts[event.id] || 0}
-                                onChange={(e) => updateAttendee(index, {
-                                  childCounts: {
-                                    ...attendee.childCounts,
-                                    [event.id]: e.target.value,
-                                  },
-                                })}
-                                className="w-20 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                          Enter the number of children attending each event
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {attendees.map((attendee, index) => (
+                <AttendeeCard
+                  key={index}
+                  attendee={attendee}
+                  index={index}
+                  events={events}
+                  filteredContacts={getFilteredContactsFor(attendee.contactSearchTerm)}
+                  onUpdate={updateAttendee}
+                  onRemove={removeAttendee}
+                  onCreateContact={handleCreateNewContactForAttendee}
+                  loading={loading}
+                  canRemove={attendees.length > 1}
+                  label="Attendee"
+                />
+              ))}
 
               {/* Add Another Attendee button */}
               <button
@@ -1089,6 +1275,41 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                   </p>
                 </div>
               )}
+
+              {/* Add another registrant to this registration's group */}
+              <div className="border-t border-gray-200 dark:border-night-700 pt-4 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Add to this group</h3>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Add another registrant (e.g. a partner) to this registration's group. When you save,
+                    everyone in the group is emailed an updated confirmation.
+                  </p>
+                </div>
+
+                {groupAttendees.map((attendee, index) => (
+                  <AttendeeCard
+                    key={index}
+                    attendee={attendee}
+                    index={index}
+                    events={events}
+                    filteredContacts={getFilteredContactsFor(attendee.contactSearchTerm)}
+                    onUpdate={updateGroupAttendee}
+                    onRemove={removeGroupAttendee}
+                    onCreateContact={handleCreateNewContactForGroup}
+                    loading={loading}
+                    canRemove={true}
+                    label="New registrant"
+                  />
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addGroupAttendee}
+                  className="w-full py-2 px-4 border-2 border-dashed border-gray-300 dark:border-night-600 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-400 hover:border-gray-400 hover:text-gray-700 dark:text-gray-300 transition-colors"
+                >
+                  + Add registrant to group
+                </button>
+              </div>
             </div>
           )}
 

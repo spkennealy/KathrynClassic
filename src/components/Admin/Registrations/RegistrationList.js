@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import Select from '../Select';
 import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
@@ -216,6 +217,19 @@ export default function RegistrationList() {
         .eq('id', registrationToDelete.registration_id);
 
       if (deleteError) throw deleteError;
+
+      await logAudit({
+        action: 'registration.deleted',
+        entityType: 'registration',
+        entityId: registrationToDelete.registration_id,
+        entityLabel: `${registrationToDelete.first_name} ${registrationToDelete.last_name}`,
+        changes: {
+          contact: `${registrationToDelete.first_name} ${registrationToDelete.last_name}`,
+          email: registrationToDelete.email,
+          tournament_year: registrationToDelete.tournament_year,
+          payment_status: registrationToDelete.payment_status,
+        },
+      });
 
       // Close dialog
       setShowDeleteConfirm(false);

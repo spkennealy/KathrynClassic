@@ -1,7 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import ConfirmDialog from '../ConfirmDialog';
 import { formatPhone } from '../../../utils/phone';
+
+// Map a recycle-bin tab type to the actual table its records live in. These must
+// match the tables fetchDeletedRecords() reads from (e.g. teams are fetched from
+// golf_teams, awards from tournament_awards) so restore/permanent-delete target the
+// correct rows.
+const RECYCLE_TABLE = {
+  registrations: 'registrations',
+  contacts: 'contacts',
+  tournaments: 'tournaments',
+  events: 'tournament_events',
+  teams: 'golf_teams',
+  awards: 'tournament_awards',
+};
+
+// Map a recycle-bin tab type to its audit entity type + a human label.
+const RECYCLE_ENTITY_TYPE = {
+  registrations: 'registration',
+  contacts: 'contact',
+  tournaments: 'tournament',
+  events: 'tournament_event',
+  teams: 'golf_team',
+  awards: 'award',
+};
+
+const recycleLabel = (record) => {
+  switch (record.type) {
+    case 'registrations': return `${record.contacts?.first_name || ''} ${record.contacts?.last_name || ''}`.trim();
+    case 'contacts': return `${record.first_name || ''} ${record.last_name || ''}`.trim();
+    case 'tournaments': return record.year != null ? String(record.year) : undefined;
+    case 'events': return record.event_name;
+    case 'teams': return record.teams?.name || 'Team';
+    case 'awards': return record.winner_name
+      || (record.contacts ? `${record.contacts.first_name} ${record.contacts.last_name}` : 'Award');
+    default: return undefined;
+  }
+};
 
 export default function RecycleBin() {
   const [deletedRecords, setDeletedRecords] = useState({
@@ -134,7 +171,7 @@ export default function RecycleBin() {
     try {
       setError(null);
 
-      const tableName = recordToRestore.type === 'events' ? 'tournament_events' : recordToRestore.type;
+      const tableName = RECYCLE_TABLE[recordToRestore.type];
 
       // Restore by setting deleted_at to NULL
       const { error: restoreError } = await supabase
@@ -143,6 +180,15 @@ export default function RecycleBin() {
         .eq('id', recordToRestore.id);
 
       if (restoreError) throw restoreError;
+
+      const restoreEntity = RECYCLE_ENTITY_TYPE[recordToRestore.type];
+      await logAudit({
+        action: `${restoreEntity}.restored`,
+        entityType: restoreEntity,
+        entityId: recordToRestore.id,
+        entityLabel: recycleLabel(recordToRestore),
+        changes: { deleted_at: { from: recordToRestore.deleted_at, to: null } },
+      });
 
       // Close dialog and refresh
       setShowRestoreConfirm(false);
@@ -165,7 +211,7 @@ export default function RecycleBin() {
     try {
       setError(null);
 
-      const tableName = recordToDelete.type === 'events' ? 'tournament_events' : recordToDelete.type;
+      const tableName = RECYCLE_TABLE[recordToDelete.type];
 
       // Permanently delete the record
       const { error: deleteError } = await supabase
@@ -174,6 +220,15 @@ export default function RecycleBin() {
         .eq('id', recordToDelete.id);
 
       if (deleteError) throw deleteError;
+
+      const purgeEntity = RECYCLE_ENTITY_TYPE[recordToDelete.type];
+      await logAudit({
+        action: `${purgeEntity}.purged`,
+        entityType: purgeEntity,
+        entityId: recordToDelete.id,
+        entityLabel: recycleLabel(recordToDelete),
+        changes: { permanently_deleted: recycleLabel(recordToDelete) },
+      });
 
       // Close dialog and refresh
       setShowPermanentDeleteConfirm(false);

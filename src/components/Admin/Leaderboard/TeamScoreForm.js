@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import Select from '../Select';
 
 export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
@@ -454,6 +455,23 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
 
       // Recalculate positions for all teams in this tournament
       await recalculatePositions();
+
+      // One audit entry for the whole score save (not the internal row rewrites).
+      const teamName = team?.team_name
+        || (isCreatingNewTeam ? newTeamName.trim() : availableTeams.find((t) => t.id === resolvedTeamId)?.name)
+        || 'Team';
+      await logAudit({
+        action: 'golf_team.score_saved',
+        entityType: 'golf_team',
+        entityId: teamId,
+        entityLabel: teamName,
+        changes: {
+          total_score: teamData.total_score,
+          score_to_par: teamData.score_to_par,
+          status: teamData.status,
+        },
+        metadata: { player_count: playerRecords.length, created: !team },
+      });
 
       onSave();
     } catch (err) {

@@ -96,6 +96,12 @@ export default function TournamentList() {
         entityType: 'tournament',
         entityId: tournamentToDelete.id,
         entityLabel: `Tournament ${tournamentToDelete.year}`,
+        changes: {
+          year: tournamentToDelete.year,
+          start_date: tournamentToDelete.start_date,
+          end_date: tournamentToDelete.end_date,
+          location: tournamentToDelete.location,
+        },
       });
 
       setShowDeleteConfirm(false);
@@ -111,12 +117,25 @@ export default function TournamentList() {
 
   const handleRegistrationStatusChange = async (tournamentId, newStatus) => {
     try {
+      const existing = tournaments.find(t => t.id === tournamentId);
+      const oldStatus = existing?.registration_status;
+
       const { error } = await supabase
         .from('tournaments')
         .update({ registration_status: newStatus })
         .eq('id', tournamentId);
 
       if (error) throw error;
+
+      if (oldStatus !== newStatus) {
+        await logAudit({
+          action: 'tournament.updated',
+          entityType: 'tournament',
+          entityId: tournamentId,
+          entityLabel: existing?.year != null ? String(existing.year) : undefined,
+          changes: { registration_status: { from: oldStatus ?? null, to: newStatus } },
+        });
+      }
 
       // Update local state
       setTournaments(tournaments.map(t =>

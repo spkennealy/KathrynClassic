@@ -113,6 +113,7 @@ export default function AddUnsubscribeModal({ isOpen, onClose, onSaved }) {
         entityType: 'contact',
         entityId: selected.id,
         entityLabel: `${fullName(selected)} — ${auditLabel}`,
+        changes: patch,
       });
 
       onSaved?.();

@@ -61,8 +61,21 @@ export default function Leaderboard() {
         return;
       }
 
-      // Store tournament dates
-      if (tournament.start_date && tournament.end_date) {
+      // Show the actual golf tournament date (not the whole weekend range).
+      // Fall back to the tournament's start/end range if no golf event exists.
+      const { data: golfEvent } = await supabase
+        .from('tournament_events')
+        .select('event_date')
+        .eq('tournament_id', tournament.id)
+        .eq('event_type', 'golf_tournament')
+        .order('event_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (golfEvent?.event_date) {
+        // start === end makes formatDateRange render a single date.
+        setTournamentDates({ start: golfEvent.event_date, end: golfEvent.event_date });
+      } else if (tournament.start_date && tournament.end_date) {
         setTournamentDates({
           start: tournament.start_date,
           end: tournament.end_date
@@ -114,7 +127,7 @@ export default function Leaderboard() {
   return (
     <div className="bg-primary-50 dark:bg-night-900 min-h-screen">
       {/* Main Content */}
-      <div className="py-12 sm:py-24 lg:py-32">
+      <div className="pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">

@@ -22,6 +22,7 @@ export const ENTITY_TYPES = [
   'tee_time',
   'email_template',
   'email_campaign',
+  'tournament_rules',
 ];
 
 /**

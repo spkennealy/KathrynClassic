@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import AwardForm from './AwardForm';
 import ConfirmDialog from '../ConfirmDialog';
 import Select from '../Select';
@@ -113,6 +114,18 @@ export default function AwardList() {
         .eq('id', awardToDelete.id);
 
       if (deleteError) throw deleteError;
+
+      await logAudit({
+        action: 'award.deleted',
+        entityType: 'award',
+        entityId: awardToDelete.id,
+        entityLabel: `${awardToDelete.award_category} — ${awardToDelete.winner_name}`,
+        changes: {
+          award_category: awardToDelete.award_category,
+          winner_name: awardToDelete.winner_name,
+          prize: awardToDelete.prize,
+        },
+      });
 
       setShowDeleteConfirm(false);
       setAwardToDelete(null);

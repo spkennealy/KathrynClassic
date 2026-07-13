@@ -288,8 +288,8 @@ export default function Registration() {
         await supabase
           .from('contacts')
           .update({
-            first_name: values.firstName,
-            last_name: values.lastName,
+            first_name: values.firstName.trim(),
+            last_name: values.lastName.trim(),
             phone: normalizePhone(values.phone),
             updated_at: new Date().toISOString()
           })
@@ -299,8 +299,8 @@ export default function Registration() {
         const { data: newContact, error: insertError } = await supabase
           .from('contacts')
           .insert([{
-            first_name: values.firstName,
-            last_name: values.lastName,
+            first_name: values.firstName.trim(),
+            last_name: values.lastName.trim(),
             email,
             phone: normalizePhone(values.phone)
           }])
@@ -359,8 +359,8 @@ export default function Registration() {
         await supabase
           .from('contacts')
           .update({
-            first_name: values.firstName,
-            last_name: values.lastName,
+            first_name: values.firstName.trim(),
+            last_name: values.lastName.trim(),
             phone: normalizePhone(values.phone),
             updated_at: new Date().toISOString()
           })
@@ -373,8 +373,8 @@ export default function Registration() {
         const { error: insertError } = await supabase
           .from('contacts')
           .insert([{
-            first_name: values.firstName,
-            last_name: values.lastName,
+            first_name: values.firstName.trim(),
+            last_name: values.lastName.trim(),
             email,
             phone: normalizePhone(values.phone)
           }]);
@@ -456,8 +456,8 @@ export default function Registration() {
           // Deduplicate by email
           if (!acc.find(c => c.email === email)) {
             acc.push({
-              first_name: adult.firstName,
-              last_name: adult.lastName,
+              first_name: adult.firstName.trim(),
+              last_name: adult.lastName.trim(),
               email,
               phone: normalizePhone(adult.phone)
             });
@@ -488,8 +488,8 @@ export default function Registration() {
             acc.push({
               id: contactMap.get(email),
               email,
-              first_name: adult.firstName,
-              last_name: adult.lastName,
+              first_name: adult.firstName.trim(),
+              last_name: adult.lastName.trim(),
               phone: normalizePhone(adult.phone),
               updated_at: new Date().toISOString()
             });
@@ -644,7 +644,7 @@ export default function Registration() {
 
   if (isSubmitted) {
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-12 sm:py-24 lg:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-8">
@@ -809,7 +809,7 @@ export default function Registration() {
 
   if (loading) {
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-12 sm:py-24 lg:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <p className="text-lg text-gray-600 dark:text-gray-400 font-serif">Loading registration form...</p>
@@ -821,7 +821,7 @@ export default function Registration() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-12 sm:py-24 lg:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 dark:text-primary-400 font-serif">Registration</h2>
@@ -840,7 +840,7 @@ export default function Registration() {
     // Show success message if contact was submitted
     if (contactSubmitted) {
       return (
-        <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
+        <div className="bg-primary-50 dark:bg-night-900 pt-10 pb-24 sm:pt-14 sm:pb-32 min-h-screen">
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl text-center">
               <div className="mb-8">
@@ -875,7 +875,7 @@ export default function Registration() {
 
     // Show form to collect contact info
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-12 sm:py-24 lg:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mb-8">
@@ -995,7 +995,7 @@ export default function Registration() {
   // Show waitlist form if registration is full
   if (registrationStatus === 'full') {
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-12 sm:py-24 lg:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32 min-h-screen">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 dark:text-primary-400 font-serif">
@@ -1112,7 +1112,7 @@ export default function Registration() {
   }
 
   return (
-    <div className="bg-primary-50 dark:bg-night-900 py-12 sm:py-24 lg:py-32 min-h-screen">
+    <div className="bg-primary-50 dark:bg-night-900 pt-6 pb-12 sm:pt-10 sm:pb-24 lg:pb-32 min-h-screen">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-primary-600 dark:text-primary-400 font-serif">Register for The Kathryn Classic {tournamentYear}</h2>

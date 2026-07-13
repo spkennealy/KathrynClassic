@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
+import { logAudit } from '../../../utils/audit';
 import { parseAddressList, EMAIL_VARIABLES } from './emailShell';
 import CommunicationsNav from './CommunicationsNav';
 import Select from '../Select';
@@ -105,6 +106,22 @@ export default function EmailCampaign() {
         throw new Error(detail);
       }
       if (data?.error) throw new Error(data.error);
+
+      await logAudit({
+        action: 'email_campaign.sent',
+        entityType: 'email_campaign',
+        entityId: campaign.id,
+        entityLabel: subject.trim(),
+        metadata: {
+          recipient_count: recipients.length,
+          sent: data?.sent ?? null,
+          failed: Array.isArray(data?.failed) ? data.failed.length : null,
+          cc,
+          bcc,
+          tournament_year: campaignYear ? parseInt(campaignYear, 10) : null,
+          template_name: template?.name ?? null,
+        },
+      });
 
       setResult(data);
     } catch (err) {

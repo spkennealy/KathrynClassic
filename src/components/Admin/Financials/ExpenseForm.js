@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit, diffFields } from '../../../utils/audit';
 import DatePicker from '../DatePicker';
 import Select from '../Select';
+
+const EXPENSE_FIELDS = ['description', 'category', 'vendor', 'amount', 'expense_date', 'payment_method', 'notes'];
 
 const CATEGORY_OPTIONS = [
   'Venue',
@@ -66,11 +69,32 @@ export default function ExpenseForm({ expense, tournamentId, onClose, onSave }) 
           .update(payload)
           .eq('id', expense.id);
         if (updateError) throw updateError;
+
+        const changes = diffFields(expense, payload, EXPENSE_FIELDS);
+        if (changes) {
+          await logAudit({
+            action: 'expense.updated',
+            entityType: 'expense',
+            entityId: expense.id,
+            entityLabel: payload.description,
+            changes,
+          });
+        }
       } else {
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('expenses')
-          .insert([payload]);
+          .insert([payload])
+          .select('id')
+          .single();
         if (insertError) throw insertError;
+
+        await logAudit({
+          action: 'expense.created',
+          entityType: 'expense',
+          entityId: inserted?.id,
+          entityLabel: payload.description,
+          changes: payload,
+        });
       }
       onSave();
       onClose();

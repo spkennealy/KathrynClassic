@@ -84,7 +84,7 @@ export default function Schedule() {
 
   if (loading) {
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-10 pb-24 sm:pt-14 sm:pb-32 min-h-screen">
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="text-center">
             <p className="text-lg text-gray-600 dark:text-gray-400">Loading schedule...</p>
@@ -96,7 +96,7 @@ export default function Schedule() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
+      <div className="bg-primary-50 dark:bg-night-900 pt-10 pb-24 sm:pt-14 sm:pb-32 min-h-screen">
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">
@@ -119,7 +119,7 @@ export default function Schedule() {
   });
 
   return (
-    <div className="bg-primary-50 dark:bg-night-900 py-24 sm:py-32 min-h-screen">
+    <div className="bg-primary-50 dark:bg-night-900 pt-10 pb-24 sm:pt-14 sm:pb-32 min-h-screen">
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">

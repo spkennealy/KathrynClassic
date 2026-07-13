@@ -33,11 +33,17 @@ export default function AdminLayout() {
     { name: 'Financials', href: '/admin/financials', icon: '💰' },
     { name: 'Contacts', href: '/admin/contacts', icon: '👥' },
     { name: 'Communications', href: '/admin/communications', icon: '📧' },
+    { name: 'Rules', href: '/admin/rules', icon: '📋' },
     { name: 'Teams', href: '/admin/teams', icon: '👫' },
     { name: 'Team Builder', href: '/admin/team-builder', icon: '🧩' },
     { name: 'Tee Times', href: '/admin/tee-times', icon: '🕐' },
     { name: 'Leaderboard', href: '/admin/leaderboard', icon: '⛳' },
     { name: 'Awards', href: '/admin/awards', icon: '🏅' },
+  ];
+
+  // Secondary "housekeeping" tools — shown as small icons in the footer, not in the
+  // main nav alongside the primary content pages.
+  const secondaryTools = [
     { name: 'Recycle Bin', href: '/admin/recycle-bin', icon: '🗑️' },
     { name: 'Audit Log', href: '/admin/audit', icon: '🧾' },
   ];
@@ -98,16 +104,33 @@ export default function AdminLayout() {
             {/* User Section */}
             <div className="flex-shrink-0 border-t border-gray-200 dark:border-night-700 p-4">
               {collapsed ? (
-                <button
-                  onClick={handleSignOut}
-                  title="Sign out"
-                  aria-label="Sign out"
-                  className="mx-auto flex items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-700 dark:hover:text-gray-200"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={handleSignOut}
+                    title="Sign out"
+                    aria-label="Sign out"
+                    className="flex items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-700 dark:hover:text-gray-200"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </button>
+                  {secondaryTools.map((tool) => (
+                    <Link
+                      key={tool.name}
+                      to={tool.href}
+                      title={tool.name}
+                      aria-label={tool.name}
+                      className={`flex items-center justify-center rounded-md p-2 text-base ${
+                        isActive(tool.href)
+                          ? 'bg-primary-100 dark:bg-night-700'
+                          : 'opacity-70 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-night-700'
+                      }`}
+                    >
+                      <span aria-hidden="true">{tool.icon}</span>
+                    </Link>
+                  ))}
+                </div>
               ) : (
                 <div className="w-full group block">
                   <div className="flex items-center">
@@ -130,6 +153,24 @@ export default function AdminLayout() {
                     >
                       Sign out
                     </button>
+                  </div>
+                  {/* Secondary tools — below Sign out */}
+                  <div className="mt-3 flex items-center gap-1">
+                    {secondaryTools.map((tool) => (
+                      <Link
+                        key={tool.name}
+                        to={tool.href}
+                        title={tool.name}
+                        aria-label={tool.name}
+                        className={`flex items-center justify-center rounded-md p-1.5 text-base ${
+                          isActive(tool.href)
+                            ? 'bg-primary-100 dark:bg-night-700'
+                            : 'opacity-60 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-night-700'
+                        }`}
+                      >
+                        <span aria-hidden="true">{tool.icon}</span>
+                      </Link>
+                    ))}
                   </div>
                 </div>
               )}
@@ -207,6 +248,20 @@ export default function AdminLayout() {
                 >
                   Sign out
                 </button>
+                {/* Secondary tools — below Sign out */}
+                <div className="mt-3 flex items-center gap-4">
+                  {secondaryTools.map((tool) => (
+                    <Link
+                      key={tool.name}
+                      to={tool.href}
+                      className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span aria-hidden="true">{tool.icon}</span>
+                      {tool.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

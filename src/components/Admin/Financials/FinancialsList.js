@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
+import { logAudit, diffFields } from '../../../utils/audit';
 import ExpenseForm from './ExpenseForm';
 import ConfirmDialog from '../ConfirmDialog';
 import DatePicker from '../DatePicker';
@@ -71,6 +72,7 @@ function SortHeader({ label, columnKey, sortKey, sortDir, onSort, align = 'left'
 // --- Record Payment modal ---
 function PaymentModal({ registrant, onClose, onSave }) {
   const totalCost = Number(registrant.total_cost) || 0;
+  const isEdit = (Number(registrant.amount_paid) || 0) > 0;
   const [amountPaid, setAmountPaid] = useState(
     registrant.amount_paid != null ? String(registrant.amount_paid) : ''
   );
@@ -94,16 +96,37 @@ function PaymentModal({ registrant, onClose, onSave }) {
         ? 'partially_paid'
         : 'pending';
     try {
+      const newValues = {
+        amount_paid: paid,
+        payment_date: paid > 0 ? paymentDate : null,
+        notes: notes.trim() || null,
+        payment_status,
+      };
       const { error: updateError } = await supabase
         .from('registrations')
-        .update({
-          amount_paid: paid,
-          payment_date: paid > 0 ? paymentDate : null,
-          notes: notes.trim() || null,
-          payment_status,
-        })
+        .update(newValues)
         .eq('id', registrant.registration_id);
       if (updateError) throw updateError;
+
+      const changes = diffFields(
+        {
+          amount_paid: registrant.amount_paid,
+          payment_date: registrant.payment_date,
+          notes: registrant.notes,
+          payment_status: registrant.payment_status,
+        },
+        newValues,
+        ['amount_paid', 'payment_date', 'notes', 'payment_status']
+      );
+      if (changes) {
+        await logAudit({
+          action: 'registration.payment_recorded',
+          entityType: 'registration',
+          entityId: registrant.registration_id,
+          entityLabel: `${registrant.first_name} ${registrant.last_name}`,
+          changes,
+        });
+      }
       onSave();
       onClose();
     } catch (err) {
@@ -117,7 +140,7 @@ function PaymentModal({ registrant, onClose, onSave }) {
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Record Payment</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Payment' : 'Record Payment'}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {registrant.first_name} {registrant.last_name} &middot; Total {formatCurrency(totalCost)}
           </p>
@@ -377,6 +400,19 @@ export default function FinancialsList() {
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', expenseToDelete.id);
       if (delErr) throw delErr;
+      await logAudit({
+        action: 'expense.deleted',
+        entityType: 'expense',
+        entityId: expenseToDelete.id,
+        entityLabel: expenseToDelete.description,
+        changes: {
+          description: expenseToDelete.description,
+          category: expenseToDelete.category,
+          vendor: expenseToDelete.vendor,
+          amount: expenseToDelete.amount,
+          expense_date: expenseToDelete.expense_date,
+        },
+      });
       setExpenseToDelete(null);
       await fetchData();
     } catch (err) {
@@ -551,7 +587,7 @@ export default function FinancialsList() {
                       onClick={() => setPaymentRegistrant(r)}
                       className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
-                      Record Payment
+                      {paid > 0 ? 'Edit Payment' : 'Record Payment'}
                     </button>
                   </td>
                 </tr>

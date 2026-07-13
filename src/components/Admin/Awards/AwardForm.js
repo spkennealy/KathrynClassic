@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit, diffFields } from '../../../utils/audit';
 import DatePicker from '../DatePicker';
 import Select from '../Select';
+
+const AWARD_FIELDS = ['award_category', 'contact_id', 'winner_name', 'award_date', 'event_id', 'prize', 'details', 'photo_url'];
 
 const AWARD_CATEGORIES = [
   { value: 'tournament_winner', label: 'Tournament Winner' },
@@ -186,11 +189,32 @@ export default function AwardForm({ award, onClose, onSave }) {
           .update(awardData)
           .eq('id', award.id);
         if (error) throw error;
+
+        const changes = diffFields(award, awardData, AWARD_FIELDS);
+        if (changes) {
+          await logAudit({
+            action: 'award.updated',
+            entityType: 'award',
+            entityId: award.id,
+            entityLabel: `${awardData.award_category} — ${awardData.winner_name}`,
+            changes,
+          });
+        }
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from('tournament_awards')
-          .insert([awardData]);
+          .insert([awardData])
+          .select('id')
+          .single();
         if (error) throw error;
+
+        await logAudit({
+          action: 'award.created',
+          entityType: 'award',
+          entityId: inserted?.id,
+          entityLabel: `${awardData.award_category} — ${awardData.winner_name}`,
+          changes: awardData,
+        });
       }
 
       onSave();

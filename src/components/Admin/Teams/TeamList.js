@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
+import { logAudit } from '../../../utils/audit';
 import TeamForm from './TeamForm';
 
 export default function TeamList() {
@@ -87,6 +88,16 @@ export default function TeamList() {
         .eq('id', teamId);
 
       if (error) throw error;
+
+      await logAudit({
+        action: 'team.deleted',
+        entityType: 'team',
+        entityId: teamId,
+        entityLabel: teamName,
+        changes: { name: teamName },
+        metadata: { cascade: 'tournament scores and leaderboard entries removed' },
+      });
+
       fetchTeams();
     } catch (err) {
       console.error('Error deleting team:', err);

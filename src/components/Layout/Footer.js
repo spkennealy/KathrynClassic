@@ -6,8 +6,8 @@ const navigation = {
     { name: 'Home', href: '/' },
     { name: 'Schedule', href: '/schedule' },
     { name: 'Registration', href: '/registration' },
+    { name: 'Rules', href: '/rules' },
     { name: 'History', href: '/history' },
-    { name: 'Donations', href: '/donations' },
     { name: 'About', href: '/about' },
   ],
   social: [
@@ -50,7 +50,7 @@ export default function Footer() {
     <footer className="bg-primary-600 dark:bg-night-800 dark:border-t dark:border-night-700">
       <div className="mx-auto max-w-7xl overflow-hidden px-6 py-12 lg:px-8">
         <p className="text-center text-base leading-7 text-white font-serif mb-6">
-          &copy; {new Date().getFullYear()} The Kathryn Classic. Making a difference, one swing at a time.
+          &copy; {new Date().getFullYear()} The Kathryn Classic. Family, Golf &amp; Giving.
         </p>
         <div className="flex justify-center space-x-10">
           {navigation.social.map((item) => (
