@@ -23,6 +23,7 @@ export const ENTITY_TYPES = [
   'email_template',
   'email_campaign',
   'tournament_rules',
+  'filter_view',
 ];
 
 /**
@@ -54,6 +55,39 @@ export async function logAudit({ action, entityType, entityId, entityLabel, chan
   } catch (err) {
     // Swallow everything — auditing must never block the admin's action.
     console.error('logAudit failed:', err);
+  }
+}
+
+/**
+ * Append many entries at once, resolving the actor once for the whole batch.
+ *
+ * Bulk admin actions still deserve one row per affected entity — that's what
+ * makes them show up in a record's history — but doing that through logAudit()
+ * would be one round trip per contact. Same best-effort contract: never throws.
+ *
+ * @param {Array<Object>} entries same shape as logAudit's parameter
+ */
+export async function logAuditBulk(entries) {
+  if (!entries || entries.length === 0) return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const rows = entries.map((e) => ({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action: e.action,
+      entity_type: e.entityType,
+      entity_id: e.entityId != null ? String(e.entityId) : null,
+      entity_label: e.entityLabel ?? null,
+      changes: e.changes ?? null,
+      metadata: e.metadata ?? null,
+    }));
+    // Keep each request's payload reasonable.
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await supabase.from('audit_log').insert(rows.slice(i, i + 500));
+      if (error) console.error('logAuditBulk insert failed:', error);
+    }
+  } catch (err) {
+    console.error('logAuditBulk failed:', err);
   }
 }
 

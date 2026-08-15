@@ -25,12 +25,38 @@ const collectOptions = (children) => {
 
 const MENU_MAX_HEIGHT = 288;
 
-export default function Select({ value, onChange, children, disabled = false, id, className = '', placeholder, triggerClassName }) {
+// Below this, a search box is more friction than help.
+const SEARCH_THRESHOLD = 8;
+
+const labelText = (label) => (typeof label === 'string' ? label : String(label ?? ''));
+
+export default function Select({
+  value,
+  onChange,
+  children,
+  disabled = false,
+  id,
+  className = '',
+  placeholder,
+  triggerClassName,
+  // Opt in to filtering. The box only actually renders once the list is long
+  // enough to be worth searching.
+  searchable = false,
+}) {
   const options = collectOptions(children);
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, openUp: false });
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
+
+  const showSearch = searchable && options.length >= SEARCH_THRESHOLD;
+  const term = query.trim().toLowerCase();
+  // While searching, drop the disabled group headings — they'd otherwise leave
+  // a "— Contact —" label stranded above results from another group.
+  const visibleOptions = term
+    ? options.filter((o) => !o.disabled && labelText(o.label).toLowerCase().includes(term))
+    : options;
 
   const current = options.find((o) => String(o.value) === String(value));
   const displayLabel = current ? current.label : (placeholder ?? (options[0] ? options[0].label : ''));
@@ -49,7 +75,7 @@ export default function Select({ value, onChange, children, disabled = false, id
     });
   }, []);
 
-  const openMenu = () => { if (disabled) return; place(); setOpen(true); };
+  const openMenu = () => { if (disabled) return; place(); setQuery(''); setOpen(true); };
 
   useEffect(() => {
     if (!open) return;
@@ -61,7 +87,14 @@ export default function Select({ value, onChange, children, disabled = false, id
         setOpen(false);
       }
     };
-    const onScroll = () => setOpen(false);
+    // The menu is fixed-positioned, so it has to close when the page scrolls out
+    // from under it. But the listener is on the capture phase, which also sees
+    // scrolls *inside* the menu — so a long option list would close itself the
+    // moment you tried to scroll it.
+    const onScroll = (e) => {
+      if (e.target instanceof Node && menuRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDown);
     window.addEventListener('scroll', onScroll, true);
@@ -79,6 +112,7 @@ export default function Select({ value, onChange, children, disabled = false, id
     if (o.disabled) return;
     onChange({ target: { value: String(o.value) } });
     setOpen(false);
+    setQuery('');
   };
 
   // Custom trigger (e.g. a colored status pill) vs the default input-style box.
@@ -118,33 +152,59 @@ export default function Select({ value, onChange, children, disabled = false, id
             minWidth: coords.width,
             maxHeight: MENU_MAX_HEIGHT,
           }}
-          className="z-50 overflow-y-auto rounded-lg border border-gray-200 dark:border-night-600 bg-white dark:bg-night-800 shadow-xl py-1"
+          className="z-50 flex flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-night-600 bg-white dark:bg-night-800 shadow-xl"
         >
-          {options.map((o, i) => {
-            const isSel = String(o.value) === String(value);
-            return (
-              <button
-                key={`${o.value}-${i}`}
-                type="button"
-                disabled={o.disabled}
-                onClick={() => pick(o)}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-                  o.disabled
-                    ? 'text-gray-400 cursor-not-allowed'
-                    : isSel
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                    : 'text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-night-700'
-                }`}
-              >
-                <span className="flex-1 truncate">{o.label}</span>
-                {isSel && (
-                  <svg className="h-4 w-4 flex-shrink-0 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
+          {showSearch && (
+            // Outside the scroll area so it stays put while the list scrolls.
+            <div className="border-b border-gray-100 dark:border-night-700 p-2">
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter takes the top match, so you can type and go.
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const first = visibleOptions.find((o) => !o.disabled);
+                    if (first) pick(first);
+                  }
+                }}
+                placeholder="Search…"
+                className="block w-full rounded-md border border-gray-300 dark:border-night-600 py-1.5 px-2 text-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-0"
+              />
+            </div>
+          )}
+          <div className="overflow-y-auto py-1">
+            {visibleOptions.map((o, i) => {
+              const isSel = String(o.value) === String(value);
+              return (
+                <button
+                  key={`${o.value}-${i}`}
+                  type="button"
+                  disabled={o.disabled}
+                  onClick={() => pick(o)}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                    o.disabled
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : isSel
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                      : 'text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-night-700'
+                  }`}
+                >
+                  <span className="flex-1 truncate">{o.label}</span>
+                  {isSel && (
+                    <svg className="h-4 w-4 flex-shrink-0 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+            {visibleOptions.length === 0 && (
+              <p className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400">No matches</p>
+            )}
+          </div>
         </div>,
         document.body
       )}

@@ -1,14 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../../../supabaseClient';
-import Select from '../Select';
 import ContactEditForm from './ContactEditForm';
+import BulkUnsubscribeModal from './BulkUnsubscribeModal';
 import ConfirmDialog from '../ConfirmDialog';
+import FilterBuilder from '../filters/FilterBuilder';
+import SavedViewsBar from '../filters/SavedViewsBar';
+import useContactFilterOptions from '../filters/useContactFilterOptions';
+import { getContactFilterFields, buildFieldMap } from '../filters/contactFilterFields';
+import { emptyTree } from '../filters/filterModel';
+import { applyFilters, countCompiledConditions } from '../filters/compileFilters';
+import {
+  toCsv,
+  downloadCsv,
+  contactCsvFilename,
+  fetchAllRows,
+  ID_CHUNK,
+  EXPORT_MAX,
+} from '../filters/exportCsv';
 import { formatPhone } from '../../../utils/phone';
 import { logAudit } from '../../../utils/audit';
 
 const PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 350;
 
 export default function ContactList() {
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
@@ -22,19 +38,42 @@ export default function ContactList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedContactIds, setSelectedContactIds] = useState(new Set());
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [showUnsubscribe, setShowUnsubscribe] = useState(false);
+  const [unsubscribeResult, setUnsubscribeResult] = useState(null);
   const [selectAllPages, setSelectAllPages] = useState(false);
   const [allContactIds, setAllContactIds] = useState([]);
-  const [filters, setFilters] = useState({
-    hasEmail: 'all', // 'all', 'yes', 'no'
-    hasPhone: 'all',
-    hasRegistrations: 'all',
-    hasTournaments: 'all',
-    hasAwards: 'all',
-    tournamentYear: 'all',
-  });
   const [showFilters, setShowFilters] = useState(false);
-  const [availableYears, setAvailableYears] = useState([]);
+  const [exporting, setExporting] = useState(false);
   const [sortConfig, setSortConfig] = useState({ column: 'last_name', direction: 'asc' });
+
+  // `tree` is what the builder edits; `appliedTree` is what the query uses. The
+  // gap is a debounce, so typing in a text condition doesn't refetch per keystroke.
+  const [tree, setTree] = useState(emptyTree);
+  const [appliedTree, setAppliedTree] = useState(tree);
+
+  // Bumped after a mutation to re-run the fetch effect with the filters, sort and
+  // page the admin currently has, rather than re-deriving a different query.
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const { options: filterOptions, loading: optionsLoading } = useContactFilterOptions();
+  const fields = useMemo(() => getContactFilterFields({ scope: 'contacts' }), []);
+  const fieldMap = useMemo(() => buildFieldMap(fields), [fields]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setAppliedTree(tree);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, tree]);
+
+  // A new object identity every render would retrigger the effects below, so key
+  // them on the serialization instead.
+  const filterKey = useMemo(() => JSON.stringify(appliedTree), [appliedTree]);
+  const activeFilterCount = useMemo(
+    () => countCompiledConditions(tree, fieldMap),
+    [tree, fieldMap]
+  );
 
   const SORT_COLUMNS = {
     name: 'last_name',
@@ -47,7 +86,7 @@ export default function ContactList() {
   };
 
   const handleSort = (key) => {
-    setSortConfig(prev => ({
+    setSortConfig((prev) => ({
       column: SORT_COLUMNS[key],
       direction: prev.column === SORT_COLUMNS[key] && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
@@ -68,106 +107,89 @@ export default function ContactList() {
     );
   };
 
-  // Fetch contacts and total count
+  // The single place filter state becomes a query. Every read path goes through
+  // it — the list, select-all, and CSV export — so they can't drift apart.
+  const buildContactQuery = useCallback(
+    (select = '*', selectOptions) => {
+      const query = supabase.from('admin_contact_activity').select(select, selectOptions);
+      return applyFilters(query, { searchTerm, tree: appliedTree, fieldMap });
+    },
+    [searchTerm, appliedTree, fieldMap]
+  );
+
+  const applySort = useCallback(
+    (query) => {
+      let out = query.order(sortConfig.column, {
+        ascending: sortConfig.direction === 'asc',
+        nullsFirst: false,
+      });
+      if (sortConfig.column !== 'last_name') out = out.order('last_name', { ascending: true });
+      // Unique tiebreaker. Without it, rows tied on the sort column can straddle
+      // a page boundary and show up twice, or not at all.
+      return out.order('contact_id', { ascending: true });
+    },
+    [sortConfig]
+  );
+
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Build query
-        let query = supabase.from('admin_contact_activity').select('*', { count: 'exact' });
-
-        // Apply search filter
-        if (searchTerm) {
-          query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
-        }
-
-        // Apply filters
-        if (filters.hasEmail === 'yes') {
-          query = query.not('email', 'is', null);
-        } else if (filters.hasEmail === 'no') {
-          query = query.is('email', null);
-        }
-
-        if (filters.hasPhone === 'yes') {
-          query = query.not('phone', 'is', null);
-        } else if (filters.hasPhone === 'no') {
-          query = query.is('phone', null);
-        }
-
-        if (filters.hasRegistrations === 'yes') {
-          query = query.gt('total_registrations', 0);
-        } else if (filters.hasRegistrations === 'no') {
-          query = query.or('total_registrations.is.null,total_registrations.eq.0');
-        }
-
-        if (filters.hasTournaments === 'yes') {
-          query = query.gt('tournaments_attended', 0);
-        } else if (filters.hasTournaments === 'no') {
-          query = query.or('tournaments_attended.is.null,tournaments_attended.eq.0');
-        }
-
-        if (filters.hasAwards === 'yes') {
-          query = query.gt('awards_won', 0);
-        } else if (filters.hasAwards === 'no') {
-          query = query.or('awards_won.is.null,awards_won.eq.0');
-        }
-
-        if (filters.tournamentYear !== 'all') {
-          query = query.contains('tournament_years', [parseInt(filters.tournamentYear)]);
-        }
-
-        query = query.order(sortConfig.column, { ascending: sortConfig.direction === 'asc', nullsFirst: false });
-        if (sortConfig.column !== 'last_name') {
-          query = query.order('last_name', { ascending: true });
-        }
-
-        // Apply pagination or limit based on search
-        if (searchTerm || hasActiveFilters()) {
-          query = query.limit(500);
-        } else {
-          const offset = (currentPage - 1) * PAGE_SIZE;
-          query = query.range(offset, offset + PAGE_SIZE - 1);
-        }
-
-        const { data, error: dataError, count } = await query;
+        const offset = (currentPage - 1) * PAGE_SIZE;
+        const { data, error: dataError, count } = await applySort(
+          buildContactQuery('*', { count: 'exact' })
+        ).range(offset, offset + PAGE_SIZE - 1);
 
         if (dataError) throw dataError;
+        if (cancelled) return;
+
         setContacts(data || []);
         setTotalCount(count || 0);
-
-        // Extract available years
-        if (data && data.length > 0) {
-          const years = new Set();
-          data.forEach(contact => {
-            if (contact.tournament_years) {
-              contact.tournament_years.forEach(year => years.add(year));
-            }
-          });
-          setAvailableYears(Array.from(years).sort((a, b) => b - a));
-        }
       } catch (err) {
+        if (cancelled) return;
         console.error('Error fetching contacts:', err);
         setError(err.message || 'Failed to load contacts');
       } finally {
-        setLoading(false);
-        setInitialLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setInitialLoading(false);
+        }
       }
     };
 
     fetchData();
-    // Clear selections when page changes (but not if all pages are selected)
-    if (!selectAllPages) {
-      setSelectedContactIds(new Set());
-    }
-  }, [currentPage, selectAllPages, searchTerm, filters, sortConfig]);
 
-  // When searching, contacts are already filtered by the database query
-  // When not searching, show all contacts from the current page
-  const filteredContacts = contacts;
+    // Debounced edits fire overlapping requests; without this a slow earlier
+    // response can land last and overwrite newer results.
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, refreshTick, buildContactQuery, applySort]);
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  // Anything that changes which contacts match invalidates the page number.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterKey]);
+
+  // ...and invalidates the selection, unless the admin explicitly selected every
+  // matching contact. Read through a ref so that toggling select-all itself
+  // doesn't re-run this and wipe the selection it just made.
+  const selectAllPagesRef = useRef(selectAllPages);
+  useEffect(() => {
+    selectAllPagesRef.current = selectAllPages;
+  }, [selectAllPages]);
+
+  useEffect(() => {
+    if (!selectAllPagesRef.current) setSelectedContactIds(new Set());
+  }, [currentPage, searchTerm, filterKey]);
+
+  const refresh = useCallback(() => setRefreshTick((t) => t + 1), []);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const handleEdit = (contact) => {
     setSelectedContact(contact);
@@ -193,7 +215,6 @@ export default function ContactList() {
     try {
       setError(null);
 
-      // Soft delete by setting deleted_at timestamp
       const { error: deleteError } = await supabase
         .from('contacts')
         .update({ deleted_at: new Date().toISOString() })
@@ -214,77 +235,16 @@ export default function ContactList() {
         },
       });
 
-      // Close dialog and refresh list
       setShowDeleteConfirm(false);
       setContactToDelete(null);
 
-      // Refresh the list
-      const fetchData = async () => {
-        try {
-          setLoading(true);
-          setError(null);
-
-          let query = supabase.from('admin_contact_activity').select('*', { count: 'exact' });
-
-          if (searchTerm) {
-            query = query.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
-          }
-
-          // Apply filters
-          if (filters.hasEmail === 'yes') {
-            query = query.not('email', 'is', null);
-          } else if (filters.hasEmail === 'no') {
-            query = query.is('email', null);
-          }
-
-          if (filters.hasPhone === 'yes') {
-            query = query.not('phone', 'is', null);
-          } else if (filters.hasPhone === 'no') {
-            query = query.is('phone', null);
-          }
-
-          if (filters.hasRegistrations === 'yes') {
-            query = query.gt('total_registrations', 0);
-          } else if (filters.hasRegistrations === 'no') {
-            query = query.eq('total_registrations', 0);
-          }
-
-          if (filters.hasTournaments === 'yes') {
-            query = query.gt('tournaments_attended', 0);
-          } else if (filters.hasTournaments === 'no') {
-            query = query.eq('tournaments_attended', 0);
-          }
-
-          if (filters.hasAwards === 'yes') {
-            query = query.gt('awards_won', 0);
-          } else if (filters.hasAwards === 'no') {
-            query = query.eq('awards_won', 0);
-          }
-
-          if (filters.tournamentYear !== 'all') {
-            query = query.contains('tournament_years', [parseInt(filters.tournamentYear)]);
-          }
-
-          const { count, error: countError } = await query;
-          if (countError) throw countError;
-          setTotalCount(count || 0);
-
-          const offset = (currentPage - 1) * PAGE_SIZE;
-          const { data, error: dataError } = await query
-            .order('last_registration_date', { ascending: false, nullsFirst: false })
-            .range(offset, offset + PAGE_SIZE - 1);
-
-          if (dataError) throw dataError;
-          setContacts(data || []);
-        } catch (err) {
-          console.error('Error fetching contacts:', err);
-          setError('Failed to load contacts');
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      await fetchData();
+      // Deleting the only row on the last page would otherwise strand the admin
+      // on an empty page.
+      if (currentPage > 1 && contacts.length === 1) {
+        setCurrentPage((p) => p - 1);
+      } else {
+        refresh();
+      }
     } catch (err) {
       console.error('Error deleting contact:', err);
       setError(err.message || 'Failed to delete contact');
@@ -293,65 +253,31 @@ export default function ContactList() {
     }
   };
 
-  const handleSaveEdit = async () => {
-    // Refresh the contacts list
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch total count
-      const { count, error: countError } = await supabase
-        .from('admin_contact_activity')
-        .select('contact_id', { count: 'exact', head: true });
-
-      if (countError) throw countError;
-      setTotalCount(count || 0);
-
-      // Fetch contacts for current page
-      const offset = (currentPage - 1) * PAGE_SIZE;
-      const { data, error: dataError } = await supabase
-        .from('admin_contact_activity')
-        .select('*')
-        .order('last_name')
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (dataError) throw dataError;
-      setContacts(data || []);
-    } catch (err) {
-      console.error('Error fetching contacts:', err);
-      setError(err.message || 'Failed to load contacts');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSaveEdit = () => refresh();
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const allContactIds = new Set(filteredContacts.map(c => c.contact_id));
-      setSelectedContactIds(allContactIds);
-      setSelectAllPages(false);
+      setSelectedContactIds(new Set(contacts.map((c) => c.contact_id)));
     } else {
       setSelectedContactIds(new Set());
-      setSelectAllPages(false);
     }
+    setSelectAllPages(false);
   };
 
+  // "Select all N" must mean the N matching the current search and filters.
   const handleSelectAllPages = async () => {
     try {
-      // Fetch all contact IDs from the database
-      const { data, error } = await supabase
-        .from('admin_contact_activity')
-        .select('contact_id, email');
-
-      if (error) throw error;
-
-      const allIds = new Set(data.map(c => c.contact_id));
-      setSelectedContactIds(allIds);
-      setAllContactIds(data);
+      setError(null);
+      const rows = await fetchAllRows(
+        (select) => buildContactQuery(select),
+        'contact_id, email'
+      );
+      setSelectedContactIds(new Set(rows.map((c) => c.contact_id)));
+      setAllContactIds(rows);
       setSelectAllPages(true);
     } catch (err) {
       console.error('Error fetching all contacts:', err);
-      alert('Failed to select all contacts. Please try again.');
+      setError('Failed to select all contacts. Please try again.');
     }
   };
 
@@ -362,87 +288,101 @@ export default function ContactList() {
   };
 
   const handleSelectContact = (contactId) => {
-    setSelectedContactIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(contactId)) {
-        newSet.delete(contactId);
-      } else {
-        newSet.add(contactId);
-      }
-      return newSet;
+    setSelectedContactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId)) next.delete(contactId);
+      else next.add(contactId);
+      return next;
     });
+    setSelectAllPages(false);
   };
 
   const handleEmailContacts = () => {
-    let emails;
-
-    if (selectAllPages && allContactIds.length > 0) {
-      // Use all contacts from database
-      emails = allContactIds
-        .map(c => c.email)
-        .filter(email => email);
-    } else {
-      // Use filtered contacts from current page
-      const selectedContacts = filteredContacts.filter(c => selectedContactIds.has(c.contact_id));
-      emails = selectedContacts
-        .map(c => c.email)
-        .filter(email => email);
-    }
+    // Union both sources: the page always has rows, and allContactIds holds the
+    // full matching set once "select all" has been used. Unioning means
+    // unchecking one contact after a select-all doesn't silently narrow the
+    // result back down to the current page.
+    const byId = new Map();
+    [...contacts, ...allContactIds].forEach((c) => byId.set(c.contact_id, c));
+    const emails = [...selectedContactIds]
+      .map((id) => byId.get(id)?.email)
+      .filter(Boolean);
 
     if (emails.length === 0) {
-      alert('No valid email addresses found for selected contacts.');
+      setError('No valid email addresses found for selected contacts.');
       return;
     }
 
-    const emailString = emails.join(', ');
-
-    // Copy to clipboard
-    navigator.clipboard.writeText(emailString).then(() => {
-      setShowCopiedMessage(true);
-      setTimeout(() => setShowCopiedMessage(false), 3000);
-    }).catch(err => {
-      console.error('Failed to copy emails:', err);
-      alert('Failed to copy emails to clipboard. Please try again.');
-    });
+    navigator.clipboard
+      .writeText(emails.join(', '))
+      .then(() => {
+        setShowCopiedMessage(true);
+        setTimeout(() => setShowCopiedMessage(false), 3000);
+      })
+      .catch((err) => {
+        console.error('Failed to copy emails:', err);
+        setError('Failed to copy emails to clipboard. Please try again.');
+      });
   };
 
-  const hasActiveFilters = () => {
-    return filters.hasEmail !== 'all' ||
-           filters.hasPhone !== 'all' ||
-           filters.hasRegistrations !== 'all' ||
-           filters.hasTournaments !== 'all' ||
-           filters.hasAwards !== 'all' ||
-           filters.tournamentYear !== 'all';
+  // Exports the selection when there is one, otherwise everything matching the
+  // current filters — not just the page on screen.
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      setError(null);
+
+      let rows;
+      if (selectedContactIds.size > 0) {
+        const ids = [...selectedContactIds];
+        rows = [];
+        // Chunked to keep the `in.(...)` list inside a sane URL length.
+        for (let i = 0; i < ids.length; i += ID_CHUNK) {
+          const { data, error: err } = await supabase
+            .from('admin_contact_activity')
+            .select('*')
+            .in('contact_id', ids.slice(i, i + ID_CHUNK));
+          if (err) throw err;
+          rows.push(...(data || []));
+        }
+      } else {
+        rows = await fetchAllRows((select) => buildContactQuery(select), '*');
+      }
+
+      if (rows.length === 0) {
+        setError('Nothing to export.');
+        return;
+      }
+
+      downloadCsv(contactCsvFilename(), toCsv(rows));
+
+      await logAudit({
+        action: 'contact.exported',
+        entityType: 'contact',
+        metadata: {
+          count: rows.length,
+          scope: selectedContactIds.size > 0 ? 'selection' : 'filtered',
+          filtered: activeFilterCount > 0 || Boolean(searchTerm),
+          truncated: rows.length >= EXPORT_MAX,
+        },
+      });
+    } catch (err) {
+      console.error('Error exporting contacts:', err);
+      setError(err.message || 'Failed to export contacts');
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const clearFilters = () => {
-    setFilters({
-      hasEmail: 'all',
-      hasPhone: 'all',
-      hasRegistrations: 'all',
-      hasTournaments: 'all',
-      hasAwards: 'all',
-      tournamentYear: 'all',
-    });
-  };
-
-  const allFilteredSelected = filteredContacts.length > 0 &&
-    filteredContacts.every(c => selectedContactIds.has(c.contact_id));
-  const someFilteredSelected = filteredContacts.some(c => selectedContactIds.has(c.contact_id));
+  const allPageSelected =
+    contacts.length > 0 && contacts.every((c) => selectedContactIds.has(c.contact_id));
+  const somePageSelected = contacts.some((c) => selectedContactIds.has(c.contact_id));
 
   if (initialLoading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
         <p className="mt-4 text-gray-600 dark:text-gray-400">Loading contacts...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-md bg-red-50 p-4">
-        <p className="text-sm text-red-800">{error}</p>
       </div>
     );
   }
@@ -471,17 +411,23 @@ export default function ContactList() {
         </button>
       </div>
 
-      {/* Search and Email Button */}
+      {error && (
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+          <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+        </div>
+      )}
+
+      {/* Search and actions */}
       <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow">
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-[12rem]">
             <label htmlFor="search" className="sr-only">Search contacts</label>
             <input
               type="text"
               id="search"
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, email or phone..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="block w-full"
             />
           </div>
@@ -496,12 +442,33 @@ export default function ContactList() {
               Email Contacts ({selectedContactIds.size})
             </button>
           )}
+          {selectedContactIds.size > 0 && (
+            <button
+              onClick={() => setShowUnsubscribe(true)}
+              className="inline-flex items-center px-4 py-2 border border-amber-300 dark:border-amber-700 rounded-md shadow-sm text-sm font-medium text-amber-700 dark:text-amber-400 bg-white dark:bg-night-700 hover:bg-amber-50 dark:hover:bg-night-600 transition-colors"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              Unsubscribe ({selectedContactIds.size})
+            </button>
+          )}
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-night-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-700 hover:bg-gray-50 dark:hover:bg-night-600 disabled:opacity-50"
+          >
+            <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {exporting
+              ? 'Exporting…'
+              : selectedContactIds.size > 0
+              ? `Export CSV (${selectedContactIds.size} selected)`
+              : `Export CSV (${totalCount})`}
+          </button>
           <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-            {searchTerm ? (
-              <>Showing {filteredContacts.length} matching contacts</>
-            ) : (
-              <>Page {currentPage} of {totalPages} ({totalCount} total contacts)</>
-            )}
+            Page {currentPage} of {totalPages} ({totalCount} total contacts)
           </div>
         </div>
         {showCopiedMessage && (
@@ -511,7 +478,23 @@ export default function ContactList() {
             </p>
           </div>
         )}
+        {unsubscribeResult && (
+          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+            <p className="text-sm text-amber-800">
+              ✓ {unsubscribeResult.count} {unsubscribeResult.count === 1 ? 'contact' : 'contacts'}{' '}
+              unsubscribed from {unsubscribeResult.scopeLabel}.
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Saved views */}
+      <SavedViewsBar
+        scope="contacts"
+        tree={tree}
+        onLoad={setTree}
+        isKnownField={(key) => Boolean(fieldMap[key])}
+      />
 
       {/* Filters */}
       <div className="bg-white dark:bg-night-800 rounded-lg shadow">
@@ -524,9 +507,9 @@ export default function ContactList() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             <span className="font-medium text-gray-900 dark:text-gray-100">Filters</span>
-            {hasActiveFilters() && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/40 text-primary-800">
-                Active
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-300">
+                {activeFilterCount} active
               </span>
             )}
           </div>
@@ -537,119 +520,29 @@ export default function ContactList() {
 
         {showFilters && (
           <div className="px-4 py-4 border-t border-gray-200 dark:border-night-700">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* Has Email Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                <Select
-                  value={filters.hasEmail}
-                  onChange={(e) => setFilters({ ...filters, hasEmail: e.target.value })}
-                  className="block w-full"
-                >
-                  <option value="all">All</option>
-                  <option value="yes">Has Email</option>
-                  <option value="no">No Email</option>
-                </Select>
-              </div>
-
-              {/* Has Phone Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                <Select
-                  value={filters.hasPhone}
-                  onChange={(e) => setFilters({ ...filters, hasPhone: e.target.value })}
-                  className="block w-full"
-                >
-                  <option value="all">All</option>
-                  <option value="yes">Has Phone</option>
-                  <option value="no">No Phone</option>
-                </Select>
-              </div>
-
-              {/* Has Registrations Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Registrations</label>
-                <Select
-                  value={filters.hasRegistrations}
-                  onChange={(e) => setFilters({ ...filters, hasRegistrations: e.target.value })}
-                  className="block w-full"
-                >
-                  <option value="all">All</option>
-                  <option value="yes">Has Registered</option>
-                  <option value="no">Never Registered</option>
-                </Select>
-              </div>
-
-              {/* Has Tournaments Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tournaments</label>
-                <Select
-                  value={filters.hasTournaments}
-                  onChange={(e) => setFilters({ ...filters, hasTournaments: e.target.value })}
-                  className="block w-full"
-                >
-                  <option value="all">All</option>
-                  <option value="yes">Attended</option>
-                  <option value="no">Never Attended</option>
-                </Select>
-              </div>
-
-              {/* Has Awards Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Awards</label>
-                <Select
-                  value={filters.hasAwards}
-                  onChange={(e) => setFilters({ ...filters, hasAwards: e.target.value })}
-                  className="block w-full"
-                >
-                  <option value="all">All</option>
-                  <option value="yes">Has Awards</option>
-                  <option value="no">No Awards</option>
-                </Select>
-              </div>
-
-              {/* Tournament Year Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
-                <Select
-                  value={filters.tournamentYear}
-                  onChange={(e) => setFilters({ ...filters, tournamentYear: e.target.value })}
-                  className="block w-full"
-                >
-                  <option value="all">All Years</option>
-                  {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            {hasActiveFilters() && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={clearFilters}
-                  className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300"
-                >
-                  Clear all filters
-                </button>
-              </div>
-            )}
+            <FilterBuilder
+              tree={tree}
+              onChange={setTree}
+              fields={fields}
+              options={filterOptions}
+              optionsLoading={optionsLoading}
+            />
           </div>
         )}
       </div>
 
       {/* Select All Pages Banner */}
-      {allFilteredSelected && !selectAllPages && totalCount > filteredContacts.length && (
+      {allPageSelected && !selectAllPages && totalCount > contacts.length && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-blue-800">
-              All <strong>{filteredContacts.length}</strong> contacts on this page are selected.
+              All <strong>{contacts.length}</strong> contacts on this page are selected.
             </p>
             <button
               onClick={handleSelectAllPages}
               className="text-sm font-medium text-blue-600 hover:text-blue-800 underline"
             >
-              Select all {totalCount} contacts
+              Select all {totalCount} matching contacts
             </button>
           </div>
         </div>
@@ -660,7 +553,7 @@ export default function ContactList() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-blue-800">
-              All <strong>{totalCount}</strong> contacts are selected.
+              All <strong>{selectedContactIds.size}</strong> matching contacts are selected.
             </p>
             <button
               onClick={handleDeselectAll}
@@ -680,10 +573,10 @@ export default function ContactList() {
               <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 w-12">
                 <input
                   type="checkbox"
-                  checked={allFilteredSelected}
+                  checked={allPageSelected}
                   ref={input => {
                     if (input) {
-                      input.indeterminate = someFilteredSelected && !allFilteredSelected;
+                      input.indeterminate = somePageSelected && !allPageSelected;
                     }
                   }}
                   onChange={handleSelectAll}
@@ -731,7 +624,7 @@ export default function ContactList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
-            {filteredContacts.map((contact) => (
+            {contacts.map((contact) => (
               <tr key={contact.contact_id} className="hover:bg-gray-50 dark:bg-night-700">
                 <td className="py-4 pl-4 pr-3 text-sm w-12">
                   <input
@@ -748,6 +641,21 @@ export default function ContactList() {
                   {contact.email || (
                     <span className="text-yellow-600">⚠️ Missing</span>
                   )}
+                  {/* Without this the unsubscribe action has no visible effect. */}
+                  {(contact.unsubscribed_all || contact.unsubscribed_years?.length > 0) && (
+                    <span
+                      className="ml-2 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300"
+                      title={
+                        contact.unsubscribed_all
+                          ? 'Unsubscribed from all email'
+                          : `Unsubscribed from ${contact.unsubscribed_years.join(', ')}`
+                      }
+                    >
+                      {contact.unsubscribed_all
+                        ? 'unsubscribed'
+                        : `unsub ${contact.unsubscribed_years.join(', ')}`}
+                    </span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {formatPhone(contact.phone) || '-'}
@@ -761,7 +669,7 @@ export default function ContactList() {
                   {contact.tournaments_attended || 0}
                 </td>
                 <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {contact.tournament_years?.join(', ') || '-'}
+                  {contact.tournament_years?.length ? contact.tournament_years.join(', ') : '-'}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
                   {contact.awards_won > 0 ? (
@@ -791,17 +699,19 @@ export default function ContactList() {
           </tbody>
         </table>
 
-        {filteredContacts.length === 0 && !loading && (
+        {contacts.length === 0 && !loading && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
-              {searchTerm ? 'No contacts found matching your search' : 'No contacts found'}
+              {searchTerm || activeFilterCount > 0
+                ? 'No contacts match your search and filters'
+                : 'No contacts found'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Pagination - hidden when searching */}
-      {!searchTerm && totalPages > 1 && (
+      {/* Pagination */}
+      {totalPages > 1 && (
         <div className="bg-white dark:bg-night-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-night-700 sm:px-6 rounded-lg shadow">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
@@ -879,6 +789,18 @@ export default function ContactList() {
           </div>
         </div>
       )}
+
+      {/* Bulk / individual unsubscribe */}
+      <BulkUnsubscribeModal
+        isOpen={showUnsubscribe}
+        contactIds={[...selectedContactIds]}
+        onClose={() => setShowUnsubscribe(false)}
+        onSaved={(count, scopeLabel) => {
+          setUnsubscribeResult({ count, scopeLabel });
+          setTimeout(() => setUnsubscribeResult(null), 5000);
+          refresh();
+        }}
+      />
 
       {/* Contact Edit/Create Form Modal */}
       {showEditForm && (
