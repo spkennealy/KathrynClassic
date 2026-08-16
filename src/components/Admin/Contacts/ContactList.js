@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '../../../supabaseClient';
 import ContactEditForm from './ContactEditForm';
 import BulkUnsubscribeModal from './BulkUnsubscribeModal';
+import AwardsHoverCard from './AwardsHoverCard';
 import ConfirmDialog from '../ConfirmDialog';
 import FilterBuilder from '../filters/FilterBuilder';
 import SavedViewsBar from '../filters/SavedViewsBar';
@@ -672,13 +673,10 @@ export default function ContactList() {
                   {contact.tournament_years?.length ? contact.tournament_years.join(', ') : '-'}
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                  {contact.awards_won > 0 ? (
-                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                      🏅 {contact.awards_won}
-                    </span>
-                  ) : (
-                    '-'
-                  )}
+                  <AwardsHoverCard
+                    count={contact.awards_won}
+                    awards={contact.recent_awards}
+                  />
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                   <button
