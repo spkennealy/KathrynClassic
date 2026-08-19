@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getLeaderboardYear, formatDateRange } from '../../utils/tournamentUtils';
+import Select from '../Admin/Select';
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -21,21 +22,30 @@ export default function Leaderboard() {
 
   const loadAvailableYears = async () => {
     try {
-      // Get leaderboard year (shows previous year until day before tournament)
-      const leaderboardYear = await getLeaderboardYear();
-      setTournamentYear(leaderboardYear);
-
-      // Get all years that have leaderboard data
+      // Only tournaments whose pairings have been published. Asking `tournaments`
+      // directly rather than deriving years from golf_teams keeps this honest for
+      // a logged-in admin too — RLS would otherwise hand them the draft years.
       const { data, error } = await supabase
-        .from('golf_teams')
-        .select('tournament_id, tournaments(year)')
-        .order('tournaments(year)', { ascending: false });
+        .from('tournaments')
+        .select('year')
+        .not('teams_published_at', 'is', null)
+        .is('deleted_at', null)
+        .order('year', { ascending: false });
 
       if (error) throw error;
 
-      // Extract unique years
-      const years = [...new Set(data.map(item => item.tournaments?.year).filter(Boolean))];
+      const years = [...new Set((data || []).map((t) => t.year).filter(Boolean))];
       setAvailableYears(years);
+
+      // Open on the most recent published year, so publishing a new year's teams
+      // immediately makes it the default view.
+      if (years.length > 0) {
+        setTournamentYear(years[0]);
+      } else {
+        // Nothing published yet — fall back to the old date-driven choice so the
+        // page still has something to ask for.
+        setTournamentYear(await getLeaderboardYear());
+      }
     } catch (err) {
       console.error('Error loading available years:', err);
     }
@@ -148,17 +158,20 @@ export default function Leaderboard() {
             {/* Year Selector */}
             {availableYears.length > 1 && (
               <div className="mt-6 flex justify-center">
-                <select
-                  value={tournamentYear}
-                  onChange={(e) => setTournamentYear(parseInt(e.target.value))}
-                  className="rounded-lg border-gray-300 dark:bg-night-700 dark:border-night-600 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-base font-serif px-4 py-2"
+                {/* Was a native <select>, whose option list the OS renders — it
+                    ignored the site's styling entirely. */}
+                <Select
+                  value={String(tournamentYear ?? '')}
+                  onChange={(e) => setTournamentYear(parseInt(e.target.value, 10))}
+                  className="w-48"
+                  triggerClassName="w-full justify-between rounded-lg border border-primary-200 dark:border-night-600 bg-white dark:bg-night-800 px-4 py-2 text-base font-serif text-gray-900 dark:text-gray-100 shadow-sm hover:border-primary-400"
                 >
                   {availableYears.map((year) => (
                     <option key={year} value={year}>
                       {year} Tournament
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
           </div>

@@ -30,6 +30,50 @@ export default function TeamBuilder() {
 
   // UI
   const [showConfirmAll, setShowConfirmAll] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
+  const currentTournament = tournaments.find(t => t.id === selectedTournament) || null;
+  const isPublished = Boolean(currentTournament?.teams_published_at);
+
+  // Publishing is all-or-nothing per tournament: it flips every saved team for
+  // this year onto the public leaderboard at once. Until then the teams exist
+  // and are editable, but RLS keeps them off the public site.
+  const handleTogglePublish = async () => {
+    if (!currentTournament) return;
+    setPublishing(true);
+    setError(null);
+    try {
+      const publishedAt = isPublished ? null : new Date().toISOString();
+      const { error: err } = await supabase
+        .from('tournaments')
+        .update({ teams_published_at: publishedAt })
+        .eq('id', currentTournament.id);
+      if (err) throw err;
+
+      await logAudit({
+        action: isPublished ? 'tournament.teams_unpublished' : 'tournament.teams_published',
+        entityType: 'tournament',
+        entityId: currentTournament.id,
+        entityLabel: `${currentTournament.year} teams`,
+        changes: {
+          teams_published_at: { from: currentTournament.teams_published_at ?? null, to: publishedAt },
+        },
+        metadata: { team_count: existingTeams.length },
+      });
+
+      setTournaments(prev =>
+        prev.map(t => (t.id === currentTournament.id ? { ...t, teams_published_at: publishedAt } : t))
+      );
+      setShowPublishConfirm(false);
+    } catch (err) {
+      console.error('Error updating publish state:', err);
+      setError(err.message || 'Failed to update publish state');
+      setShowPublishConfirm(false);
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // Computed unassigned: golfers not saved to a team and not in any pending team
   const pendingMemberIds = new Set(
@@ -59,7 +103,7 @@ export default function TeamBuilder() {
     try {
       const { data, error } = await supabase
         .from('tournaments')
-        .select('id, year')
+        .select('id, year, teams_published_at')
         .order('year', { ascending: false });
       if (error) throw error;
       setTournaments(data || []);
@@ -516,7 +560,47 @@ export default function TeamBuilder() {
         >
           Generate Suggestions
         </button>
+        <button
+          onClick={() => setShowPublishConfirm(true)}
+          disabled={loading || publishing || !currentTournament || (!isPublished && existingTeams.length === 0)}
+          title={
+            !isPublished && existingTeams.length === 0
+              ? 'Save at least one team before publishing'
+              : undefined
+          }
+          className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium disabled:opacity-50 ${
+            isPublished
+              ? 'border-gray-300 dark:border-night-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-night-700 hover:bg-gray-50 dark:hover:bg-night-600'
+              : 'border-transparent text-white bg-green-600 hover:bg-green-700'
+          }`}
+        >
+          {isPublished ? 'Unpublish teams' : 'Publish teams'}
+        </button>
       </div>
+
+      {/* Draft / published state — the whole point is knowing which you're in. */}
+      {currentTournament && (
+        <div
+          className={`rounded-lg border p-3 text-sm ${
+            isPublished
+              ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-900/20 dark:text-green-300'
+              : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300'
+          }`}
+        >
+          {isPublished ? (
+            <>
+              <strong>Published.</strong> The {currentTournament.year} teams are live on the public
+              leaderboard. Edits you make here go public immediately.
+            </>
+          ) : (
+            <>
+              <strong>Draft.</strong> The {currentTournament.year} teams are saved but hidden from the
+              public site — they won't appear on the leaderboard, in its year picker, or in tee times
+              until you publish.
+            </>
+          )}
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -834,6 +918,20 @@ export default function TeamBuilder() {
         message={`This will save ${pendingTeams.length} team${pendingTeams.length !== 1 ? 's' : ''} with a total of ${pendingTeams.reduce((sum, t) => sum + t.members.length, 0)} players. Continue?`}
         confirmText="Save All"
         confirmButtonClass="bg-primary-600 hover:bg-primary-700"
+      />
+
+      <ConfirmDialog
+        isOpen={showPublishConfirm}
+        onClose={() => setShowPublishConfirm(false)}
+        onConfirm={handleTogglePublish}
+        title={isPublished ? 'Unpublish teams' : 'Publish teams'}
+        message={
+          isPublished
+            ? `Hide the ${currentTournament?.year} teams from the public leaderboard? They'll stay saved here, and the leaderboard will fall back to the most recent published year.`
+            : `Publish all ${existingTeams.length} saved team${existingTeams.length !== 1 ? 's' : ''} for ${currentTournament?.year}? They'll appear on the public leaderboard right away, and ${currentTournament?.year} becomes the year it opens on.`
+        }
+        confirmText={isPublished ? 'Unpublish' : 'Publish'}
+        confirmButtonClass={isPublished ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
       />
     </div>
   );

@@ -304,7 +304,10 @@ export default function Registration() {
             email,
             phone: normalizePhone(values.phone)
           }])
-          .select()
+          // Only the id is used. Naming it matters: a bare .select() returns
+          // every column, which requires the anon role to hold SELECT on all of
+          // them — and anon is column-restricted to (id, email) on contacts.
+          .select('id')
           .single();
 
         if (insertError) throw insertError;
