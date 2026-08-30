@@ -49,8 +49,13 @@ export default function TournamentRules() {
             {loading ? (
               <p className="text-center text-gray-500 dark:text-gray-400">Loading…</p>
             ) : bodyHtml ? (
+              // `.App` in App.css still carries Create React App's boilerplate
+              // `text-align: center`, which every page inherits. Centred body copy
+              // gives each line a ragged left edge and scatters list bullets, so the
+              // prose reads left-aligned; `.rules-content` (index.css) re-centres the
+              // section headings.
               <div
-                className="rich-content text-base leading-7 text-gray-600 dark:text-gray-300"
+                className="rich-content rules-content text-left text-base leading-7 text-gray-600 dark:text-gray-300"
                 dangerouslySetInnerHTML={{ __html: bodyHtml }}
               />
             ) : (

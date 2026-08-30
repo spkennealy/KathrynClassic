@@ -93,9 +93,21 @@ code {
 
 /* Public-facing rendered rich text (Tournament Rules): brand headings + theme text. */
 .rich-content h1, .rich-content h2, .rich-content h3, .rich-content h4 { color: #0f766e; }
+
+/* Tournament Rules page only: section headings stay centred over left-aligned prose.
+   Scoped to .rules-content rather than .rich-content, which also renders the admin
+   email previews. (The page sets text-align:left itself — `.App` in App.css still
+   carries Create React App's default `text-align: center`, which everything inherits.) */
+.rules-content h1, .rules-content h2, .rules-content h3, .rules-content h4 { text-align: center; }
 /* Keep list markers next to their text (content is center-aligned site-wide). */
 .rich-content ul, .rich-content ol { list-style-position: inside; padding-left: 0; }
 .rich-content li { padding-left: 0; }
+/* ...except the Rules page, which reads left-aligned (TournamentRules.js sets
+   text-left itself). There, an "inside" bullet sits flush with the prose and
+   wrapped lines run back out to the margin instead of hanging under the text,
+   which reads as misaligned rather than intentional — so give it back a normal
+   outside, indented bullet. */
+.rules-content ul, .rules-content ol { list-style-position: outside; padding-left: 1.5em; }
 .dark .rich-content { color: #d1d5db; }
 .dark .rich-content h1, .dark .rich-content h2, .dark .rich-content h3, .dark .rich-content h4 { color: #5eead4; }
 .dark .rich-content blockquote { border-color: #475569; color: #9ca3af; }

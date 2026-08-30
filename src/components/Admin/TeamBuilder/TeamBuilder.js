@@ -5,6 +5,7 @@ import Select from '../Select';
 import { buildTeamSuggestions } from './teamBuilderAlgorithm';
 import ConfirmDialog from '../ConfirmDialog';
 import { computeTeamHandicap, describeTeamHandicap, isHandicapEnabled } from '../../../utils/handicap';
+import { applyTeamName } from '../../../utils/teamNames';
 
 export default function TeamBuilder() {
   const [tournaments, setTournaments] = useState([]);
@@ -275,6 +276,7 @@ export default function TeamBuilder() {
           id,
           team_number,
           team_id,
+          display_name,
           teams ( name ),
           golf_team_players ( player_name, contact_id, handicap, player_order )
         `)
@@ -323,7 +325,11 @@ export default function TeamBuilder() {
         (teams || []).map(team => ({
           id: team.id,
           teams_id: team.team_id,
-          name: team.teams?.name || `Team ${team.team_number || ''}`,
+          // `name` is what this year's entry is called; `identityName` is what the
+          // team is called in general. They differ only when a returning team plays
+          // under a different name this year.
+          name: team.display_name || team.teams?.name || `Team ${team.team_number || ''}`,
+          identityName: team.teams?.name || '',
           members: (team.golf_team_players || [])
             .sort((a, b) => a.player_order - b.player_order)
             .map(p => ({
@@ -385,7 +391,13 @@ export default function TeamBuilder() {
       }));
     setPendingTeams(prev => [
       ...prev,
-      { name: team.name, teams_id: team.id, lastPlayed: team.lastPlayed, members: returningMembers },
+      {
+        name: team.name,
+        identityName: team.name,
+        teams_id: team.id,
+        lastPlayed: team.lastPlayed,
+        members: returningMembers,
+      },
     ]);
   };
 
@@ -455,21 +467,17 @@ export default function TeamBuilder() {
     setSaving(true);
     setError(null);
     try {
-      // Update team name in teams table
+      // Renaming the team's most recent year moves the identity to the new name and
+      // pins earlier years to what they played under; renaming an older year is a
+      // correction to that year alone. applyTeamName() decides which this is.
       const originalTeam = existingTeams.find(t => t.id === editingTeamId);
-      if (editingTeamData.name !== originalTeam?.name) {
-        const { data: gt } = await supabase
-          .from('golf_teams')
-          .select('team_id')
-          .eq('id', editingTeamId)
-          .single();
-        if (gt?.team_id) {
-          const { error: nameErr } = await supabase
-            .from('teams')
-            .update({ name: editingTeamData.name })
-            .eq('id', gt.team_id);
-          if (nameErr) throw nameErr;
-        }
+      let nameChange = null;
+      if (editingTeamData.name !== originalTeam?.name && originalTeam?.teams_id) {
+        nameChange = await applyTeamName({
+          teamsId: originalTeam.teams_id,
+          golfTeamId: editingTeamId,
+          newName: editingTeamData.name,
+        });
       }
 
       // Replace all players: delete then re-insert
@@ -499,7 +507,12 @@ export default function TeamBuilder() {
         changes: originalTeam && originalTeam.name !== editingTeamData.name
           ? { name: { from: originalTeam.name, to: editingTeamData.name } }
           : undefined,
-        metadata: { player_count: editingTeamData.members.length },
+        metadata: {
+          player_count: editingTeamData.members.length,
+          ...(nameChange?.movedIdentity
+            ? { team_renamed: true, years_pinned_to_previous_name: nameChange.frozenYears }
+            : {}),
+        },
       });
 
       // Rebuild existingTeamContactIds from scratch after edit
@@ -591,11 +604,20 @@ export default function TeamBuilder() {
         }
       }
 
+      const identityName = team.teams_id
+        ? (teamCatalog.find(t => t.id === team.teams_id)?.name ?? null)
+        : team.name;
       const { data: newTeam, error: teamError } = await supabase
         .from('golf_teams')
         .insert({ tournament_id: selectedTournament, team_id: teamsId, team_number: 0 })
         .select().single();
       if (teamError) throw teamError;
+
+      // A returning team entered under a new name renames the team from this year
+      // on, pinning earlier years to the name they played under.
+      if (team.name !== identityName) {
+        await applyTeamName({ teamsId, golfTeamId: newTeam.id, newName: team.name });
+      }
 
       if (team.members.length > 0) {
         const playerInserts = team.members.map((m, i) => ({
@@ -624,6 +646,7 @@ export default function TeamBuilder() {
         id: newTeam.id,
         teams_id: teamsId,
         name: team.name,
+        identityName: identityName || team.name,
         members: team.members.map(m => ({
           player_name: m.first_name ? `${m.first_name} ${m.last_name}` : (m.player_name || ''),
           handicap: m.golf_handicap ?? m.handicap ?? null,
@@ -662,11 +685,18 @@ export default function TeamBuilder() {
           }
         }
 
+        const identityName = team.teams_id
+          ? (teamCatalog.find(t => t.id === team.teams_id)?.name ?? null)
+          : team.name;
         const { data: newTeam, error: teamError } = await supabase
           .from('golf_teams')
           .insert({ tournament_id: selectedTournament, team_id: teamsId, team_number: 0 })
           .select().single();
         if (teamError) throw teamError;
+
+        if (team.name !== identityName) {
+          await applyTeamName({ teamsId, golfTeamId: newTeam.id, newName: team.name });
+        }
 
         if (team.members.length > 0) {
           const playerInserts = team.members.map((m, i) => ({
@@ -968,6 +998,7 @@ export default function TeamBuilder() {
                               type="text"
                               value={editingTeamData.name}
                               onChange={e => setEditingTeamData(prev => ({ ...prev, name: e.target.value }))}
+                              title={`Sets the name for ${currentTournament?.year || 'this year'} only`}
                               className="text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-primary-300 focus:border-primary-500 focus:ring-0 px-0 py-0.5 bg-transparent w-full mr-2"
                             />
                           ) : (
@@ -975,6 +1006,14 @@ export default function TeamBuilder() {
                           )}
                           <span className="text-xs text-gray-400 flex-shrink-0">{displayMembers.length}/4</span>
                         </div>
+
+                        {(isEditing || team.name !== team.identityName) && team.identityName && (
+                          <p className="-mt-1 mb-2 text-xs text-gray-400 truncate">
+                            {team.name !== team.identityName
+                              ? `Normally “${team.identityName}”`
+                              : `Renaming applies to ${currentTournament?.year || 'this year'} only`}
+                          </p>
+                        )}
 
                         <div className="space-y-1 mb-2">
                           {displayMembers.map((m, i) => (
@@ -1077,34 +1116,33 @@ export default function TeamBuilder() {
                           isOver ? 'border-primary-400 bg-primary-50' : 'border-dashed border-gray-300 dark:border-night-600'
                         }`}
                       >
-                        {/* A returning team keeps its name — renaming here would rename
-                            it for every year it has played — so it's shown, not edited. */}
-                        {team.teams_id ? (
-                          <div className="mb-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                                {team.name}
-                              </span>
-                              <button
-                                onClick={() => handleUnlinkPendingTeam(teamIdx)}
-                                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
-                                title="Make this a new team instead"
-                              >
-                                Unlink
-                              </button>
-                            </div>
-                            <span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                        {/* Editing the name of a returning team sets it for this year
+                            only — past years keep the name they were played under. */}
+                        <input
+                          type="text"
+                          value={team.name}
+                          onChange={e => handleTeamNameChange(teamIdx, e.target.value)}
+                          className="block w-full text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-night-700 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-1 bg-transparent"
+                          placeholder="Team name"
+                        />
+                        {team.teams_id && (
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
                               Returning{team.lastPlayed ? ` — last played ${team.lastPlayed}` : ''}
                             </span>
+                            <button
+                              onClick={() => handleUnlinkPendingTeam(teamIdx)}
+                              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+                              title="Make this a separate new team instead"
+                            >
+                              Unlink
+                            </button>
                           </div>
-                        ) : (
-                          <input
-                            type="text"
-                            value={team.name}
-                            onChange={e => handleTeamNameChange(teamIdx, e.target.value)}
-                            className="block w-full text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-night-700 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-2 bg-transparent"
-                            placeholder="Team name"
-                          />
+                        )}
+                        {team.teams_id && team.name !== team.identityName && (
+                          <p className="-mt-1 mb-2 text-xs text-gray-400 truncate" title={`Known as "${team.identityName}" in other years`}>
+                            Normally “{team.identityName}”
+                          </p>
                         )}
 
                         {/* Members */}

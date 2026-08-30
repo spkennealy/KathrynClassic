@@ -28,6 +28,7 @@ export default function TournamentHistory() {
             .from('golf_teams')
             .select(`
               id,
+              display_name,
               teams ( name ),
               golf_team_players (
                 player_name,
@@ -48,7 +49,7 @@ export default function TournamentHistory() {
               .map(p => p.player_name);
 
             championInfo = {
-              team_name: winningTeam.teams?.name,
+              team_name: winningTeam.display_name || winningTeam.teams?.name,
               players: players
             };
           }

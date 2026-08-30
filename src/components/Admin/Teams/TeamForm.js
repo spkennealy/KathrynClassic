@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
+import { applyTeamName } from '../../../utils/teamNames';
 
 export default function TeamForm({ team, onClose, onSave }) {
   const [name, setName] = useState('');
@@ -44,12 +45,10 @@ export default function TeamForm({ team, onClose, onSave }) {
           changes: { name: name.trim() },
         });
       } else {
-        const { error: updateError } = await supabase
-          .from('teams')
-          .update({ name: name.trim() })
-          .eq('id', team.team_id);
-
-        if (updateError) throw updateError;
+        // Renaming the team here renames it from its most recent year onward;
+        // earlier years are pinned to the name they played under, so past
+        // leaderboards and tournament history keep saying what actually happened.
+        const result = await applyTeamName({ teamsId: team.team_id, newName: name.trim() });
 
         if ((team.team_name || '') !== name.trim()) {
           await logAudit({
@@ -58,6 +57,9 @@ export default function TeamForm({ team, onClose, onSave }) {
             entityId: team.team_id,
             entityLabel: name.trim(),
             changes: { name: { from: team.team_name || null, to: name.trim() } },
+            metadata: result.frozenYears.length
+              ? { years_pinned_to_previous_name: result.frozenYears }
+              : undefined,
           });
         }
       }
@@ -104,6 +106,11 @@ export default function TeamForm({ team, onClose, onSave }) {
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               placeholder="e.g., The Eagles, Dream Team"
             />
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {isCreateMode
+                ? 'What this team is currently known as. Each year can play under its own name, set in Team Builder.'
+                : 'Renaming applies from the team’s most recent tournament onward. Earlier years keep the name they played under, so past leaderboards and history are unchanged.'}
+            </p>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">

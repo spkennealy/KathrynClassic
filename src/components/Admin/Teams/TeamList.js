@@ -29,6 +29,7 @@ export default function TeamList() {
           golf_teams (
             id,
             team_number,
+            display_name,
             total_score,
             score_to_par,
             position,
@@ -60,9 +61,19 @@ export default function TeamList() {
           .map(p => p.tournaments.year)
           .filter(Boolean);
         const draftParticipations = allParticipations.filter(p => !p.tournaments?.teams_published_at);
+        // Each year can play under its own name, so the card leads with the most
+        // recent one — that's what people will recognise the team by now — while
+        // `identity_name` stays the general name that Edit changes.
+        const nameForYear = (p) => p?.display_name || team.name;
+        const latestName = nameForYear(mostRecent);
         return {
           team_id: team.id,
-          team_name: team.name,
+          team_name: latestName,
+          identity_name: team.name,
+          // Years that played under something other than the current name.
+          past_names: participations
+            .filter(p => p.tournaments?.year && nameForYear(p) !== latestName)
+            .map(p => ({ year: p.tournaments.year, name: nameForYear(p) })),
           tournament_years: participations.map(p => p.tournaments?.year).filter(Boolean),
           published_years: [...new Set(publishedYears)],
           draft_years: draftParticipations
@@ -203,6 +214,24 @@ export default function TeamList() {
                   {team.member_count} {team.member_count === 1 ? 'player' : 'players'}
                 </span>
               </div>
+
+              {team.identity_name !== team.team_name && (
+                <p className="-mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400">
+                  General name: {team.identity_name}
+                </p>
+              )}
+
+              {team.past_names.length > 0 && (
+                <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                  Played as{' '}
+                  {team.past_names.map((p, i) => (
+                    <span key={p.year}>
+                      {i > 0 && ', '}
+                      {p.year} “{p.name}”
+                    </span>
+                  ))}
+                </p>
+              )}
 
               {team.tournament_years && team.tournament_years.length > 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
