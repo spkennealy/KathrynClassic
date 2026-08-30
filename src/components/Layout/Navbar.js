@@ -3,19 +3,17 @@ import { Link, useLocation } from 'react-router-dom';
 import { Disclosure } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import ThemeToggle from './ThemeToggle';
+import { DONATE_URL } from '../../config/links';
 
+// "Home" is deliberately absent — the title/logo on the left links there.
 const navigation = [
-  { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
   { name: 'Schedule', href: '/schedule' },
-  { name: 'Registration', href: '/registration' },
+  { name: 'Register', href: '/registration' },
   { name: 'Rules', href: '/rules' },
   { name: 'Leaderboard', href: '/leaderboard' },
   { name: 'History', href: '/history' },
 ];
-
-// External donation page (CJD Foundation via QGiv).
-const DONATE_URL = 'https://secure.qgiv.com/event/cjdfoundation/account/2161631/';
 
 export default function Navbar() {
   const location = useLocation();
@@ -27,9 +25,32 @@ export default function Navbar() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-2 md:gap-4 py-4 md:py-5">
               <div className="min-w-0 flex-1 md:flex-none text-left">
-                <Link to="/" className="block">
-                  <h1 className="text-primary-600 dark:text-primary-400 font-serif text-xl sm:text-2xl lg:text-3xl font-bold leading-tight">The Kathryn Classic</h1>
-                  <p className="text-primary-600 dark:text-primary-400 text-xs sm:text-sm font-medium md:text-center">A weekend of family, golf &amp; giving</p>
+                <Link to="/" className="flex items-center gap-3">
+                  {/* Official logo, wordmark cropped off since the title sits right
+                      beside it. Paper background is keyed out to transparency, with a
+                      mint recolour for dark mode where the original green would vanish.
+                      Hidden on the narrowest screens, where the bar is already full
+                      with the Donate button and menu toggle. */}
+                  <span className="hidden sm:block flex-shrink-0">
+                    <img
+                      src="/kc_logo_mark.png"
+                      alt=""
+                      width={681}
+                      height={270}
+                      className="dark:hidden h-11 lg:h-14 w-auto"
+                    />
+                    <img
+                      src="/kc_logo_mark_dark.png"
+                      alt=""
+                      width={681}
+                      height={270}
+                      className="hidden dark:block h-11 lg:h-14 w-auto"
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <h1 className="text-primary-600 dark:text-primary-400 font-serif text-xl sm:text-2xl lg:text-3xl font-bold leading-tight">The Kathryn Classic</h1>
+                    <p className="text-primary-600 dark:text-primary-400 text-xs sm:text-sm font-medium md:text-center">A weekend of family, golf &amp; giving</p>
+                  </div>
                 </Link>
               </div>
               <div className="hidden md:block">
@@ -47,6 +68,7 @@ export default function Navbar() {
                       {item.name}
                     </Link>
                   ))}
+                  <span className="h-5 w-px bg-gray-300 dark:bg-night-600" aria-hidden="true" />
                   <ThemeToggle />
                   <a
                     href={DONATE_URL}

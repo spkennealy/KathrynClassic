@@ -16,6 +16,10 @@ export default function TeamBuilder() {
   const [golfers, setGolfers] = useState([]);
   const [existingTeamContactIds, setExistingTeamContactIds] = useState(new Set());
   const [existingTeams, setExistingTeams] = useState([]);
+  // Every team name on record, with the years it has played. A team is an identity
+  // that recurs across years (a family, a sponsor) while its roster changes, so the
+  // builder lets you re-enter one for this year and fill it with different players.
+  const [teamCatalog, setTeamCatalog] = useState([]);
 
   // Pending (unsaved) teams — includes manually created and algorithm-suggested
   const [pendingTeams, setPendingTeams] = useState([]);
@@ -97,6 +101,24 @@ export default function TeamBuilder() {
     return !existingTeamContactIds.has(g.contact_id);
   });
 
+  // Teams that could be re-entered for this year: everything on record that isn't
+  // already saved or queued for this tournament. `lastPlayed` and the count of
+  // last roster's players who have registered again are what make a returning
+  // team recognisable in the picker.
+  const claimedTeamsIds = new Set(
+    [...existingTeams.map(t => t.teams_id), ...pendingTeams.map(t => t.teams_id)].filter(Boolean)
+  );
+  const availableReturningIds = (lastRoster = []) =>
+    lastRoster.filter(
+      contactId =>
+        golfers.some(g => g.contact_id === contactId) &&
+        !existingTeamContactIds.has(contactId) &&
+        !pendingMemberIds.has(contactId)
+    );
+  const reusableTeams = teamCatalog
+    .filter(t => !claimedTeamsIds.has(t.id))
+    .map(t => ({ ...t, returningCount: availableReturningIds(t.lastRoster).length }));
+
   useEffect(() => {
     fetchTournaments();
   }, []);
@@ -121,6 +143,42 @@ export default function TeamBuilder() {
       setLoading(true);
       setError(null);
       setPendingTeams([]);
+
+      const { data: catalog, error: catalogError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          golf_teams (
+            deleted_at,
+            tournament_id,
+            tournaments ( year ),
+            golf_team_players ( contact_id, player_order )
+          )
+        `)
+        .is('golf_teams.deleted_at', null)
+        .order('name');
+      if (catalogError) throw catalogError;
+      setTeamCatalog(
+        (catalog || []).map(t => {
+          const participations = (t.golf_teams || []).sort(
+            (a, b) => (b.tournaments?.year || 0) - (a.tournaments?.year || 0)
+          );
+          // The team's most recent outing in some *other* year — the roster we
+          // offer to carry forward when it's re-entered for this one.
+          const previous = participations.find(gt => gt.tournament_id !== selectedTournament);
+          return {
+            id: t.id,
+            name: t.name,
+            years: participations.map(gt => gt.tournaments?.year).filter(Boolean),
+            lastPlayed: previous?.tournaments?.year ?? null,
+            lastRoster: (previous?.golf_team_players || [])
+              .sort((a, b) => a.player_order - b.player_order)
+              .map(p => p.contact_id)
+              .filter(Boolean),
+          };
+        })
+      );
 
       const { data: golfEvent, error: eventError } = await supabase
         .from('tournament_events')
@@ -177,6 +235,7 @@ export default function TeamBuilder() {
         .select(`
           id,
           team_number,
+          team_id,
           teams ( name ),
           golf_team_players ( player_name, contact_id, handicap, player_order )
         `)
@@ -224,6 +283,7 @@ export default function TeamBuilder() {
       setExistingTeams(
         (teams || []).map(team => ({
           id: team.id,
+          teams_id: team.team_id,
           name: team.teams?.name || `Team ${team.team_number || ''}`,
           members: (team.golf_team_players || [])
             .sort((a, b) => a.player_order - b.player_order)
@@ -256,8 +316,38 @@ export default function TeamBuilder() {
   const handleAddNewTeam = () => {
     setPendingTeams(prev => [
       ...prev,
-      { name: `Team ${prev.length + existingTeams.length + 1}`, members: [] },
+      { name: `Team ${prev.length + existingTeams.length + 1}`, teams_id: null, members: [] },
     ]);
+  };
+
+  // --- Re-enter an existing team for this year ---
+  // Links the pending team to its teams row, so saving adds a new participation
+  // under the same identity rather than creating a look-alike name. The roster is
+  // seeded with last time's players who have registered again and aren't already
+  // spoken for — the rest of the card is filled by hand, since a returning team
+  // often sends different people.
+  const handleReuseTeam = (teamsId) => {
+    const team = reusableTeams.find(t => t.id === teamsId);
+    if (!team) return;
+    const returningMembers = availableReturningIds(team.lastRoster)
+      .slice(0, 4)
+      .map(contactId => ({
+        ...golfers.find(g => g.contact_id === contactId),
+        reasons: ['Returning player'],
+      }));
+    setPendingTeams(prev => [
+      ...prev,
+      { name: team.name, teams_id: team.id, lastPlayed: team.lastPlayed, members: returningMembers },
+    ]);
+  };
+
+  // Drop the link so the card goes back to being a brand new, freely named team.
+  const handleUnlinkPendingTeam = (teamIdx) => {
+    setPendingTeams(prev => {
+      const updated = [...prev];
+      updated[teamIdx] = { ...updated[teamIdx], teams_id: null, lastPlayed: null };
+      return updated;
+    });
   };
 
   // --- Drag & Drop ---
@@ -439,14 +529,18 @@ export default function TeamBuilder() {
     setSaving(true);
     setError(null);
     try {
-      let teamsId;
-      const { data: existing } = await supabase.from('teams').select('id').ilike('name', team.name).maybeSingle();
-      if (existing) {
-        teamsId = existing.id;
-      } else {
-        const { data: newRow, error: e } = await supabase.from('teams').insert({ name: team.name }).select().single();
-        if (e) throw e;
-        teamsId = newRow.id;
+      // A re-entered team already knows its identity; otherwise fall back to
+      // matching on name so retyping an existing team's name still reuses it.
+      let teamsId = team.teams_id;
+      if (!teamsId) {
+        const { data: existing } = await supabase.from('teams').select('id').ilike('name', team.name).maybeSingle();
+        if (existing) {
+          teamsId = existing.id;
+        } else {
+          const { data: newRow, error: e } = await supabase.from('teams').insert({ name: team.name }).select().single();
+          if (e) throw e;
+          teamsId = newRow.id;
+        }
       }
 
       const { data: newTeam, error: teamError } = await supabase
@@ -480,6 +574,7 @@ export default function TeamBuilder() {
       setExistingTeamContactIds(newIds);
       setExistingTeams(prev => [...prev, {
         id: newTeam.id,
+        teams_id: teamsId,
         name: team.name,
         members: team.members.map(m => ({
           player_name: m.first_name ? `${m.first_name} ${m.last_name}` : (m.player_name || ''),
@@ -507,14 +602,16 @@ export default function TeamBuilder() {
     try {
       for (const team of snapshot) {
         if (!team.name.trim()) continue;
-        let teamsId;
-        const { data: existing } = await supabase.from('teams').select('id').ilike('name', team.name).maybeSingle();
-        if (existing) {
-          teamsId = existing.id;
-        } else {
-          const { data: newRow, error: e } = await supabase.from('teams').insert({ name: team.name }).select().single();
-          if (e) throw e;
-          teamsId = newRow.id;
+        let teamsId = team.teams_id;
+        if (!teamsId) {
+          const { data: existing } = await supabase.from('teams').select('id').ilike('name', team.name).maybeSingle();
+          if (existing) {
+            teamsId = existing.id;
+          } else {
+            const { data: newRow, error: e } = await supabase.from('teams').insert({ name: team.name }).select().single();
+            if (e) throw e;
+            teamsId = newRow.id;
+          }
         }
 
         const { data: newTeam, error: teamError } = await supabase
@@ -612,6 +709,32 @@ export default function TeamBuilder() {
         >
           + Add Team
         </button>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Returning team
+          </label>
+          <Select
+            value=""
+            onChange={e => handleReuseTeam(e.target.value)}
+            disabled={loading || reusableTeams.length === 0}
+            placeholder={reusableTeams.length === 0 ? 'None available' : 'Add a team from a past year…'}
+            className="block w-full sm:w-64"
+          >
+            {reusableTeams.map(t => (
+              <option key={t.id} value={t.id}>
+                {[
+                  t.name,
+                  t.lastPlayed ? `last played ${t.lastPlayed}` : null,
+                  t.returningCount > 0
+                    ? `${t.returningCount} player${t.returningCount !== 1 ? 's' : ''} back`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' — ')}
+              </option>
+            ))}
+          </Select>
+        </div>
         <button
           onClick={handleGenerate}
           disabled={loading || golfers.length === 0}
@@ -884,14 +1007,35 @@ export default function TeamBuilder() {
                           isOver ? 'border-primary-400 bg-primary-50' : 'border-dashed border-gray-300 dark:border-night-600'
                         }`}
                       >
-                        {/* Editable name */}
-                        <input
-                          type="text"
-                          value={team.name}
-                          onChange={e => handleTeamNameChange(teamIdx, e.target.value)}
-                          className="block w-full text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-night-700 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-2 bg-transparent"
-                          placeholder="Team name"
-                        />
+                        {/* A returning team keeps its name — renaming here would rename
+                            it for every year it has played — so it's shown, not edited. */}
+                        {team.teams_id ? (
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                {team.name}
+                              </span>
+                              <button
+                                onClick={() => handleUnlinkPendingTeam(teamIdx)}
+                                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+                                title="Make this a new team instead"
+                              >
+                                Unlink
+                              </button>
+                            </div>
+                            <span className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                              Returning{team.lastPlayed ? ` — last played ${team.lastPlayed}` : ''}
+                            </span>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={team.name}
+                            onChange={e => handleTeamNameChange(teamIdx, e.target.value)}
+                            className="block w-full text-sm font-semibold text-gray-900 dark:text-gray-100 border-0 border-b border-gray-200 dark:border-night-700 focus:border-primary-500 focus:ring-0 px-0 py-0.5 mb-2 bg-transparent"
+                            placeholder="Team name"
+                          />
+                        )}
 
                         {/* Members */}
                         <div className="space-y-1 mb-2">
@@ -929,7 +1073,8 @@ export default function TeamBuilder() {
                           <div className="flex flex-wrap gap-1 mb-2">
                             {team.members.flatMap(m => m.reasons || []).filter((r, i, a) => a.indexOf(r) === i).map((reason, ri) => (
                               <span key={ri} className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                reason.startsWith('Registered') ? 'bg-blue-100 text-blue-700'
+                                reason.startsWith('Returning') ? 'bg-green-100 text-green-700'
+                                : reason.startsWith('Registered') ? 'bg-blue-100 text-blue-700'
                                 : reason.startsWith('Preferred') || reason.startsWith('Prefers') ? 'bg-purple-100 text-purple-700'
                                 : 'bg-gray-100 dark:bg-night-900 text-gray-600 dark:text-gray-400'
                               }`}>{reason}</span>

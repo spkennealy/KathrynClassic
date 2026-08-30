@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { DONATE_URL } from '../../config/links';
 
 const videoExtensions = ['.mov', '.mp4', '.webm'];
 const isVideo = (src) => videoExtensions.some(ext => src.toLowerCase().endsWith(ext));
@@ -219,7 +220,7 @@ export default function About() {
                     Your contribution supports vital research and provides critical resources for families affected by Creutzfeldt-Jakob disease.
                   </p>
                   <a
-                    href="https://secure.qgiv.com/event/cjdfoundation/account/2161631/"
+                    href={DONATE_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-all hover:scale-105"

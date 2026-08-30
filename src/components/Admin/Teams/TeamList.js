@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
 import TeamForm from './TeamForm';
+import ConfirmDialog from '../ConfirmDialog';
 
 export default function TeamList() {
   const [teams, setTeams] = useState([]);
@@ -9,6 +10,8 @@ export default function TeamList() {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teamToDelete, setTeamToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchTeams();
@@ -29,7 +32,8 @@ export default function TeamList() {
             total_score,
             score_to_par,
             position,
-            tournaments ( year ),
+            deleted_at,
+            tournaments ( year, teams_published_at ),
             golf_team_players ( player_name, handicap, player_order )
           )
         `)
@@ -38,14 +42,35 @@ export default function TeamList() {
       if (teamsError) throw teamsError;
 
       const transformedTeams = (teamsData || []).map(team => {
-        const participations = (team.golf_teams || []).sort(
+        // Soft-deleted participations are filtered here rather than in the query:
+        // they're hidden from the card, but they still hold a foreign key to the
+        // team, so the delete rules below have to account for them.
+        const allParticipations = (team.golf_teams || []).sort(
           (a, b) => (b.tournaments?.year || 0) - (a.tournaments?.year || 0)
         );
+        const participations = allParticipations.filter(p => !p.deleted_at);
         const mostRecent = participations[0];
+        // A team that has played a published year is tournament history and can't
+        // be deleted. One that exists only in draft years (or not at all) is still
+        // scratch work, so it can go along with those draft participations —
+        // including any sitting in the recycle bin, which would otherwise block
+        // the delete with a foreign key error.
+        const publishedYears = allParticipations
+          .filter(p => p.tournaments?.teams_published_at)
+          .map(p => p.tournaments.year)
+          .filter(Boolean);
+        const draftParticipations = allParticipations.filter(p => !p.tournaments?.teams_published_at);
         return {
           team_id: team.id,
           team_name: team.name,
           tournament_years: participations.map(p => p.tournaments?.year).filter(Boolean),
+          published_years: [...new Set(publishedYears)],
+          draft_years: draftParticipations
+            .filter(p => !p.deleted_at)
+            .map(p => p.tournaments?.year)
+            .filter(Boolean),
+          draft_participation_ids: draftParticipations.map(p => p.id),
+          has_published: publishedYears.length > 0,
           member_count: mostRecent?.golf_team_players?.length || 0,
           members: mostRecent?.golf_team_players
             ?.sort((a, b) => a.player_order - b.player_order)
@@ -76,32 +101,49 @@ export default function TeamList() {
     setShowForm(true);
   };
 
-  const handleDelete = async (teamId, teamName) => {
-    if (!window.confirm(`Are you sure you want to delete team "${teamName}"? This will also remove all of their tournament scores and leaderboard entries.`)) {
-      return;
-    }
-
+  // golf_teams.team_id is ON DELETE RESTRICT, so a team can only be removed once
+  // it has no participations left. Draft ones are scratch work and go with it;
+  // a team that has played a published year keeps its history and isn't deletable
+  // at all (the button is hidden — unpublish that year first).
+  const handleDelete = async () => {
+    if (!teamToDelete || teamToDelete.has_published) return;
+    setDeleting(true);
+    setError(null);
     try {
-      const { error } = await supabase
+      if (teamToDelete.draft_participation_ids.length > 0) {
+        const { error: partErr } = await supabase
+          .from('golf_teams')
+          .delete()
+          .in('id', teamToDelete.draft_participation_ids);
+        if (partErr) throw partErr;
+      }
+
+      const { error: teamErr } = await supabase
         .from('teams')
         .delete()
-        .eq('id', teamId);
-
-      if (error) throw error;
+        .eq('id', teamToDelete.team_id);
+      if (teamErr) throw teamErr;
 
       await logAudit({
         action: 'team.deleted',
         entityType: 'team',
-        entityId: teamId,
-        entityLabel: teamName,
-        changes: { name: teamName },
-        metadata: { cascade: 'tournament scores and leaderboard entries removed' },
+        entityId: teamToDelete.team_id,
+        entityLabel: teamToDelete.team_name,
+        changes: { name: teamToDelete.team_name },
+        metadata: {
+          permanent: true,
+          draft_years_removed: teamToDelete.draft_years,
+        },
       });
 
+      setTeamToDelete(null);
       fetchTeams();
     } catch (err) {
       console.error('Error deleting team:', err);
-      alert('Failed to delete team: ' + err.message);
+      setError('Failed to delete team: ' + err.message);
+      setTeamToDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -123,16 +165,14 @@ export default function TeamList() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="rounded-md bg-red-50 p-4">
-        <p className="text-sm text-red-800">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -166,7 +206,10 @@ export default function TeamList() {
 
               {team.tournament_years && team.tournament_years.length > 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Tournaments: {team.tournament_years.join(', ')}
+                  Tournaments:{' '}
+                  {team.tournament_years
+                    .map(year => (team.draft_years.includes(year) ? `${year} (draft)` : year))
+                    .join(', ')}
                 </p>
               )}
 
@@ -192,12 +235,22 @@ export default function TeamList() {
                 >
                   Edit
                 </button>
-                <button
-                  onClick={() => handleDelete(team.team_id, team.team_name)}
-                  className="inline-flex justify-center items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white dark:bg-night-800 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  Delete
-                </button>
+                {team.has_published ? (
+                  <span
+                    className="inline-flex items-center px-3 py-2 text-sm text-gray-400"
+                    title={`Played in published tournaments (${team.published_years.join(', ')}). Unpublish that year in Team Builder to remove the team.`}
+                  >
+                    Published
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setTeamToDelete(team)}
+                    disabled={deleting}
+                    className="inline-flex justify-center items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white dark:bg-night-800 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -224,6 +277,24 @@ export default function TeamList() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(teamToDelete)}
+        onClose={() => setTeamToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Team"
+        message={
+          teamToDelete
+            ? `Permanently delete "${teamToDelete.team_name}"?${
+                teamToDelete.draft_years.length > 0
+                  ? ` Its draft ${teamToDelete.draft_years.length === 1 ? 'entry' : 'entries'} for ${teamToDelete.draft_years.join(', ')} will be removed too, and those players go back to the unassigned pool in Team Builder.`
+                  : ''
+              } This can't be undone.`
+            : ''
+        }
+        confirmText={deleting ? 'Deleting…' : 'Delete'}
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+      />
 
       {/* Team Form Modal */}
       {showForm && (
