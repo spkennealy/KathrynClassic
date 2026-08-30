@@ -31,6 +31,7 @@ export default function AdminLayout() {
     { name: 'Events', href: '/admin/events', icon: '📅' },
     { name: 'Registrations', href: '/admin/registrations', icon: '✍️' },
     { name: 'Financials', href: '/admin/financials', icon: '💰' },
+    { name: 'Vendors', href: '/admin/vendors', icon: '🏪' },
     { name: 'Contacts', href: '/admin/contacts', icon: '👥' },
     { name: 'Communications', href: '/admin/communications', icon: '📧' },
     { name: 'Rules', href: '/admin/rules', icon: '📋' },

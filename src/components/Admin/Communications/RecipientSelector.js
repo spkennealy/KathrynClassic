@@ -195,6 +195,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search recipients by name or email…"
+        spellCheck={false}
         className="block w-full rounded-lg border border-gray-400 dark:border-night-600 py-2.5 px-3 shadow-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-0 sm:text-sm"
       />
 

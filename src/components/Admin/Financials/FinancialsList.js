@@ -137,8 +137,8 @@ function PaymentModal({ registrant, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-md w-full modal-panel overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Payment' : 'Record Payment'}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -297,7 +297,7 @@ export default function FinancialsList() {
           .eq('tournament_year', parseInt(selectedYear, 10)),
         supabase
           .from('expenses')
-          .select('*')
+          .select('*, vendors ( id, name ), tournament_events ( id, event_name ), paid_by:contacts ( first_name, last_name )')
           .eq('tournament_id', selectedTournament.id)
           .is('deleted_at', null)
           .order('expense_date', { ascending: false }),
@@ -339,12 +339,15 @@ export default function FinancialsList() {
     const totalPaid = registrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
     const totalDonations = donations.reduce((s, d) => s + (Number(d.amount) || 0), 0);
     const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const expensesPaid = expenses.reduce((s, e) => s + (e.is_paid ? Number(e.amount) || 0 : 0), 0);
     return {
       registrations: registrants.length,
       totalDue,
       totalPaid,
       totalDonations,
       totalExpenses,
+      expensesPaid,
+      expensesUnpaid: totalExpenses - expensesPaid,
       outstanding: totalDue - totalPaid,
       net: totalPaid + totalDonations - totalExpenses,
     };
@@ -408,7 +411,7 @@ export default function FinancialsList() {
         changes: {
           description: expenseToDelete.description,
           category: expenseToDelete.category,
-          vendor: expenseToDelete.vendor,
+          vendor: expenseToDelete.vendors?.name || null,
           amount: expenseToDelete.amount,
           expense_date: expenseToDelete.expense_date,
         },
@@ -464,7 +467,7 @@ export default function FinancialsList() {
       )}
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
         <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
           <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Registrations</dt>
           <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
@@ -495,6 +498,18 @@ export default function FinancialsList() {
             incl. {formatCurrency(totals.totalDonations)} donations &middot; {formatCurrency(totals.totalExpenses)} expenses
           </p>
         </div>
+        <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Total Expenses</dt>
+          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+            {formatCurrency(totals.totalExpenses)}
+          </dd>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {formatCurrency(totals.expensesPaid)} paid &middot;{' '}
+            <span className={totals.expensesUnpaid > 0 ? 'text-amber-600 font-medium' : ''}>
+              {formatCurrency(totals.expensesUnpaid)} unpaid
+            </span>
+          </p>
+        </div>
       </div>
 
       {/* Registrants table */}
@@ -506,6 +521,7 @@ export default function FinancialsList() {
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
               <input
                 type="text"
+                spellCheck={false}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Name or email..."
@@ -673,7 +689,9 @@ export default function FinancialsList() {
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Description</th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Category</th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Vendor</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Paid By</th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Method</th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
               <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount</th>
               <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
             </tr>
@@ -684,10 +702,27 @@ export default function FinancialsList() {
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400">
                   {e.expense_date ? new Date(e.expense_date).toLocaleDateString() : '—'}
                 </td>
-                <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">{e.description}</td>
+                <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
+                  {e.description}
+                  {e.tournament_events?.event_name && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{e.tournament_events.event_name}</div>
+                  )}
+                </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.category || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.vendor || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {e.vendors?.name || '—'}
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {e.paid_by ? `${e.paid_by.first_name} ${e.paid_by.last_name}` : '—'}
+                </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.payment_method || '—'}</td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm">
+                  <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                    e.is_paid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {e.is_paid ? 'Paid' : 'Unpaid'}
+                  </span>
+                </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                   {formatCurrency(e.amount)}
                 </td>
@@ -711,7 +746,7 @@ export default function FinancialsList() {
           {expenses.length > 0 && (
             <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
               <tr>
-                <td colSpan={5} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <td colSpan={7} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Total Expenses
                 </td>
                 <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">

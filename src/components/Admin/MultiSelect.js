@@ -127,6 +127,7 @@ export default function MultiSelect({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search…"
+                spellCheck={false}
                 className="block w-full rounded-md border border-gray-300 dark:border-night-600 py-1.5 px-2 text-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-0"
               />
             </div>

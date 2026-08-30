@@ -169,6 +169,7 @@ export default function AuditLog() {
             <input
               type="text"
               placeholder="Search by record or action..."
+              spellCheck={false}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"

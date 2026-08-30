@@ -444,6 +444,7 @@ export default function RegistrationList() {
             type="text"
             id="search"
             placeholder="Search by name, email, tournament, events, payment status, or date..."
+            spellCheck={false}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="block w-full"

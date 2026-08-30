@@ -306,6 +306,7 @@ export default function SavedViewsBar({ scope, tree, onLoad, isKnownField }) {
               type="text"
               value={search}
               placeholder="Search views…"
+              spellCheck={false}
               onFocus={() => setSearchOpen(true)}
               onChange={(e) => {
                 setSearch(e.target.value);

@@ -5,6 +5,7 @@ import { normalizePhone } from '../../../utils/phone';
 import { normalizeEmail } from '../../../utils/email';
 import { logAudit, diffFields } from '../../../utils/audit';
 import { sendGroupConfirmationEmails } from '../../../utils/registrationEmail';
+import { syncTeamPlayerHandicap } from '../../../utils/golfTeams';
 
 const REGISTRATION_FIELDS = ['contact_id', 'payment_status', 'golf_handicap', 'preferred_teammates'];
 
@@ -120,6 +121,7 @@ function AttendeeCard({
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
               <input
                 type="email"
+                spellCheck={false}
                 value={attendee.newContactData.email}
                 onChange={(e) => onUpdate(index, {
                   newContactData: { ...attendee.newContactData, email: e.target.value }
@@ -131,6 +133,7 @@ function AttendeeCard({
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
               <input
                 type="tel"
+                spellCheck={false}
                 value={attendee.newContactData.phone}
                 onChange={(e) => onUpdate(index, {
                   newContactData: { ...attendee.newContactData, phone: e.target.value }
@@ -160,6 +163,7 @@ function AttendeeCard({
               onFocus={() => onUpdate(index, { showContactDropdown: true })}
               onBlur={() => setTimeout(() => onUpdate(index, { showContactDropdown: false }), 200)}
               placeholder="Search by name or email..."
+              spellCheck={false}
               className="mt-1 block w-full"
               autoComplete="off"
             />
@@ -815,6 +819,15 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
         if (updateError) throw updateError;
 
+        // Push the handicap through to any golf team this player is already on
+        // so the Team Builder / team list / leaderboard don't show a stale
+        // snapshot from when the team was built.
+        await syncTeamPlayerHandicap({
+          tournamentId: registration.tournament_id,
+          contactId: formData.contact_id,
+          handicap: formData.golf_handicap,
+        });
+
         const registrationChanges = diffFields(
           {
             contact_id: registration.contact_id,
@@ -981,8 +994,8 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
   // === Render ===
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
+      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full modal-panel overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {isCreateMode
@@ -1102,6 +1115,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                       <input
                         type="email"
+                        spellCheck={false}
                         value={newContactData.email}
                         onChange={(e) => setNewContactData({ ...newContactData, email: e.target.value })}
                         className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
@@ -1111,6 +1125,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
                       <input
                         type="tel"
+                        spellCheck={false}
                         value={newContactData.phone}
                         onChange={(e) => setNewContactData({ ...newContactData, phone: e.target.value })}
                         className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 text-sm"
@@ -1136,6 +1151,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                       onFocus={() => setShowContactDropdown(true)}
                       onBlur={() => setTimeout(() => setShowContactDropdown(false), 200)}
                       placeholder="Search by name or email..."
+                      spellCheck={false}
                       className="mt-1 block w-full"
                       autoComplete="off"
                     />

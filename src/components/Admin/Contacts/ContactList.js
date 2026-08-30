@@ -427,6 +427,7 @@ export default function ContactList() {
               type="text"
               id="search"
               placeholder="Search by name, email or phone..."
+              spellCheck={false}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="block w-full"

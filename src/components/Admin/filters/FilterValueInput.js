@@ -88,6 +88,7 @@ export default function FilterValueInput({ field, operator, value, onChange, opt
   return (
     <input
       type="text"
+      spellCheck={false}
       className={inputCls}
       placeholder="Value"
       value={value ?? ''}

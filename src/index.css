@@ -44,6 +44,16 @@ body {
     @apply text-gray-500 dark:text-gray-400;
   }
 
+  /* Modal panels: cap height against the *visible* viewport. Plain `vh` on mobile
+     resolves against the large viewport (browser chrome hidden), so a 90vh panel
+     is taller than the screen and its footer buttons sit under the browser bar
+     with no way to scroll to them. `dvh` tracks the chrome; the vh line is the
+     fallback for browsers without it. */
+  .modal-panel {
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+
   .admin-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus,
   .admin-content select:focus,
   .admin-content textarea:focus {

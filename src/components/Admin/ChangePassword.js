@@ -85,6 +85,7 @@ export default function ChangePassword() {
               id="currentPassword"
               name="currentPassword"
               type="password"
+              spellCheck={false}
               required
               className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-night-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
               placeholder="Enter your current password"
@@ -101,6 +102,7 @@ export default function ChangePassword() {
               id="newPassword"
               name="newPassword"
               type="password"
+              spellCheck={false}
               required
               minLength={6}
               className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-night-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
@@ -121,6 +123,7 @@ export default function ChangePassword() {
               id="confirmPassword"
               name="confirmPassword"
               type="password"
+              spellCheck={false}
               required
               minLength={6}
               className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-night-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"

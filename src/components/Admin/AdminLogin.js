@@ -97,6 +97,7 @@ export default function AdminLogin() {
                   id="reset-email"
                   name="email"
                   type="email"
+                  spellCheck={false}
                   autoComplete="email"
                   required
                   className="appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-night-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
@@ -161,6 +162,7 @@ export default function AdminLogin() {
                 id="email"
                 name="email"
                 type="email"
+                spellCheck={false}
                 autoComplete="email"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-night-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
@@ -175,6 +177,7 @@ export default function AdminLogin() {
                 id="password"
                 name="password"
                 type="password"
+                spellCheck={false}
                 autoComplete="current-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-night-600 placeholder-gray-500 text-gray-900 dark:text-gray-100 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"

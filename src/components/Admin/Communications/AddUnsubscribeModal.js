@@ -157,6 +157,7 @@ export default function AddUnsubscribeModal({ isOpen, onClose, onSaved }) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or email…"
+                spellCheck={false}
                 className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
               />
               <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-gray-200 dark:border-night-700 divide-y divide-gray-100 dark:divide-night-700">

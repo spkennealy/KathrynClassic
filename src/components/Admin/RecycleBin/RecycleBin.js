@@ -15,6 +15,7 @@ const RECYCLE_TABLE = {
   events: 'tournament_events',
   teams: 'golf_teams',
   awards: 'tournament_awards',
+  vendors: 'vendors',
 };
 
 // Map a recycle-bin tab type to its audit entity type + a human label.
@@ -25,6 +26,7 @@ const RECYCLE_ENTITY_TYPE = {
   events: 'tournament_event',
   teams: 'golf_team',
   awards: 'award',
+  vendors: 'vendor',
 };
 
 const recycleLabel = (record) => {
@@ -36,6 +38,7 @@ const recycleLabel = (record) => {
     case 'teams': return record.teams?.name || 'Team';
     case 'awards': return record.winner_name
       || (record.contacts ? `${record.contacts.first_name} ${record.contacts.last_name}` : 'Award');
+    case 'vendors': return record.name;
     default: return undefined;
   }
 };
@@ -48,6 +51,7 @@ export default function RecycleBin() {
     events: [],
     teams: [],
     awards: [],
+    vendors: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -146,6 +150,18 @@ export default function RecycleBin() {
         throw new Error(`Awards: ${awardsError.message}`);
       }
 
+      // Fetch deleted vendors
+      const { data: vendors, error: vendorsError } = await supabase
+        .from('vendors')
+        .select('id, name, contact_name, email, phone, category, deleted_at')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+
+      if (vendorsError) {
+        console.error('Error fetching deleted vendors:', vendorsError);
+        throw new Error(`Vendors: ${vendorsError.message}`);
+      }
+
       setDeletedRecords({
         registrations: regs || [],
         contacts: contacts || [],
@@ -153,6 +169,7 @@ export default function RecycleBin() {
         events: events || [],
         teams: teams || [],
         awards: awards || [],
+        vendors: vendors || [],
       });
     } catch (err) {
       console.error('Error fetching deleted records:', err);
@@ -259,6 +276,7 @@ export default function RecycleBin() {
     { id: 'events', name: 'Events', count: deletedRecords.events.length },
     { id: 'teams', name: 'Teams', count: deletedRecords.teams.length },
     { id: 'awards', name: 'Awards', count: deletedRecords.awards.length },
+    { id: 'vendors', name: 'Vendors', count: deletedRecords.vendors.length },
   ];
 
   const renderRecordsList = () => {
@@ -284,6 +302,7 @@ export default function RecycleBin() {
                 {selectedTab === 'events' && 'Event Name'}
                 {selectedTab === 'teams' && 'Team Name'}
                 {selectedTab === 'awards' && 'Winner / Category'}
+                {selectedTab === 'vendors' && 'Vendor'}
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Details
@@ -483,6 +502,37 @@ export default function RecycleBin() {
                 </tr>
               );
             })}
+
+            {selectedTab === 'vendors' && records.map((record) => (
+              <tr key={record.id} className="hover:bg-gray-50 dark:bg-night-700">
+                <td className="py-4 pl-4 pr-3 text-sm">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{record.name || 'Unknown'}</div>
+                  {record.contact_name && (
+                    <div className="text-gray-500 dark:text-gray-400">{record.contact_name}</div>
+                  )}
+                </td>
+                <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {[record.category, record.email, formatPhone(record.phone)].filter(Boolean).join(' \u2022 ') || '-'}
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {formatDate(record.deleted_at)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
+                  <button
+                    onClick={() => handleRestoreClick(record, 'vendors')}
+                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
+                  >
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => handlePermanentDeleteClick(record, 'vendors')}
+                    className="text-red-600 hover:text-red-900 font-medium"
+                  >
+                    Delete Forever
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

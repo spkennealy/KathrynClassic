@@ -29,6 +29,8 @@ export default function TeamBuilder() {
   const [editingTeamData, setEditingTeamData] = useState(null); // { name, members }
 
   // UI
+  const [teamToDelete, setTeamToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [showConfirmAll, setShowConfirmAll] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -179,6 +181,7 @@ export default function TeamBuilder() {
           golf_team_players ( player_name, contact_id, handicap, player_order )
         `)
         .eq('tournament_id', selectedTournament)
+        .is('deleted_at', null)
         .order('teams(name)');
       if (teamsError) throw teamsError;
 
@@ -211,13 +214,24 @@ export default function TeamBuilder() {
         }
       }
       setExistingTeamContactIds(teamContactIds);
+      // The stored handicap is a snapshot from when the team was built, so
+      // prefer the registration's current value when we can link the player.
+      const handicapByContactId = new Map(
+        golferList
+          .filter(g => g.contact_id && g.golf_handicap != null)
+          .map(g => [g.contact_id, g.golf_handicap])
+      );
       setExistingTeams(
         (teams || []).map(team => ({
           id: team.id,
           name: team.teams?.name || `Team ${team.team_number || ''}`,
           members: (team.golf_team_players || [])
             .sort((a, b) => a.player_order - b.player_order)
-            .map(p => ({ player_name: p.player_name, handicap: p.handicap, contact_id: p.contact_id })),
+            .map(p => ({
+              player_name: p.player_name,
+              handicap: handicapByContactId.get(p.contact_id) ?? p.handicap,
+              contact_id: p.contact_id,
+            })),
         }))
       );
     } catch (err) {
@@ -359,6 +373,51 @@ export default function TeamBuilder() {
       setError(err.message || 'Failed to save changes');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Only draft teams can be deleted. They're scratch work, so it's a hard delete:
+  // the golf_teams row goes and golf_team_players cascades with it. Once the year
+  // is published the teams are real history — the button is gone, and unpublishing
+  // is the deliberate step you have to take before removing one. The `teams` name
+  // row is left alone either way: it's shared across years and reused by name when
+  // a team is saved again.
+  const handleDeleteTeam = async () => {
+    if (!teamToDelete || isPublished) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const { error: delErr } = await supabase
+        .from('golf_teams')
+        .delete()
+        .eq('id', teamToDelete.id);
+      if (delErr) throw delErr;
+
+      await logAudit({
+        action: 'golf_team.deleted',
+        entityType: 'golf_team',
+        entityId: teamToDelete.id,
+        entityLabel: teamToDelete.name,
+        // Permanent, so keep the roster in the log — it's the only record left.
+        metadata: {
+          permanent: true,
+          player_count: teamToDelete.members.length,
+          players: teamToDelete.members.map(m => m.player_name).filter(Boolean),
+        },
+      });
+
+      if (editingTeamId === teamToDelete.id) {
+        setEditingTeamId(null);
+        setEditingTeamData(null);
+      }
+      setTeamToDelete(null);
+      await fetchData();
+    } catch (err) {
+      console.error('Error deleting team:', err);
+      setError(err.message || 'Failed to delete team');
+      setTeamToDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -590,7 +649,8 @@ export default function TeamBuilder() {
           {isPublished ? (
             <>
               <strong>Published.</strong> The {currentTournament.year} teams are live on the public
-              leaderboard. Edits you make here go public immediately.
+              leaderboard. Edits you make here go public immediately, and teams can no longer be
+              deleted — unpublish first if you need to remove one.
             </>
           ) : (
             <>
@@ -777,12 +837,24 @@ export default function TeamBuilder() {
                               </button>
                             </>
                           ) : (
-                            <button
-                              onClick={() => handleStartEdit(team)}
-                              className="w-full px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-night-600 hover:bg-gray-50 dark:bg-night-700 rounded"
-                            >
-                              Edit
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleStartEdit(team)}
+                                className={`px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-night-600 hover:bg-gray-50 dark:bg-night-700 rounded ${isPublished ? 'w-full' : 'flex-1'}`}
+                              >
+                                Edit
+                              </button>
+                              {!isPublished && (
+                                <button
+                                  onClick={() => setTeamToDelete(team)}
+                                  disabled={deleting}
+                                  title="Delete this draft team permanently"
+                                  className="px-2 py-1.5 text-xs font-medium text-red-700 border border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -909,6 +981,24 @@ export default function TeamBuilder() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a tournament with golf registrations to get started.</p>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(teamToDelete)}
+        onClose={() => setTeamToDelete(null)}
+        onConfirm={handleDeleteTeam}
+        title="Delete Team"
+        message={
+          teamToDelete
+            ? `Permanently delete "${teamToDelete.name}"?${
+                teamToDelete.members.length > 0
+                  ? ` Its ${teamToDelete.members.length} player${teamToDelete.members.length !== 1 ? 's' : ''} will go back to the unassigned pool.`
+                  : ''
+              } Draft teams aren't kept in the recycle bin, so this can't be undone.`
+            : ''
+        }
+        confirmText={deleting ? 'Deleting…' : 'Delete'}
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+      />
 
       <ConfirmDialog
         isOpen={showConfirmAll}

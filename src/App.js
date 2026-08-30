@@ -31,6 +31,7 @@ import RulesEditor from './components/Admin/Rules/RulesEditor';
 import TournamentList from './components/Admin/Tournaments/TournamentList';
 import EventList from './components/Admin/Events/EventList';
 import AwardList from './components/Admin/Awards/AwardList';
+import VendorList from './components/Admin/Vendors/VendorList';
 import TeeTimesManagement from './components/Admin/TeeTimes/TeeTimesManagement';
 import LeaderboardManagement from './components/Admin/Leaderboard/LeaderboardManagement';
 import TeamList from './components/Admin/Teams/TeamList';
@@ -140,6 +141,7 @@ function App() {
                 <Route path="teams" element={<TeamList />} />
                 <Route path="team-builder" element={<TeamBuilder />} />
                 <Route path="awards" element={<AwardList />} />
+                <Route path="vendors" element={<VendorList />} />
                 <Route path="recycle-bin" element={<RecycleBin />} />
                 <Route path="audit" element={<AuditLog />} />
                 <Route path="change-password" element={<ChangePassword />} />
