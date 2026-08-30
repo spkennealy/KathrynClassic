@@ -271,16 +271,30 @@ export default function TeamScoreForm({ team, tournamentId, onClose, onSave }) {
 
   const recalculatePositions = async () => {
     try {
-      // Fetch all teams for this tournament
-      const { data: teams, error: fetchError } = await supabase
-        .from('golf_teams')
-        .select('id, score_to_par, total_score')
-        .eq('tournament_id', tournamentId)
-        .order('score_to_par', { ascending: true });
+      // Standings rank on net score in a year that applies a team handicap, and on
+      // gross otherwise. The view works that out per year and exposes it as
+      // standings_to_par; sorting client-side keeps this working against a database
+      // that predates that column.
+      const { data: viewRows, error: fetchError } = await supabase
+        .from('leaderboard_view')
+        .select('team_id, score_to_par, standings_to_par')
+        .eq('tournament_id', tournamentId);
 
       if (fetchError) throw fetchError;
 
-      if (!teams || teams.length === 0) return;
+      const teams = (viewRows || [])
+        .map(row => ({
+          id: row.team_id,
+          score_to_par: row.standings_to_par ?? row.score_to_par,
+        }))
+        .sort((a, b) => {
+          // Teams with no score yet fall to the bottom rather than leading.
+          if (a.score_to_par == null) return b.score_to_par == null ? 0 : 1;
+          if (b.score_to_par == null) return -1;
+          return a.score_to_par - b.score_to_par;
+        });
+
+      if (teams.length === 0) return;
 
       // Calculate positions with tie detection
       let currentPosition = 1;

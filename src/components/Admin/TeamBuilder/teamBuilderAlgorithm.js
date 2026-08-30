@@ -7,9 +7,15 @@
  * @param {Array} golfers - Array of golfer objects:
  *   { id, contact_id, first_name, last_name, golf_handicap, preferred_teammates, registration_group_id }
  * @param {Set|Array} existingTeamContactIds - contact_ids already assigned to a team
+ * @param {Object} [options]
+ * @param {Array} [options.priorTeams] - team identities from past years:
+ *   { id, name, lastPlayed, roster: [contact_id] }. A suggestion containing any of
+ *   a past team's players is re-entered under that team rather than named "Team N".
+ * @param {Set|Array} [options.claimedTeamIds] - team identities already used this
+ *   year, which can't be re-entered again.
  * @returns {{ suggestedTeams: Array, unassigned: Array }}
  */
-export function buildTeamSuggestions(golfers, existingTeamContactIds = []) {
+export function buildTeamSuggestions(golfers, existingTeamContactIds = [], options = {}) {
   const onTeam = new Set(
     Array.isArray(existingTeamContactIds)
       ? existingTeamContactIds
@@ -213,41 +219,137 @@ export function buildTeamSuggestions(golfers, existingTeamContactIds = []) {
     }
   }
 
-  // 5. Leftovers → unassigned
+  // 5. Carry team identities forward where a suggestion contains past players
+  assignReturningTeams(suggestedTeams, options.priorTeams || [], options.claimedTeamIds || []);
+
+  // 6. Leftovers → unassigned
   const unassigned = available.filter((g) => !assigned.has(g.contact_id));
 
   return { suggestedTeams, unassigned };
 }
 
+/**
+ * Links suggestions to the team identities their players have played for before, so
+ * a family or organisation that enters every year keeps its name even when the
+ * line-up changes. One returning player is enough to claim the identity.
+ *
+ * Mutates `suggestedTeams` in place: sets `teams_id`, renames the team, and tags the
+ * players it recognised. Strongest links are resolved first (most returning players,
+ * then most recent year), and each identity is used at most once.
+ */
+function assignReturningTeams(suggestedTeams, priorTeams, claimedTeamIds) {
+  if (!priorTeams.length) return;
+  const claimed = new Set(claimedTeamIds);
+
+  const candidates = [];
+  suggestedTeams.forEach((team, teamIdx) => {
+    const memberIds = new Set(team.members.map((m) => m.contact_id).filter(Boolean));
+    priorTeams.forEach((prior) => {
+      if (claimed.has(prior.id)) return;
+      const matched = (prior.roster || []).filter((id) => memberIds.has(id));
+      if (matched.length === 0) return;
+      candidates.push({ teamIdx, prior, matched, score: matched.length });
+    });
+  });
+
+  candidates.sort(
+    (a, b) => b.score - a.score || (b.prior.lastPlayed || 0) - (a.prior.lastPlayed || 0)
+  );
+
+  const usedSuggestions = new Set();
+  for (const candidate of candidates) {
+    if (usedSuggestions.has(candidate.teamIdx) || claimed.has(candidate.prior.id)) continue;
+    usedSuggestions.add(candidate.teamIdx);
+    claimed.add(candidate.prior.id);
+
+    const team = suggestedTeams[candidate.teamIdx];
+    const matched = new Set(candidate.matched);
+    team.teams_id = candidate.prior.id;
+    team.name = candidate.prior.name;
+    team.lastPlayed = candidate.prior.lastPlayed ?? null;
+    team.members = team.members.map((m) =>
+      matched.has(m.contact_id)
+        ? { ...m, reasons: [...(m.reasons || []), 'Returning team'] }
+        : m
+    );
+  }
+}
+
 // --- Helpers ---
+
+/**
+ * Scores how well a written preference matches a registered golfer. People rarely
+ * write a full name — "mike", "Mike W", "woodruff" — so this ranks the plausible
+ * readings instead of taking whatever matches first. 0 means no match.
+ */
+export function scoreNameMatch(pref, other) {
+  const first = (other.first_name || '').toLowerCase().trim();
+  const last = (other.last_name || '').toLowerCase().trim();
+  const full = `${first} ${last}`.trim();
+  const needle = (pref || '').toLowerCase().trim();
+  if (!needle || !full) return 0;
+
+  // "the Woodruffs", "Graham's" — people pluralise and possessive surnames.
+  const singular = (word) => word.replace(/['\u2019]s$/, '').replace(/s$/, '');
+
+  if (needle === full) return 100;
+
+  const tokens = needle.split(/\s+/).filter(Boolean);
+  if (tokens.length >= 2) {
+    const pFirst = tokens[0];
+    const pLast = tokens[tokens.length - 1];
+    if (pFirst === first && pLast === last) return 95;
+    // "mike w" / "mike wood" — first name exact, surname abbreviated
+    if (pFirst === first && last.startsWith(pLast)) return 90;
+    if (first.startsWith(pFirst) && last.startsWith(pLast)) return 80;
+    // "the woodruffs", "woodruff family" — surname mentioned among other words
+    if (tokens.some((t) => t === last || singular(t) === last)) return 60;
+    return 0;
+  }
+
+  if (needle === first) return 70;
+  if (needle === last) return 70;
+  if (singular(needle) === last) return 65;
+  // Short fragments are too easy to collide with; require a real prefix.
+  if (needle.length >= 3 && first.startsWith(needle)) return 55;
+  if (needle.length >= 3 && last.startsWith(needle)) return 55;
+  if (needle.length >= 4 && full.includes(needle)) return 40;
+  return 0;
+}
 
 function buildPreferenceMap(golfers) {
   // Map: contact_id → Set of contact_ids they prefer
   const map = new Map();
   golfers.forEach((g) => {
     if (!g.preferred_teammates) return;
+    // People separate names with commas, "and", "&" or slashes.
     const prefs = g.preferred_teammates
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
+      .split(/,|\band\b|&|\/|\+|;/i)
+      .map((s) => s.trim())
       .filter(Boolean);
 
     const matched = new Set();
     prefs.forEach((prefName) => {
-      // Fuzzy match: case-insensitive substring on full name
-      const match = golfers.find((other) => {
-        if (other.contact_id === g.contact_id) return false;
-        const fullName = `${other.first_name} ${other.last_name}`.toLowerCase();
-        const firstName = other.first_name.toLowerCase();
-        const lastName = other.last_name.toLowerCase();
-        return (
-          fullName.includes(prefName) ||
-          prefName.includes(lastName) ||
-          prefName.includes(firstName) ||
-          firstName.startsWith(prefName) ||
-          lastName.startsWith(prefName)
-        );
+      let best = null;
+      let bestScore = 0;
+      let tiedAtBest = 0;
+
+      golfers.forEach((other) => {
+        if (other.contact_id === g.contact_id) return;
+        const score = scoreNameMatch(prefName, other);
+        if (score === 0) return;
+        if (score > bestScore) {
+          bestScore = score;
+          best = other;
+          tiedAtBest = 1;
+        } else if (score === bestScore) {
+          tiedAtBest++;
+        }
       });
-      if (match) matched.add(match.contact_id);
+
+      // An ambiguous name (two Mikes, and they only wrote "Mike") is left
+      // unmatched rather than guessed — the admin can still drag them together.
+      if (best && tiedAtBest === 1) matched.add(best.contact_id);
     });
 
     if (matched.size > 0) {

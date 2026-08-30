@@ -4,7 +4,10 @@ import Select from '../Select';
 import { normalizePhone } from '../../../utils/phone';
 import { normalizeEmail } from '../../../utils/email';
 import { logAudit, diffFields } from '../../../utils/audit';
-import { sendGroupConfirmationEmails } from '../../../utils/registrationEmail';
+import {
+  sendConfirmationEmailsForIds,
+  sendConfirmationEmailsForRegistration,
+} from '../../../utils/registrationEmail';
 import { syncTeamPlayerHandicap } from '../../../utils/golfTeams';
 
 const REGISTRATION_FIELDS = ['contact_id', 'payment_status', 'golf_handicap', 'preferred_teammates'];
@@ -341,6 +344,9 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
   });
   const [selectedEvents, setSelectedEvents] = useState({});
   const [registrationEvents, setRegistrationEvents] = useState({});
+  // Snapshot of which events were selected when the form loaded, used to
+  // detect an added/removed event (vs. just a child-count edit) at save time.
+  const [originalSelectedEvents, setOriginalSelectedEvents] = useState({});
   const [showNewContactForm, setShowNewContactForm] = useState(false);
   const [newContactData, setNewContactData] = useState({
     first_name: '',
@@ -565,6 +571,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
       });
       setRegistrationEvents(eventsMap);
       setSelectedEvents(selectedMap);
+      setOriginalSelectedEvents(selectedMap);
     } catch (err) {
       console.error('Error fetching registration events:', err);
     }
@@ -729,6 +736,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
         const groupId = attendees.length > 1 ? crypto.randomUUID() : null;
 
         // Insert all registrations
+        const insertedIds = [];
         for (const att of attendees) {
           const { data: newReg, error: insertError } = await supabase
             .from('registrations')
@@ -744,6 +752,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             .single();
 
           if (insertError) throw insertError;
+          insertedIds.push(newReg.id);
 
           // Insert registration_events for this attendee
           const attEventNames = [];
@@ -774,6 +783,14 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             },
             metadata: groupId ? { registration_group_id: groupId } : undefined,
           });
+        }
+
+        // Send confirmation emails, same as a public registration. A failure
+        // here shouldn't fail the registration that was just created.
+        try {
+          await sendConfirmationEmailsForIds(insertedIds, formData.tournament_id);
+        } catch (emailErr) {
+          console.error('Failed to send registration confirmation email:', emailErr);
         }
 
         onSave();
@@ -898,7 +915,17 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           }
         }
 
+        // Did the set of registered events change (an event added or
+        // removed)? A child-count-only edit doesn't count — that's compared
+        // against the original snapshot captured when the form loaded.
+        const originalEventIds = new Set(Object.keys(originalSelectedEvents).filter(id => originalSelectedEvents[id]));
+        const currentEventIds = new Set(events.filter(ev => selectedEvents[ev.id]).map(ev => String(ev.id)));
+        const eventsChanged =
+          originalEventIds.size !== currentEventIds.size ||
+          [...originalEventIds].some(id => !currentEventIds.has(id));
+
         // --- Add any new registrants to this registration's group ---
+        let groupId = registration.registration_group_id || null;
         if (groupAttendees.length > 0) {
           // Validate each new group member.
           for (let i = 0; i < groupAttendees.length; i++) {
@@ -924,7 +951,6 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
           // Reuse the existing group id, or create one and back-fill the edited
           // registration so the original + new members share a group.
-          let groupId = registration.registration_group_id || null;
           if (!groupId) {
             groupId = crypto.randomUUID();
             const { error: groupErr } = await supabase
@@ -972,11 +998,26 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             changes: { added_registrants: groupAttendees.length },
           });
 
-          // Email the whole (updated) group. A failure here shouldn't fail the save.
+          // New members were just added to the group — email the whole
+          // (updated) group, same as a fresh group registration. This already
+          // reflects this registrant's current events too, so no separate
+          // solo send is needed below. A failure here shouldn't fail the save.
           try {
-            await sendGroupConfirmationEmails(groupId, registration.tournament_id);
+            await sendConfirmationEmailsForRegistration(
+              { id: registrationId, registration_group_id: groupId },
+              registration.tournament_id
+            );
           } catch (emailErr) {
-            console.error('Failed to send group confirmation emails:', emailErr);
+            console.error('Failed to send registration confirmation email:', emailErr);
+          }
+        } else if (eventsChanged) {
+          // Only this registrant's own events changed (added/removed, not
+          // just a child-count edit) — email just them, not their whole
+          // group. A failure here shouldn't fail the save.
+          try {
+            await sendConfirmationEmailsForIds([registrationId], registration.tournament_id);
+          } catch (emailErr) {
+            console.error('Failed to send registration confirmation email:', emailErr);
           }
         }
 

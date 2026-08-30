@@ -3,6 +3,21 @@ import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
 import EmailEditor from '../Communications/EmailEditor';
 import Select from '../Select';
+import {
+  DEFAULT_HANDICAP_FORMULA,
+  computeTeamHandicap,
+  describeTeamHandicap,
+  isHandicapEnabled,
+} from '../../../utils/handicap';
+
+// Worked example shown under the formula editor, so an admin can see what the
+// weights they typed actually produce before saving.
+const EXAMPLE_HANDICAPS = [7, 11, 16, 18];
+
+// Percentages are friendlier to type than decimals; the stored formula keeps
+// decimals so the maths stays exact.
+const toPercent = (weight) => String(Math.round((Number(weight) || 0) * 1000) / 10);
+const fromPercent = (percent) => (Number(percent) || 0) / 100;
 
 // Strip HTML tags to readable plain text (for the audit diff).
 const plainText = (html) =>
@@ -48,6 +63,11 @@ export default function RulesEditor() {
   const [tournamentId, setTournamentId] = useState('');
   const [rowId, setRowId] = useState(null); // rules row id for the selected year, or null
   const [bodyHtml, setBodyHtml] = useState('');
+  // Structured team handicap for this year, kept beside the prose. null = played
+  // straight up, which is how 2025 is stored.
+  const [handicapFormula, setHandicapFormula] = useState(null);
+  const [handicapUnavailable, setHandicapUnavailable] = useState(false);
+  const loadedHandicapRef = useRef(null);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
   const [loadingRules, setLoadingRules] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -81,19 +101,36 @@ export default function RulesEditor() {
     setLoadingRules(true);
     setError(null);
     try {
-      const { data, error: err } = await supabase
+      // handicap_formula arrives with a migration; if this database doesn't have it
+      // yet, fall back to the prose so the page still works and say why the formula
+      // panel is missing.
+      let { data, error: err } = await supabase
         .from('tournament_rules')
-        .select('id, body_html')
+        .select('id, body_html, handicap_formula')
         .eq('tournament_id', tId)
         .maybeSingle();
+      if (err && err.code === '42703') {
+        setHandicapUnavailable(true);
+        ({ data, error: err } = await supabase
+          .from('tournament_rules')
+          .select('id, body_html')
+          .eq('tournament_id', tId)
+          .maybeSingle());
+      } else if (!err) {
+        setHandicapUnavailable(false);
+      }
       if (err) throw err;
       setRowId(data?.id || null);
       setBodyHtml(data?.body_html || '');
       loadedBodyRef.current = data?.body_html || '';
+      setHandicapFormula(data?.handicap_formula || null);
+      loadedHandicapRef.current = data?.handicap_formula || null;
     } catch (err) {
       setError(err.message || 'Failed to load rules');
       setRowId(null);
       setBodyHtml('');
+      setHandicapFormula(null);
+      loadedHandicapRef.current = null;
     } finally {
       setLoadingRules(false);
     }
@@ -110,6 +147,32 @@ export default function RulesEditor() {
 
   const selectedYear = tournaments.find((t) => t.id === tournamentId)?.year;
 
+  const handicapEnabled = isHandicapEnabled(handicapFormula);
+  const exampleResult = computeTeamHandicap(EXAMPLE_HANDICAPS, handicapFormula);
+
+  const toggleHandicap = (enabled) => {
+    setHandicapFormula(
+      enabled
+        ? { ...DEFAULT_HANDICAP_FORMULA, ...(handicapFormula || {}), enabled: true }
+        : null
+    );
+  };
+
+  const updateTier = (players, patch) => {
+    setHandicapFormula(prev => ({
+      ...prev,
+      tiers: (prev?.tiers || []).map(t => (t.players === players ? { ...t, ...patch } : t)),
+    }));
+  };
+
+  const updateWeight = (players, index, percent) => {
+    const tier = (handicapFormula?.tiers || []).find(t => t.players === players);
+    if (!tier) return;
+    const weights = [...tier.weights];
+    weights[index] = fromPercent(percent);
+    updateTier(players, { weights });
+  };
+
   const handleSave = async () => {
     if (!tournamentId) return;
     setSaving(true);
@@ -121,13 +184,21 @@ export default function RulesEditor() {
       if (rowId) {
         const { error: err } = await supabase
           .from('tournament_rules')
-          .update({ body_html: bodyHtml, updated_at: new Date().toISOString() })
+          .update({
+            body_html: bodyHtml,
+            ...(handicapUnavailable ? {} : { handicap_formula: handicapFormula }),
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', rowId);
         if (err) throw err;
       } else {
         const { data, error: err } = await supabase
           .from('tournament_rules')
-          .insert({ tournament_id: tournamentId, body_html: bodyHtml })
+          .insert({
+            tournament_id: tournamentId,
+            body_html: bodyHtml,
+            ...(handicapUnavailable ? {} : { handicap_formula: handicapFormula }),
+          })
           .select('id')
           .single();
         if (err) throw err;
@@ -141,6 +212,12 @@ export default function RulesEditor() {
         const d = diffContent(previousBody, bodyHtml);
         changes = d ? { content: d } : { note: 'Saved with no content changes' };
       }
+      // The handicap drives scoring, so a change to it is worth its own audit line.
+      const previousHandicap = JSON.stringify(loadedHandicapRef.current ?? null);
+      const nextHandicap = JSON.stringify(handicapFormula ?? null);
+      if (previousHandicap !== nextHandicap) {
+        changes = { ...changes, handicap_formula: { from: previousHandicap, to: nextHandicap } };
+      }
       await logAudit({
         action: wasNew ? 'tournament_rules.created' : 'tournament_rules.updated',
         entityType: 'tournament_rules',
@@ -149,6 +226,7 @@ export default function RulesEditor() {
         changes,
       });
       loadedBodyRef.current = bodyHtml;
+      loadedHandicapRef.current = handicapFormula;
       flash('Rules saved');
     } catch (err) {
       setError(err.message || 'Failed to save rules');
@@ -198,6 +276,101 @@ export default function RulesEditor() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rules content</label>
                 <EmailEditor key={tournamentId} value={bodyHtml} onChange={setBodyHtml} />
               </div>
+
+              {handicapUnavailable ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-900/20 p-4">
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    Team handicaps aren't set up on this database yet. Run the{' '}
+                    <code>add_handicap_formula</code> migration to configure a per-year formula
+                    here.
+                  </p>
+                </div>
+              ) : (
+              <div className="border border-gray-200 dark:border-night-700 rounded-lg p-4">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={handicapEnabled}
+                    onChange={(e) => toggleHandicap(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Apply a team handicap for {selectedYear}
+                    </span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      Team Builder uses this to work out each team's strokes. Leave it off for a
+                      year played straight up. Describe it for players in the rules content above —
+                      this panel only drives the calculation.
+                    </span>
+                  </span>
+                </label>
+
+                {handicapEnabled && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Weights are applied to a team's handicaps sorted lowest to highest, so
+                      stronger players count for more. Extra strokes are added afterwards to
+                      compensate short teams, and only the final total is rounded (half-strokes up).
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="text-sm">
+                        <thead>
+                          <tr className="text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th className="pr-3 pb-1 font-medium">Team size</th>
+                            <th className="pr-3 pb-1 font-medium">Weights, lowest handicap first (%)</th>
+                            <th className="pb-1 font-medium">+ strokes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(handicapFormula.tiers || []).map((tier) => (
+                            <tr key={tier.players}>
+                              <td className="pr-3 py-1 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                {tier.players} players
+                              </td>
+                              <td className="pr-3 py-1">
+                                <div className="flex gap-1.5">
+                                  {(tier.weights || []).map((weight, i) => (
+                                    <input
+                                      key={i}
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      value={toPercent(weight)}
+                                      onChange={(e) => updateWeight(tier.players, i, e.target.value)}
+                                      className="w-16 rounded-md border border-gray-300 dark:border-night-600 py-1 px-2 text-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:outline-none focus:ring-0"
+                                    />
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="py-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={tier.flat ?? 0}
+                                  onChange={(e) =>
+                                    updateTier(tier.players, { flat: Number(e.target.value) || 0 })
+                                  }
+                                  className="w-16 rounded-md border border-gray-300 dark:border-night-600 py-1 px-2 text-sm bg-white dark:bg-night-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:outline-none focus:ring-0"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">Example</span> — a team of{' '}
+                      {EXAMPLE_HANDICAPS.join(', ')}:{' '}
+                      {exampleResult
+                        ? describeTeamHandicap(exampleResult)
+                        : 'no weights set for a team of this size.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</label>

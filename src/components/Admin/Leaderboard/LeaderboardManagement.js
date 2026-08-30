@@ -70,6 +70,10 @@ export default function LeaderboardManagement() {
     setShowForm(true);
   };
 
+  // Net scoring is a per-year rule; the view reports whether it applies.
+  const usesHandicap = teams.some((team) => team.handicap_applied);
+  const standingsToPar = (team) => team.standings_to_par ?? team.score_to_par;
+
   const handleDeleteTeam = async (team) => {
     if (!window.confirm('Are you sure you want to delete this team?')) {
       return;
@@ -180,10 +184,15 @@ export default function LeaderboardManagement() {
                   Team / Players
                 </th>
                 <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  To Par
+                  {usesHandicap ? 'Net to Par' : 'To Par'}
                 </th>
+                {usesHandicap && (
+                  <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Net
+                  </th>
+                )}
                 <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Total
+                  {usesHandicap ? 'Gross' : 'Total'}
                 </th>
                 <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Status
@@ -218,12 +227,20 @@ export default function LeaderboardManagement() {
                     ))}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-bold">
-                    <span className={team.score_to_par < 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}>
-                      {formatScore(team.score_to_par)}
+                    <span className={standingsToPar(team) < 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}>
+                      {formatScore(standingsToPar(team))}
                     </span>
                   </td>
+                  {usesHandicap && (
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-900 dark:text-gray-100">
+                      {team.net_score ?? team.total_score}
+                    </td>
+                  )}
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                     {team.total_score}
+                    {usesHandicap && team.team_handicap != null && (
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">HCP {team.team_handicap}</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-600 dark:text-gray-400">
                     {team.status || 'F'}

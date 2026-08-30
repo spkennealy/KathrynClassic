@@ -3,12 +3,12 @@
   "name": "The Kathryn Classic - Annual Charity Golf Tournament",
   "icons": [
     {
-      "src": "kc_favicon.png",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/png"
+      "src": "favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
     },
     {
-      "src": "kc_favicon.png",
+      "src": "kc_favicon_192.png",
       "type": "image/png",
       "sizes": "192x192"
     },

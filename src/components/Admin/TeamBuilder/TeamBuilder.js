@@ -4,6 +4,7 @@ import { logAudit } from '../../../utils/audit';
 import Select from '../Select';
 import { buildTeamSuggestions } from './teamBuilderAlgorithm';
 import ConfirmDialog from '../ConfirmDialog';
+import { computeTeamHandicap, describeTeamHandicap, isHandicapEnabled } from '../../../utils/handicap';
 
 export default function TeamBuilder() {
   const [tournaments, setTournaments] = useState([]);
@@ -20,6 +21,8 @@ export default function TeamBuilder() {
   // that recurs across years (a family, a sponsor) while its roster changes, so the
   // builder lets you re-enter one for this year and fill it with different players.
   const [teamCatalog, setTeamCatalog] = useState([]);
+  // This year's team handicap rules, or null when the year is played straight up.
+  const [handicapFormula, setHandicapFormula] = useState(null);
 
   // Pending (unsaved) teams — includes manually created and algorithm-suggested
   const [pendingTeams, setPendingTeams] = useState([]);
@@ -80,6 +83,15 @@ export default function TeamBuilder() {
       setPublishing(false);
     }
   };
+
+  // Team handicap for a card's current line-up. Saved members carry `handicap`,
+  // pool/pending members carry `golf_handicap` — either way it's the registration
+  // number, so a card recalculates as players are dragged in and out.
+  const handicapEnabled = isHandicapEnabled(handicapFormula);
+  const teamHandicapFor = (members) =>
+    handicapEnabled
+      ? computeTeamHandicap((members || []).map(m => m.golf_handicap ?? m.handicap), handicapFormula)
+      : null;
 
   // Computed unassigned: golfers not saved to a team and not in any pending team
   const pendingMemberIds = new Set(
@@ -144,6 +156,22 @@ export default function TeamBuilder() {
       setError(null);
       setPendingTeams([]);
 
+      // The handicap formula lives with the year's rules. Read defensively: the
+      // column is added by migration, and a year with no rules row simply has no
+      // handicap, which shouldn't take the whole builder down.
+      try {
+        const { data: rules, error: rulesError } = await supabase
+          .from('tournament_rules')
+          .select('handicap_formula')
+          .eq('tournament_id', selectedTournament)
+          .maybeSingle();
+        if (rulesError) throw rulesError;
+        setHandicapFormula(rules?.handicap_formula || null);
+      } catch (rulesErr) {
+        console.warn('No handicap formula available for this tournament:', rulesErr.message);
+        setHandicapFormula(null);
+      }
+
       const { data: catalog, error: catalogError } = await supabase
         .from('teams')
         .select(`
@@ -176,6 +204,17 @@ export default function TeamBuilder() {
               .sort((a, b) => a.player_order - b.player_order)
               .map(p => p.contact_id)
               .filter(Boolean),
+            // Everyone who has ever played for this team in another year. Used to
+            // recognise the team when suggestions are generated — someone who
+            // played for it two years ago still counts as a returning player.
+            pastRoster: [
+              ...new Set(
+                participations
+                  .filter(gt => gt.tournament_id !== selectedTournament)
+                  .flatMap(gt => (gt.golf_team_players || []).map(p => p.contact_id))
+                  .filter(Boolean)
+              ),
+            ],
           };
         })
       );
@@ -308,7 +347,16 @@ export default function TeamBuilder() {
 
   // --- Generate algorithm suggestions ---
   const handleGenerate = () => {
-    const { suggestedTeams } = buildTeamSuggestions(golfers, existingTeamContactIds);
+    const { suggestedTeams } = buildTeamSuggestions(golfers, existingTeamContactIds, {
+      priorTeams: teamCatalog.map(t => ({
+        id: t.id,
+        name: t.name,
+        lastPlayed: t.lastPlayed,
+        roster: t.pastRoster,
+      })),
+      // Identities already saved for this year can't be entered a second time.
+      claimedTeamIds: existingTeams.map(t => t.teams_id).filter(Boolean),
+    });
     setPendingTeams(suggestedTeams);
   };
 
@@ -666,6 +714,23 @@ export default function TeamBuilder() {
     setPendingTeams(prev => prev.filter((_, i) => i !== teamIdx));
   };
 
+  // Small shared badge so a card's handicap reads the same whether it's saved,
+  // being edited or still pending. Hover shows the arithmetic.
+  const HandicapBadge = ({ members }) => {
+    const result = teamHandicapFor(members);
+    if (!result) return null;
+    return (
+      <div className="mt-1 text-center">
+        <span
+          title={describeTeamHandicap(result)}
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+        >
+          Team handicap {result.strokes}
+        </span>
+      </div>
+    );
+  };
+
   const totalGolfers = golfers.length;
   const onTeams = existingTeamContactIds.size;
 
@@ -677,6 +742,9 @@ export default function TeamBuilder() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Team Builder</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Drag golfers from the pool on the left onto team cards on the right.
+            {handicapEnabled
+              ? ' Team handicaps follow this year\u2019s rules and update as you build.'
+              : ' This year has no team handicap \u2014 add one in Admin \u2192 Rules.'}
           </p>
         </div>
         {pendingTeams.length > 0 && (
@@ -942,6 +1010,8 @@ export default function TeamBuilder() {
                           <div className="mt-1 text-xs text-gray-400 text-center">Full</div>
                         )}
 
+                        <HandicapBadge members={displayMembers} />
+
                         <div className="mt-2 flex gap-2">
                           {isEditing ? (
                             <>
@@ -1067,6 +1137,8 @@ export default function TeamBuilder() {
                             {draggedGolfer ? 'Drop here' : `${4 - team.members.length} spot${4 - team.members.length !== 1 ? 's' : ''} open`}
                           </div>
                         )}
+
+                        <HandicapBadge members={team.members} />
 
                         {/* Reason tags (from algorithm) */}
                         {team.members.some(m => m.reasons?.length > 0) && (

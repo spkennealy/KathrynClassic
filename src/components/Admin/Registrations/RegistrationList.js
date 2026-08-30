@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
+import { sendConfirmationEmailsForRegistration } from '../../../utils/registrationEmail';
 import Select from '../Select';
 import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
@@ -77,6 +78,8 @@ export default function RegistrationList() {
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState(null);
+  // Per-row "Resend email" state: registration_id -> 'sending' | 'sent' | 'error'.
+  const [resendStatus, setResendStatus] = useState({});
 
   // Debounce the search box so we don't refetch on every keystroke (which caused
   // the input to lose focus when results briefly emptied during a fetch).
@@ -186,6 +189,36 @@ export default function RegistrationList() {
   const handleCloseEdit = () => {
     setShowEditForm(false);
     setSelectedRegistration(null);
+  };
+
+  const handleResendEmail = async (registration) => {
+    const id = registration.registration_id;
+    setResendStatus((prev) => ({ ...prev, [id]: 'sending' }));
+    try {
+      await sendConfirmationEmailsForRegistration(
+        { id, registration_group_id: registration.registration_group_id },
+        registration.tournament_id
+      );
+      await logAudit({
+        action: 'registration.email_resent',
+        entityType: 'registration',
+        entityId: id,
+        entityLabel: `${registration.first_name} ${registration.last_name}`,
+      });
+      setResendStatus((prev) => ({ ...prev, [id]: 'sent' }));
+    } catch (err) {
+      console.error('Failed to resend confirmation email:', err);
+      setResendStatus((prev) => ({ ...prev, [id]: 'error' }));
+    } finally {
+      // Clear the transient status a few seconds later so the button resets.
+      setTimeout(() => {
+        setResendStatus((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }, 4000);
+    }
   };
 
   const handleDeleteClick = (registration) => {
@@ -632,6 +665,19 @@ export default function RegistrationList() {
                         className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => handleResendEmail(reg)}
+                        disabled={resendStatus[reg.registration_id] === 'sending'}
+                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {resendStatus[reg.registration_id] === 'sending'
+                          ? 'Sending…'
+                          : resendStatus[reg.registration_id] === 'sent'
+                          ? 'Sent!'
+                          : resendStatus[reg.registration_id] === 'error'
+                          ? 'Failed'
+                          : 'Resend email'}
                       </button>
                       <button
                         onClick={() => handleDeleteClick(reg)}

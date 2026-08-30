@@ -111,6 +111,12 @@ export default function Leaderboard() {
     }
   };
 
+  // A year is played under a handicap or it isn't — the view says which, and the
+  // leaderboard shows one score column or two accordingly. Falls back to gross if
+  // the database predates the net-score view.
+  const usesHandicap = leaderboard.some((team) => team.handicap_applied);
+  const standingsToPar = (team) => team.standings_to_par ?? team.score_to_par;
+
   const formatScore = (scoreToPar) => {
     if (scoreToPar === 0) return 'E';
     if (scoreToPar > 0) return `+${scoreToPar}`;
@@ -188,9 +194,10 @@ export default function Leaderboard() {
                 <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-sm uppercase tracking-wide">
                   <div className="col-span-1 flex items-center justify-center">Pos</div>
                   <div className="col-span-3 flex items-center">Team</div>
-                  <div className="col-span-4 flex items-center justify-center">Players</div>
-                  <div className="col-span-2 flex items-center justify-center">To Par</div>
-                  <div className="col-span-1 flex items-center justify-center">Total</div>
+                  <div className={`${usesHandicap ? 'col-span-3' : 'col-span-4'} flex items-center justify-center`}>Players</div>
+                  <div className="col-span-2 flex items-center justify-center">{usesHandicap ? 'Net to Par' : 'To Par'}</div>
+                  {usesHandicap && <div className="col-span-1 flex items-center justify-center">Net</div>}
+                  <div className="col-span-1 flex items-center justify-center">{usesHandicap ? 'Gross' : 'Total'}</div>
                   <div className="col-span-1 flex items-center justify-center">Thru</div>
                 </div>
               </div>
@@ -241,7 +248,7 @@ export default function Leaderboard() {
                         </div>
 
                         {/* Players (2 per line) */}
-                        <div className="col-span-4 flex items-center">
+                        <div className={`${usesHandicap ? 'col-span-3' : 'col-span-4'} flex items-center`}>
                           <div className="space-y-1 w-full">
                             {playerPairs.map((pair, pairIdx) => (
                               <div key={pairIdx} className="text-sm text-gray-900 dark:text-gray-100 font-serif">
@@ -259,18 +266,33 @@ export default function Leaderboard() {
                           </div>
                         </div>
 
-                        {/* Score to Par */}
+                        {/* Score to Par — net where a handicap applies, since that's
+                            what standings are ranked on */}
                         <div className="col-span-2 flex items-center justify-center">
-                          <span className={`text-2xl font-bold font-serif ${getScoreColor(team.score_to_par)}`}>
-                            {formatScore(team.score_to_par)}
+                          <span className={`text-2xl font-bold font-serif ${getScoreColor(standingsToPar(team))}`}>
+                            {formatScore(standingsToPar(team))}
                           </span>
                         </div>
 
-                        {/* Total Score */}
-                        <div className="col-span-1 flex items-center justify-center">
+                        {/* Net Score */}
+                        {usesHandicap && (
+                          <div className="col-span-1 flex items-center justify-center">
+                            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 font-serif">
+                              {team.net_score ?? team.total_score}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Gross Score, with the allowance that produced the net */}
+                        <div className="col-span-1 flex flex-col items-center justify-center">
                           <span className="text-lg text-gray-900 dark:text-gray-100 font-serif">
                             {team.total_score}
                           </span>
+                          {usesHandicap && team.team_handicap != null && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
+                              HCP {team.team_handicap}
+                            </span>
+                          )}
                         </div>
 
                         {/* Status */}
@@ -330,14 +352,23 @@ export default function Leaderboard() {
 
                           {/* Right: Score */}
                           <div className="flex flex-col items-end flex-shrink-0">
-                            <span className={`text-2xl font-bold font-serif ${getScoreColor(team.score_to_par)}`}>
-                              {formatScore(team.score_to_par)}
+                            <span className={`text-2xl font-bold font-serif ${getScoreColor(standingsToPar(team))}`}>
+                              {formatScore(standingsToPar(team))}
                             </span>
                             <div className="flex items-center gap-1 mt-0.5">
-                              <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">{team.total_score}</span>
+                              {usesHandicap ? (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
+                                  Net {team.net_score ?? team.total_score} · Gross {team.total_score}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">{team.total_score}</span>
+                              )}
                               <span className="text-xs text-gray-400">•</span>
                               <span className="text-xs text-gray-500 dark:text-gray-400 font-serif font-semibold">{team.status || 'F'}</span>
                             </div>
+                            {usesHandicap && team.team_handicap != null && (
+                              <span className="text-xs text-gray-400 font-serif">HCP {team.team_handicap}</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -348,7 +379,10 @@ export default function Leaderboard() {
 
               {/* Footer Note */}
               <div className="bg-gray-50 dark:bg-night-900 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center font-serif border-t border-gray-200 dark:border-night-700">
-                <p>Scramble format • F = Finished • T = Tied</p>
+                <p>
+                  Scramble format • F = Finished • T = Tied
+                  {usesHandicap && ' • Net = gross − team handicap • Standings are by net score'}
+                </p>
               </div>
             </div>
           ) : (
