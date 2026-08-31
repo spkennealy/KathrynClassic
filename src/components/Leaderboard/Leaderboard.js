@@ -9,6 +9,10 @@ export default function Leaderboard() {
   const [tournamentYear, setTournamentYear] = useState(null);
   const [availableYears, setAvailableYears] = useState([]);
   const [tournamentDates, setTournamentDates] = useState(null);
+  // Pre-round pairings: once tee times are set for a round that hasn't been
+  // played yet, the "position" column doesn't mean anything — swap it for
+  // when/where each team starts instead.
+  const [teeTimeInfo, setTeeTimeInfo] = useState({ show: false, format: 'standard', shotgunTime: null });
 
   useEffect(() => {
     loadAvailableYears();
@@ -75,7 +79,7 @@ export default function Leaderboard() {
       // Fall back to the tournament's start/end range if no golf event exists.
       const { data: golfEvent } = await supabase
         .from('tournament_events')
-        .select('event_date')
+        .select('event_date, tee_time_format')
         .eq('tournament_id', tournament.id)
         .eq('event_type', 'golf_tournament')
         .order('event_date', { ascending: true })
@@ -102,7 +106,49 @@ export default function Leaderboard() {
         .order('position', { ascending: true });
 
       if (error) throw error;
-      setLeaderboard(data || []);
+
+      // Pull in tee times for this round, if any have been set.
+      const { data: teeTimes } = await supabase
+        .from('tee_times_view')
+        .select('team_id, tee_time, hole_number')
+        .eq('tournament_id', tournament.id);
+
+      const teeTimeByTeam = new Map((teeTimes || []).filter((t) => t.team_id).map((t) => [t.team_id, t]));
+
+      // The round hasn't been played yet if its date is still ahead of today —
+      // that's when standings are meaningless and pairings are what matters.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const roundNotYetPlayed = golfEvent?.event_date && new Date(`${golfEvent.event_date}T00:00:00`) > today;
+      const showTeeTimes = Boolean(roundNotYetPlayed && teeTimeByTeam.size > 0);
+      const format = golfEvent?.tee_time_format || 'standard';
+      // A shotgun start is one shared time for the whole field — surface it once
+      // up top rather than repeating it in every row (the earliest tee time
+      // covers it even if entries drift by a minute or two).
+      const shotgunTime = format === 'shotgun'
+        ? (teeTimes || []).reduce((earliest, t) => {
+            if (!t.tee_time) return earliest;
+            return !earliest || new Date(t.tee_time) < new Date(earliest) ? t.tee_time : earliest;
+          }, null)
+        : null;
+      setTeeTimeInfo({ show: showTeeTimes, format, shotgunTime });
+
+      let merged = (data || []).map((team) => {
+        const tt = teeTimeByTeam.get(team.team_id);
+        return { ...team, tee_time: tt?.tee_time ?? null, hole_number: tt?.hole_number ?? null };
+      });
+
+      if (showTeeTimes) {
+        // Chronological for a standard round (everyone's on hole 1, so the
+        // time is the only thing that varies); by starting hole for a shotgun
+        // (everyone starts at once, so the hole is what varies).
+        const sortKey = format === 'shotgun'
+          ? (t) => t.hole_number ?? Infinity
+          : (t) => (t.tee_time ? new Date(t.tee_time).getTime() : Infinity);
+        merged = [...merged].sort((a, b) => sortKey(a) - sortKey(b));
+      }
+
+      setLeaderboard(merged);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       setLeaderboard([]);
@@ -136,6 +182,24 @@ export default function Leaderboard() {
 
   const formatPosition = (position, isTied) => {
     return isTied ? `T${position}` : position;
+  };
+
+  const formatTeeClock = (teeTime) => {
+    if (!teeTime) return null;
+    return new Date(teeTime).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  // What goes in the "Pos" column's place while showing pairings: a shotgun
+  // start cares about the hole (the time is the same for everyone), a
+  // standard round cares about the time (the hole is 1 for everyone).
+  const teeTimeDisplay = (team) => {
+    if (teeTimeInfo.format === 'shotgun') {
+      return team.hole_number != null ? `Hole ${team.hole_number}` : null;
+    }
+    return formatTeeClock(team.tee_time);
   };
 
   const getPlaceEmoji = (position) => {
@@ -209,6 +273,13 @@ export default function Leaderboard() {
               </p>
             )}
 
+            {/* Shotgun Start Time — one shared time for the whole field */}
+            {teeTimeInfo.show && teeTimeInfo.format === 'shotgun' && teeTimeInfo.shotgunTime && (
+              <p className="mt-1 text-base text-primary-600 dark:text-primary-400 font-serif font-semibold">
+                Shotgun Start: {formatTeeClock(teeTimeInfo.shotgunTime)}
+              </p>
+            )}
+
             {/* Year Selector */}
             {availableYears.length > 1 && (
               <div className="mt-6 flex justify-center">
@@ -240,7 +311,9 @@ export default function Leaderboard() {
               {/* Desktop Table Header - hidden on mobile */}
               <div className="bg-primary-600 dark:bg-primary-800 text-white hidden md:block">
                 <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-xs uppercase tracking-wider">
-                  <div className="col-span-1 text-center">Pos</div>
+                  <div className="col-span-1 text-center">
+                    {teeTimeInfo.show ? (teeTimeInfo.format === 'shotgun' ? 'Hole' : 'Tee Time') : 'Pos'}
+                  </div>
                   <div className="col-span-3 text-center">Team</div>
                   <div className={`${playersSpan} text-left`}>Players</div>
                   {usesHandicap && <div className="col-span-1 text-center">Hcp</div>}
@@ -262,17 +335,25 @@ export default function Leaderboard() {
                       {/* Desktop Row */}
                       <div
                         className={`hidden md:grid grid-cols-12 gap-4 px-6 py-4 hover:bg-primary-50 dark:hover:bg-night-700 transition-colors ${
-                          index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                          index === 0 && !teeTimeInfo.show ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                         }`}
                       >
-                        {/* Position */}
+                        {/* Position — or, before the round's been played, the tee time / starting hole */}
                         <div className="col-span-1 flex items-center justify-center gap-1">
-                          {getPlaceEmoji(team.position) && (
-                            <span className="text-xl leading-none">{getPlaceEmoji(team.position)}</span>
+                          {teeTimeInfo.show ? (
+                            <span className="text-base font-bold text-gray-900 dark:text-gray-100 font-serif">
+                              {teeTimeDisplay(team) || '—'}
+                            </span>
+                          ) : (
+                            <>
+                              {getPlaceEmoji(team.position) && (
+                                <span className="text-xl leading-none">{getPlaceEmoji(team.position)}</span>
+                              )}
+                              <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
+                                {team.position != null ? formatPosition(team.position, team.is_tied) : ''}
+                              </span>
+                            </>
                           )}
-                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
-                            {team.position != null ? formatPosition(team.position, team.is_tied) : ''}
-                          </span>
                         </div>
 
                         {/* Team Name — centred in its column; the player list beside it
@@ -331,18 +412,26 @@ export default function Leaderboard() {
                       {/* Mobile Card */}
                       <div
                         className={`md:hidden px-4 py-4 ${
-                          index === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                          index === 0 && !teeTimeInfo.show ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           {/* Fixed-width position column for alignment */}
                           <div className="w-14 flex-shrink-0 flex items-center justify-center gap-1 pt-0.5">
-                            {getPlaceEmoji(team.position) && (
-                              <span className="text-lg">{getPlaceEmoji(team.position)}</span>
+                            {teeTimeInfo.show ? (
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-serif text-center">
+                                {teeTimeDisplay(team) || '—'}
+                              </span>
+                            ) : (
+                              <>
+                                {getPlaceEmoji(team.position) && (
+                                  <span className="text-lg">{getPlaceEmoji(team.position)}</span>
+                                )}
+                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
+                                  {formatPosition(team.position, team.is_tied)}
+                                </span>
+                              </>
                             )}
-                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
-                              {formatPosition(team.position, team.is_tied)}
-                            </span>
                           </div>
 
                           {/* Center: Team + Players */}
@@ -387,8 +476,16 @@ export default function Leaderboard() {
               {/* Footer Note */}
               <div className="bg-gray-50 dark:bg-night-900 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center font-serif border-t border-gray-200 dark:border-night-700">
                 <p>
-                  Scramble format • T = Tied
-                  {usesHandicap && ' • Net = gross − team handicap • Standings are by net score'}
+                  {teeTimeInfo.show ? (
+                    teeTimeInfo.format === 'shotgun'
+                      ? `Shotgun start${teeTimeInfo.shotgunTime ? ` at ${formatTeeClock(teeTimeInfo.shotgunTime)}` : ''} • Starting holes are subject to change`
+                      : 'Tee times are subject to change'
+                  ) : (
+                    <>
+                      Scramble format • T = Tied
+                      {usesHandicap && ' • Net = gross − team handicap • Standings are by net score'}
+                    </>
+                  )}
                 </p>
               </div>
             </div>
