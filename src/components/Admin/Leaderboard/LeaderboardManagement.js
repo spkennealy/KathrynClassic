@@ -117,6 +117,7 @@ export default function LeaderboardManagement() {
   };
 
   const formatScore = (scoreToPar) => {
+    if (scoreToPar == null) return '';
     if (scoreToPar === 0) return 'E';
     if (scoreToPar > 0) return `+${scoreToPar}`;
     return scoreToPar.toString();
@@ -183,6 +184,11 @@ export default function LeaderboardManagement() {
                 <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Team / Players
                 </th>
+                {usesHandicap && (
+                  <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    HCP
+                  </th>
+                )}
                 <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {usesHandicap ? 'Net to Par' : 'To Par'}
                 </th>
@@ -226,6 +232,11 @@ export default function LeaderboardManagement() {
                       </div>
                     ))}
                   </td>
+                  {usesHandicap && (
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-700 dark:text-gray-300">
+                      {team.team_handicap ?? ''}
+                    </td>
+                  )}
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-bold">
                     <span className={standingsToPar(team) < 0 ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}>
                       {formatScore(standingsToPar(team))}
@@ -238,9 +249,6 @@ export default function LeaderboardManagement() {
                   )}
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-900 dark:text-gray-100">
                     {team.total_score}
-                    {usesHandicap && team.team_handicap != null && (
-                      <span className="block text-xs text-gray-500 dark:text-gray-400">HCP {team.team_handicap}</span>
-                    )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-600 dark:text-gray-400">
                     {team.status || 'F'}

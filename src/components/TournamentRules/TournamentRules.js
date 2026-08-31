@@ -64,6 +64,73 @@ export default function TournamentRules() {
               </p>
             )}
           </div>
+
+          {/* Scorecard — its own card at the foot of the page. The handicap rules
+              above refer to the hole handicap, so players need to be able to read
+              the card itself. Rendered as images rather than an embedded PDF:
+              mobile browsers routinely refuse to display a PDF in an iframe, and
+              the images stay pinchable. The PDF is linked underneath for printing. */}
+          <div className="mt-8 bg-white dark:bg-night-800 rounded-2xl shadow-lg p-6 sm:p-10">
+            <h2 className="text-center text-xl font-bold text-primary-700 dark:text-primary-400 font-serif">
+              Course Scorecard
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+              Pine Mountain Lake — hole handicaps are on the front, the course map and
+              local rules on the back.
+            </p>
+
+            <div className="mt-6 space-y-6">
+              {[
+                {
+                  src: `${process.env.PUBLIC_URL}/scorecard-front.png`,
+                  alt: 'Pine Mountain Lake scorecard front: yardages by tee, par, and the men\u2019s and ladies\u2019 handicap for each of the 18 holes.',
+                  caption: 'Front — yardages, par, and hole handicaps',
+                  width: 1944,
+                  height: 1512,
+                },
+                {
+                  src: `${process.env.PUBLIC_URL}/scorecard-back.jpg`,
+                  alt: 'Pine Mountain Lake scorecard back: course map of all 18 holes, local rules, and yardage marker guidance.',
+                  caption: 'Back — course map and local rules',
+                  width: 1400,
+                  height: 1089,
+                },
+              ].map((page) => (
+                <figure key={page.src}>
+                  {/* White mat so the card reads the same in dark mode. */}
+                  <a
+                    href={page.src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg bg-white p-2 ring-1 ring-gray-200 dark:ring-night-700"
+                  >
+                    <img
+                      src={page.src}
+                      alt={page.alt}
+                      width={page.width}
+                      height={page.height}
+                      loading="lazy"
+                      className="w-full h-auto rounded"
+                    />
+                  </a>
+                  <figcaption className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                    {page.caption}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+
+            <p className="mt-6 text-center text-sm">
+              <a
+                href={`${process.env.PUBLIC_URL}/pml-scorecard.pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 dark:text-primary-400 underline hover:text-primary-700"
+              >
+                Open the printable scorecard (PDF)
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -116,14 +116,19 @@ export default function Leaderboard() {
   // the database predates the net-score view.
   const usesHandicap = leaderboard.some((team) => team.handicap_applied);
   const standingsToPar = (team) => team.standings_to_par ?? team.score_to_par;
+  // 12-column grid: Pos 1 + Team 3 + Players + score columns.
+  const playersSpan = usesHandicap ? 'col-span-4' : 'col-span-5';
+  const toParSpan = usesHandicap ? 'col-span-1' : 'col-span-2';
 
   const formatScore = (scoreToPar) => {
+    if (scoreToPar == null) return '';
     if (scoreToPar === 0) return 'E';
     if (scoreToPar > 0) return `+${scoreToPar}`;
     return scoreToPar.toString();
   };
 
   const getScoreColor = (scoreToPar) => {
+    if (scoreToPar == null) return 'text-gray-400 dark:text-gray-500';
     if (scoreToPar < 0) return 'text-red-600'; // Under par (red like Masters)
     if (scoreToPar === 0) return 'text-gray-900 dark:text-gray-100'; // Even par
     return 'text-gray-900 dark:text-gray-100'; // Over par
@@ -138,6 +143,49 @@ export default function Leaderboard() {
     if (position === 2) return '🥈';
     if (position === 3) return '🥉';
     return null;
+  };
+
+  const renderPlayers = (players, { size = 'sm' } = {}) => {
+    if (!players?.length) return null;
+
+    const textClass =
+      size === 'xs'
+        ? 'text-xs text-gray-700 dark:text-gray-300 font-serif leading-5'
+        : 'text-sm text-gray-900 dark:text-gray-100 font-serif';
+
+    // Two players per line with a dot between them. The row is a plain flex row —
+    // NOT flex-wrap — so the pair can never break between the dot and the second
+    // name, which is what used to strand a "•" at the start of a line. A pair too
+    // wide for the column wraps inside each name instead, leaving the dot put.
+    const pairs = [];
+    for (let i = 0; i < players.length; i += 2) {
+      pairs.push(players.slice(i, i + 2));
+    }
+
+    const renderPlayer = (player) => (
+      <>
+        {player.name}
+        {player.handicap != null && (
+          <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({player.handicap})</span>
+        )}
+      </>
+    );
+
+    return (
+      <div className={`w-full space-y-1 text-left ${textClass}`}>
+        {pairs.map((pair, pairIdx) => (
+          <div key={pairIdx} className="flex items-baseline gap-x-2">
+            <span>{renderPlayer(pair[0])}</span>
+            {pair[1] && (
+              <>
+                <span className="text-gray-400 dark:text-gray-500" aria-hidden="true">•</span>
+                <span>{renderPlayer(pair[1])}</span>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -191,14 +239,14 @@ export default function Leaderboard() {
             <div className="bg-white dark:bg-night-800 rounded-2xl shadow-lg overflow-hidden">
               {/* Desktop Table Header - hidden on mobile */}
               <div className="bg-primary-600 dark:bg-primary-800 text-white hidden md:block">
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-sm uppercase tracking-wide">
-                  <div className="col-span-1 flex items-center justify-center">Pos</div>
-                  <div className="col-span-3 flex items-center">Team</div>
-                  <div className={`${usesHandicap ? 'col-span-3' : 'col-span-4'} flex items-center justify-center`}>Players</div>
-                  <div className="col-span-2 flex items-center justify-center">{usesHandicap ? 'Net to Par' : 'To Par'}</div>
-                  {usesHandicap && <div className="col-span-1 flex items-center justify-center">Net</div>}
-                  <div className="col-span-1 flex items-center justify-center">{usesHandicap ? 'Gross' : 'Total'}</div>
-                  <div className="col-span-1 flex items-center justify-center">Thru</div>
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-xs uppercase tracking-wider">
+                  <div className="col-span-1 text-center">Pos</div>
+                  <div className="col-span-3 text-center">Team</div>
+                  <div className={`${playersSpan} text-left`}>Players</div>
+                  {usesHandicap && <div className="col-span-1 text-center">Hcp</div>}
+                  <div className="col-span-1 text-center">{usesHandicap ? 'Gross' : 'Total'}</div>
+                  {usesHandicap && <div className="col-span-1 text-center">Net</div>}
+                  <div className={`${toParSpan} text-center`}>To Par</div>
                 </div>
               </div>
 
@@ -209,16 +257,7 @@ export default function Leaderboard() {
 
               {/* Table Body */}
               <div className="divide-y divide-gray-200 dark:divide-night-700">
-                {leaderboard.map((team, index) => {
-                  // Group players into pairs for display
-                  const playerPairs = [];
-                  if (team.players) {
-                    for (let i = 0; i < team.players.length; i += 2) {
-                      playerPairs.push(team.players.slice(i, i + 2));
-                    }
-                  }
-
-                  return (
+                {leaderboard.map((team, index) => (
                     <div key={team.team_id}>
                       {/* Desktop Row */}
                       <div
@@ -227,79 +266,65 @@ export default function Leaderboard() {
                         }`}
                       >
                         {/* Position */}
-                        <div className="col-span-1 flex items-center justify-center">
-                          <div className="flex flex-row items-center justify-end gap-2 min-w-[4rem]">
-                            {getPlaceEmoji(team.position) && (
-                              <span className="text-2xl">{getPlaceEmoji(team.position)}</span>
-                            )}
-                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif w-8 text-center">
-                              {formatPosition(team.position, team.is_tied)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Team Name */}
-                        <div className="col-span-3 flex items-center">
-                          {team.team_name && (
-                            <div className="text-sm font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide">
-                              {team.team_name}
-                            </div>
+                        <div className="col-span-1 flex items-center justify-center gap-1">
+                          {getPlaceEmoji(team.position) && (
+                            <span className="text-xl leading-none">{getPlaceEmoji(team.position)}</span>
                           )}
-                        </div>
-
-                        {/* Players (2 per line) */}
-                        <div className={`${usesHandicap ? 'col-span-3' : 'col-span-4'} flex items-center`}>
-                          <div className="space-y-1 w-full">
-                            {playerPairs.map((pair, pairIdx) => (
-                              <div key={pairIdx} className="text-sm text-gray-900 dark:text-gray-100 font-serif">
-                                {pair.map((player, idx) => (
-                                  <span key={idx}>
-                                    {player.name}
-                                    {player.handicap && (
-                                      <span className="text-xs text-gray-500 dark:text-gray-400"> ({player.handicap})</span>
-                                    )}
-                                    {idx < pair.length - 1 && <span className="text-gray-400 mx-2">•</span>}
-                                  </span>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Score to Par — net where a handicap applies, since that's
-                            what standings are ranked on */}
-                        <div className="col-span-2 flex items-center justify-center">
-                          <span className={`text-2xl font-bold font-serif ${getScoreColor(standingsToPar(team))}`}>
-                            {formatScore(standingsToPar(team))}
+                          <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
+                            {team.position != null ? formatPosition(team.position, team.is_tied) : ''}
                           </span>
                         </div>
 
-                        {/* Net Score */}
+                        {/* Team Name — centred in its column; the player list beside it
+                            stays left-aligned so its lines keep a straight edge. */}
+                        <div className="col-span-3 flex items-center justify-center">
+                          <div className="text-sm font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide text-center">
+                            {team.team_name}
+                          </div>
+                        </div>
+
+                        {/* Players */}
+                        <div className={`${playersSpan} flex items-center`}>
+                          {renderPlayers(team.players)}
+                        </div>
+
+                        {/* Team Handicap */}
                         {usesHandicap && (
                           <div className="col-span-1 flex items-center justify-center">
-                            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 font-serif">
-                              {team.net_score ?? team.total_score}
+                            <span className="text-sm text-gray-500 dark:text-gray-400 font-serif">
+                              {team.team_handicap ?? ''}
                             </span>
                           </div>
                         )}
 
-                        {/* Gross Score, with the allowance that produced the net */}
-                        <div className="col-span-1 flex flex-col items-center justify-center">
-                          <span className="text-lg text-gray-900 dark:text-gray-100 font-serif">
-                            {team.total_score}
+                        {/* Gross */}
+                        <div className="col-span-1 flex items-center justify-center">
+                          <span className="text-base text-gray-500 dark:text-gray-400 font-serif">
+                            {team.total_score ?? ''}
                           </span>
-                          {usesHandicap && team.team_handicap != null && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
-                              HCP {team.team_handicap}
-                            </span>
-                          )}
                         </div>
 
-                        {/* Status */}
-                        <div className="col-span-1 flex items-center justify-center">
-                          <span className="text-base text-gray-600 dark:text-gray-400 font-serif font-semibold">
-                            {team.status || 'F'}
+                        {/* Net */}
+                        {usesHandicap && (
+                          <div className="col-span-1 flex items-center justify-center">
+                            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100 font-serif">
+                              {team.net_score ?? ''}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* To par — the number standings are ranked on, so it carries
+                            the most weight. Status rides underneath when a team is
+                            still out on the course. */}
+                        <div className={`${toParSpan} flex flex-col items-center justify-center`}>
+                          <span className={`text-2xl font-bold font-serif ${getScoreColor(standingsToPar(team))}`}>
+                            {formatScore(standingsToPar(team))}
                           </span>
+                          {team.status && team.status !== 'F' && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
+                              thru {team.status}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -321,66 +346,48 @@ export default function Leaderboard() {
                           </div>
 
                           {/* Center: Team + Players */}
-                          <div className="flex-1 min-w-0 text-center">
+                          <div className="flex-1 min-w-0 text-left">
                             {team.team_name && (
                               <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide">
                                 {team.team_name}
                               </div>
                             )}
-                            <div className="mt-1">
-                              {team.players && (() => {
-                                const pairs = [];
-                                for (let i = 0; i < team.players.length; i += 2) {
-                                  pairs.push(team.players.slice(i, i + 2));
-                                }
-                                return pairs.map((pair, pairIdx) => (
-                                  <div key={pairIdx} className="text-xs text-gray-700 dark:text-gray-300 font-serif leading-5">
-                                    {pair.map((player, idx) => (
-                                      <span key={idx}>
-                                        {player.name}
-                                        {player.handicap && (
-                                          <span className="text-xs text-gray-400"> ({player.handicap})</span>
-                                        )}
-                                        {idx < pair.length - 1 && <span className="text-gray-300 mx-1">•</span>}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ));
-                              })()}
-                            </div>
+                            <div className="mt-1">{renderPlayers(team.players, { size: 'xs' })}</div>
                           </div>
 
                           {/* Right: Score */}
-                          <div className="flex flex-col items-end flex-shrink-0">
+                          <div className="flex flex-col items-end flex-shrink-0 text-right">
                             <span className={`text-2xl font-bold font-serif ${getScoreColor(standingsToPar(team))}`}>
                               {formatScore(standingsToPar(team))}
                             </span>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              {usesHandicap ? (
-                                <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
-                                  Net {team.net_score ?? team.total_score} · Gross {team.total_score}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">{team.total_score}</span>
-                              )}
-                              <span className="text-xs text-gray-400">•</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 font-serif font-semibold">{team.status || 'F'}</span>
-                            </div>
-                            {usesHandicap && team.team_handicap != null && (
-                              <span className="text-xs text-gray-400 font-serif">HCP {team.team_handicap}</span>
+                            {team.total_score != null && (
+                              <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 font-serif">
+                                {usesHandicap ? (
+                                  <>
+                                    {team.team_handicap != null && <>hcp {team.team_handicap} · </>}
+                                    net {team.net_score ?? team.total_score} · gross {team.total_score}
+                                  </>
+                                ) : (
+                                  team.total_score
+                                )}
+                              </span>
+                            )}
+                            {team.status && team.status !== 'F' && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
+                                thru {team.status}
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
 
               {/* Footer Note */}
               <div className="bg-gray-50 dark:bg-night-900 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center font-serif border-t border-gray-200 dark:border-night-700">
                 <p>
-                  Scramble format • F = Finished • T = Tied
+                  Scramble format • T = Tied
                   {usesHandicap && ' • Net = gross − team handicap • Standings are by net score'}
                 </p>
               </div>

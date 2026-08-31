@@ -100,10 +100,10 @@ export default function Schedule() {
         <div className="mx-auto max-w-5xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">
-              Tournament Schedule
+              Schedule
             </h2>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
-              Schedule details will be posted soon. Check back later for the full tournament schedule.
+              Details will be posted soon. Check back later for the full schedule.
             </p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function Schedule() {
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold tracking-tight text-primary-600 dark:text-primary-400 sm:text-5xl font-serif">
-            Tournament Schedule
+            Schedule
           </h2>
         </div>
 
