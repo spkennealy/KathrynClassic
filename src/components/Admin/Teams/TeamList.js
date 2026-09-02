@@ -28,7 +28,6 @@ export default function TeamList() {
           name,
           golf_teams (
             id,
-            team_number,
             display_name,
             total_score,
             score_to_par,

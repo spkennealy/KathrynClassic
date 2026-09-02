@@ -70,7 +70,6 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
         .from('golf_teams')
         .select(`
           id,
-          team_number,
           display_name,
           teams ( name ),
           golf_team_players ( player_name, player_order )
@@ -84,7 +83,6 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
       const transformedTeams = (data || []).map(team => ({
         team_id: team.id,
         team_name: team.display_name || team.teams?.name,
-        team_number: team.team_number,
         players: team.golf_team_players?.sort((a, b) => a.player_order - b.player_order) || [],
       }));
 
@@ -272,7 +270,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                   <option value="">No team yet</option>
                   {teams.map((team) => (
                     <option key={team.team_id} value={team.team_id}>
-                      {team.team_name || `Team #${team.team_number}`}
+                      {team.team_name || 'Unnamed team'}
                       {team.players && team.players.length > 0 && ` - ${team.players[0].player_name}`}
                     </option>
                   ))}

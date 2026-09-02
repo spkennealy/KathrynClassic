@@ -4,7 +4,12 @@ import { logAudit } from '../../../utils/audit';
 import Select from '../Select';
 import { buildTeamSuggestions } from './teamBuilderAlgorithm';
 import ConfirmDialog from '../ConfirmDialog';
-import { computeTeamHandicap, describeTeamHandicap, isHandicapEnabled } from '../../../utils/handicap';
+import {
+  computeTeamHandicap,
+  describeTeamHandicap,
+  isHandicapEnabled,
+  isScratchToLowestEnabled,
+} from '../../../utils/handicap';
 import { applyTeamName } from '../../../utils/teamNames';
 
 export default function TeamBuilder() {
@@ -89,6 +94,7 @@ export default function TeamBuilder() {
   // pool/pending members carry `golf_handicap` — either way it's the registration
   // number, so a card recalculates as players are dragged in and out.
   const handicapEnabled = isHandicapEnabled(handicapFormula);
+  const scratchToLowest = isScratchToLowestEnabled(handicapFormula);
   const teamHandicapFor = (members) =>
     handicapEnabled
       ? computeTeamHandicap((members || []).map(m => m.golf_handicap ?? m.handicap), handicapFormula)
@@ -274,7 +280,6 @@ export default function TeamBuilder() {
         .from('golf_teams')
         .select(`
           id,
-          team_number,
           team_id,
           display_name,
           teams ( name ),
@@ -328,7 +333,7 @@ export default function TeamBuilder() {
           // `name` is what this year's entry is called; `identityName` is what the
           // team is called in general. They differ only when a returning team plays
           // under a different name this year.
-          name: team.display_name || team.teams?.name || `Team ${team.team_number || ''}`,
+          name: team.display_name || team.teams?.name || 'Unnamed Team',
           identityName: team.teams?.name || '',
           members: (team.golf_team_players || [])
             .sort((a, b) => a.player_order - b.player_order)
@@ -609,7 +614,7 @@ export default function TeamBuilder() {
         : team.name;
       const { data: newTeam, error: teamError } = await supabase
         .from('golf_teams')
-        .insert({ tournament_id: selectedTournament, team_id: teamsId, team_number: 0 })
+        .insert({ tournament_id: selectedTournament, team_id: teamsId })
         .select().single();
       if (teamError) throw teamError;
 
@@ -690,7 +695,7 @@ export default function TeamBuilder() {
           : team.name;
         const { data: newTeam, error: teamError } = await supabase
           .from('golf_teams')
-          .insert({ tournament_id: selectedTournament, team_id: teamsId, team_number: 0 })
+          .insert({ tournament_id: selectedTournament, team_id: teamsId })
           .select().single();
         if (teamError) throw teamError;
 
@@ -775,6 +780,8 @@ export default function TeamBuilder() {
             {handicapEnabled
               ? ' Team handicaps follow this year\u2019s rules and update as you build.'
               : ' This year has no team handicap \u2014 add one in Admin \u2192 Rules.'}
+            {scratchToLowest &&
+              ' The lowest team in the field will be scratched to 0 on the leaderboard, with every other team\u2019s handicap reduced by that amount \u2014 the numbers shown here are before that adjustment.'}
           </p>
         </div>
         {pendingTeams.length > 0 && (

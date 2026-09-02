@@ -8,6 +8,7 @@ import {
   computeTeamHandicap,
   describeTeamHandicap,
   isHandicapEnabled,
+  isScratchToLowestEnabled,
 } from '../../../utils/handicap';
 
 // Worked example shown under the formula editor, so an admin can see what the
@@ -148,6 +149,7 @@ export default function RulesEditor() {
   const selectedYear = tournaments.find((t) => t.id === tournamentId)?.year;
 
   const handicapEnabled = isHandicapEnabled(handicapFormula);
+  const scratchToLowest = isScratchToLowestEnabled(handicapFormula);
   const exampleResult = computeTeamHandicap(EXAMPLE_HANDICAPS, handicapFormula);
 
   const toggleHandicap = (enabled) => {
@@ -163,6 +165,10 @@ export default function RulesEditor() {
       ...prev,
       tiers: (prev?.tiers || []).map(t => (t.players === players ? { ...t, ...patch } : t)),
     }));
+  };
+
+  const toggleScratchToLowest = (checked) => {
+    setHandicapFormula(prev => ({ ...prev, scratch_to_lowest: checked }));
   };
 
   const updateWeight = (players, index, percent) => {
@@ -367,6 +373,27 @@ export default function RulesEditor() {
                         ? describeTeamHandicap(exampleResult)
                         : 'no weights set for a team of this size.'}
                     </p>
+
+                    <label className="flex items-start gap-2 cursor-pointer pt-2 border-t border-gray-100 dark:border-night-700">
+                      <input
+                        type="checkbox"
+                        checked={scratchToLowest}
+                        onChange={(e) => toggleScratchToLowest(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Scratch the lowest team handicap to 0
+                        </span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400">
+                          After the formula above runs, the team with the smallest handicap in the
+                          field is set to 0 and every other team's handicap is reduced by that same
+                          amount. Teams end up compared to the strongest team rather than to par.
+                          Leave it off to use each team's handicap as calculated. Team Builder shows
+                          the number before this adjustment; the leaderboard shows it after.
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 )}
               </div>

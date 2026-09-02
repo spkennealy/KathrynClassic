@@ -305,13 +305,9 @@ export default function TeeTimesManagement() {
                     {teeTime.hole_number}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
-                    {teeTime.team_name && (
+                    {teeTime.team_name ? (
                       <div className="font-semibold text-primary-600 dark:text-primary-400">{teeTime.team_name}</div>
-                    )}
-                    {Boolean(teeTime.team_number) && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Team #{teeTime.team_number}</div>
-                    )}
-                    {!teeTime.team_name && !teeTime.team_number && (
+                    ) : (
                       <span className="text-gray-400">No team assigned</span>
                     )}
                   </td>

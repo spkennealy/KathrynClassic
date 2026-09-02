@@ -45,10 +45,13 @@ export default function LeaderboardManagement() {
     try {
       setLoading(true);
 
+      // Only published teams belong here — an unpublished/draft team gets
+      // built and published from Team Builder, not created on this page.
       const { data, error } = await supabase
         .from('leaderboard_view')
         .select('*')
         .eq('tournament_id', selectedTournament)
+        .not('teams_published_at', 'is', null)
         .order('position', { ascending: true });
 
       if (error) throw error;
@@ -60,11 +63,6 @@ export default function LeaderboardManagement() {
     }
   };
 
-  const handleAddTeam = () => {
-    setSelectedTeam(null);
-    setShowForm(true);
-  };
-
   const handleEditTeam = (team) => {
     setSelectedTeam(team);
     setShowForm(true);
@@ -74,35 +72,68 @@ export default function LeaderboardManagement() {
   const usesHandicap = teams.some((team) => team.handicap_applied);
   const standingsToPar = (team) => team.standings_to_par ?? team.score_to_par;
 
-  const handleDeleteTeam = async (team) => {
-    if (!window.confirm('Are you sure you want to delete this team?')) {
+  // When a year scratches the field's lowest team to 0 (Admin → Rules), the
+  // handicap actually used for scoring differs from the raw formula number —
+  // show both, raw in gray leading into the adjusted number in black, so the
+  // adjustment is visible rather than just its result.
+  const renderHandicap = (team) => {
+    if (team.team_handicap == null) return '';
+    if (team.scratch_to_lowest && team.team_handicap_raw != null && team.team_handicap_raw !== team.team_handicap) {
+      return (
+        <>
+          <span className="text-gray-400 dark:text-gray-500">{team.team_handicap_raw}</span>
+          <span className="text-gray-400 dark:text-gray-500 mx-0.5">→</span>
+          <span className="text-gray-900 dark:text-gray-100">{team.team_handicap}</span>
+        </>
+      );
+    }
+    return team.team_handicap;
+  };
+
+  // This page only ever touches scores — the team and its roster stay put
+  // (that's Team Builder's job). "Clear" resets the score back to blank
+  // rather than removing the team from the tournament.
+  const handleClearScore = async (team) => {
+    if (!window.confirm(`Clear the score for ${team.team_name || 'this team'}?`)) {
       return;
     }
 
     try {
+      const { error: deleteHolesError } = await supabase
+        .from('golf_hole_scores')
+        .delete()
+        .eq('team_id', team.team_id);
+      if (deleteHolesError) throw deleteHolesError;
+
       const { error } = await supabase
         .from('golf_teams')
-        .delete()
+        .update({
+          total_score: null,
+          score_to_par: null,
+          status: null,
+          position: null,
+          is_tied: false,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', team.team_id);
 
       if (error) throw error;
 
       await logAudit({
-        action: 'golf_team.deleted',
+        action: 'golf_team.score_cleared',
         entityType: 'golf_team',
         entityId: team.team_id,
-        entityLabel: team.team_name || `Team #${team.team_number ?? ''}`.trim(),
+        entityLabel: team.team_name || 'Unnamed team',
         changes: {
-          team: team.team_name,
-          score: team.total_score ?? team.score,
-          position: team.position,
+          total_score: { from: team.total_score, to: null },
+          score_to_par: { from: team.score_to_par, to: null },
         },
       });
 
       fetchTeams();
     } catch (err) {
-      console.error('Error deleting team:', err);
-      alert('Failed to delete team');
+      console.error('Error clearing score:', err);
+      alert('Failed to clear score');
     }
   };
 
@@ -134,19 +165,11 @@ export default function LeaderboardManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Leaderboard Management</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Manage tournament scores and team standings
-          </p>
-        </div>
-        <button
-          onClick={handleAddTeam}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        >
-          Add Team
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Leaderboard Management</h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Enter and edit scores for this tournament's published teams. To add a team, publish it from Team Builder first.
+        </p>
       </div>
 
       {/* Tournament Selector */}
@@ -203,6 +226,9 @@ export default function LeaderboardManagement() {
                 <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Status
                 </th>
+                <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Mulligans
+                </th>
                 <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Actions
                 </th>
@@ -234,7 +260,7 @@ export default function LeaderboardManagement() {
                   </td>
                   {usesHandicap && (
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-700 dark:text-gray-300">
-                      {team.team_handicap ?? ''}
+                      {renderHandicap(team)}
                     </td>
                   )}
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-bold">
@@ -251,20 +277,28 @@ export default function LeaderboardManagement() {
                     {team.total_score}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-semibold text-gray-600 dark:text-gray-400">
-                    {team.status || 'F'}
+                    {/* golf_teams.status used to default to 'F' at the database
+                        level, so a team could show "Finished" with no score
+                        ever entered. A team with no gross score hasn't played,
+                        full stop — ignore whatever status says. */}
+                    {team.total_score == null ? '-' : team.status || '-'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
+                    {team.mulligans_purchased || 0}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-2">
                     <button
                       onClick={() => handleEditTeam(team)}
                       className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
-                      Edit
+                      {team.total_score != null ? 'Edit Score' : 'Add Score'}
                     </button>
                     <button
-                      onClick={() => handleDeleteTeam(team)}
-                      className="text-red-600 hover:text-red-900 font-medium"
+                      onClick={() => handleClearScore(team)}
+                      disabled={team.total_score == null}
+                      className="text-red-600 hover:text-red-900 font-medium disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-red-600"
                     >
-                      Delete
+                      Clear
                     </button>
                   </td>
                 </tr>
@@ -274,7 +308,9 @@ export default function LeaderboardManagement() {
 
           {teams.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">No teams added yet</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                No published teams for this tournament yet — publish teams from Team Builder to score them here.
+              </p>
             </div>
           )}
         </div>

@@ -4,6 +4,10 @@ import Select from '../Select';
 import { logAudit, diffFields } from '../../../utils/audit';
 import DatePicker from '../DatePicker';
 
+const DEFAULT_HOLE_PAR = 4;
+const FRONT_NINE = Array.from({ length: 9 }, (_, i) => i + 1);
+const BACK_NINE = Array.from({ length: 9 }, (_, i) => i + 10);
+
 export default function TournamentForm({ tournament, onClose, onSave }) {
   const [formData, setFormData] = useState({
     year: '',
@@ -11,6 +15,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
     end_date: '',
     location: '',
     golf_course: '',
+    golf_course_logo_url: '',
     par: '72',
     total_raised: '',
     golfer_count: '',
@@ -22,6 +27,18 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState(null);
+
+  // Hole-by-hole course layout (par + handicap/stroke index), used by the
+  // Leaderboard scorecard. Lives here rather than being set up ad hoc from
+  // the score-entry screen, so it has one persistent, editable home.
+  const [holePars, setHolePars] = useState(Array(18).fill(DEFAULT_HOLE_PAR));
+  const [holeStrokeIndexes, setHoleStrokeIndexes] = useState(Array.from({ length: 18 }, (_, i) => i + 1));
+  const [holesLoaded, setHolesLoaded] = useState(false);
+  const [holesSaving, setHolesSaving] = useState(false);
+  const [holesError, setHolesError] = useState(null);
+  const [holesSavedMessage, setHolesSavedMessage] = useState(false);
 
   useEffect(() => {
     if (tournament) {
@@ -31,6 +48,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
         end_date: tournament.end_date || '',
         location: tournament.location || '',
         golf_course: tournament.golf_course || '',
+        golf_course_logo_url: tournament.golf_course_logo_url || '',
         par: tournament.par || '72',
         total_raised: tournament.total_raised || '',
         golfer_count: tournament.golfer_count || '',
@@ -42,6 +60,120 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
       });
     }
   }, [tournament]);
+
+  useEffect(() => {
+    const fetchHoles = async () => {
+      if (!tournament?.id) {
+        setHolesLoaded(true);
+        return;
+      }
+      const { data, error: holesFetchError } = await supabase
+        .from('tournament_holes')
+        .select('hole_number, par, stroke_index')
+        .eq('tournament_id', tournament.id)
+        .order('hole_number');
+
+      if (holesFetchError) {
+        console.error('Error fetching course layout:', holesFetchError);
+      } else if (data && data.length === 18) {
+        const pars = data.map((h) => h.par);
+        setHolePars(pars);
+        setHoleStrokeIndexes(data.map((h) => h.stroke_index ?? ''));
+        // Keep the top-level Course Par field in sync with the real layout,
+        // in case it had drifted from whatever was saved hole-by-hole.
+        setFormData((prev) => ({ ...prev, par: String(pars.reduce((sum, p) => sum + (parseInt(p, 10) || 0), 0)) }));
+      }
+      setHolesLoaded(true);
+    };
+    fetchHoles();
+  }, [tournament]);
+
+  const setHolePar = (idx, value) => {
+    const next = [...holePars];
+    next[idx] = value;
+    setHolePars(next);
+    // Course Par auto-calculates from the 18 holes as you type — no need to
+    // keep it in sync by hand.
+    const total = next.reduce((sum, p) => sum + (parseInt(p, 10) || 0), 0);
+    setFormData((prev) => ({ ...prev, par: String(total) }));
+  };
+
+  const setHoleStrokeIndex = (idx, value) => {
+    const next = [...holeStrokeIndexes];
+    next[idx] = value;
+    setHoleStrokeIndexes(next);
+  };
+
+  const totalHolePar = holePars.reduce((sum, p) => sum + (parseInt(p, 10) || 0), 0);
+
+  const handleSaveHoles = async (tournamentId) => {
+    setHolesSaving(true);
+    setHolesError(null);
+    setHolesSavedMessage(false);
+    try {
+      const rows = holePars.map((par, idx) => ({
+        tournament_id: tournamentId,
+        hole_number: idx + 1,
+        par: parseInt(par, 10) || DEFAULT_HOLE_PAR,
+        stroke_index: parseInt(holeStrokeIndexes[idx], 10) || null,
+      }));
+
+      // Wholesale replace — simplest way to also handle edits to existing holes.
+      const { error: deleteError } = await supabase
+        .from('tournament_holes')
+        .delete()
+        .eq('tournament_id', tournamentId);
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase.from('tournament_holes').insert(rows);
+      if (insertError) throw insertError;
+
+      await logAudit({
+        action: 'tournament_holes.updated',
+        entityType: 'tournament',
+        entityId: tournamentId,
+        entityLabel: 'Course layout',
+        changes: { total_par: totalHolePar },
+      });
+
+      setHolesSavedMessage(true);
+    } catch (err) {
+      console.error('Error saving course layout:', err);
+      setHolesError(err.message || 'Failed to save course layout');
+    } finally {
+      setHolesSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setLogoUploading(true);
+    setLogoError(null);
+
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `course-logo-${Date.now()}.${ext}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('event-photos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('event-photos')
+        .getPublicUrl(data.path);
+
+      setFormData((prev) => ({ ...prev, golf_course_logo_url: publicUrl }));
+    } catch (err) {
+      console.error('Error uploading course logo:', err);
+      setLogoError('Failed to upload logo. Make sure the "event-photos" storage bucket exists in Supabase.');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,6 +187,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
         end_date: formData.end_date,
         location: formData.location || null,
         golf_course: formData.golf_course || null,
+        golf_course_logo_url: formData.golf_course_logo_url || null,
         par: formData.par ? parseInt(formData.par) : 72,
         total_raised: formData.total_raised ? parseFloat(formData.total_raised) : null,
         golfer_count: formData.golfer_count ? parseInt(formData.golfer_count) : null,
@@ -217,8 +350,147 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
                   placeholder="72"
                   className="mt-1 block w-full"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Typically 72</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Auto-calculated from the hole-by-hole par below — typically 72.
+                </p>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Course Logo
+              </label>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Shown on the right side of the scorecard.
+              </p>
+              {logoError && <p className="mt-1 text-sm text-red-600">{logoError}</p>}
+              <div className="mt-2 flex items-center gap-4">
+                {formData.golf_course_logo_url && (
+                  <div className="relative">
+                    <img
+                      src={formData.golf_course_logo_url}
+                      alt="Course logo"
+                      className="h-16 w-16 object-contain rounded-md bg-white border border-gray-300 dark:border-night-600 p-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, golf_course_logo_url: '' }))}
+                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-700"
+                      title="Remove logo"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  disabled={logoUploading}
+                  className="block text-sm text-gray-600 dark:text-gray-400"
+                />
+                {logoUploading && <span className="text-sm text-gray-500 dark:text-gray-400">Uploading...</span>}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-night-700 pt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Course Layout (Par &amp; Handicap)
+              </label>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Used for the hole-by-hole scorecard in Leaderboard Management.
+              </p>
+
+              {!tournament?.id ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                  Save this tournament first, then edit it again to set up the course layout.
+                </p>
+              ) : !holesLoaded ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+              ) : (
+                <div className="rounded-lg border border-gray-200 dark:border-night-600 bg-gray-50 dark:bg-night-700 p-4">
+                  {holesError && <p className="text-sm text-red-600 mb-2">{holesError}</p>}
+
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Par</p>
+                  <div className="grid grid-cols-9 gap-2 mb-2">
+                    {FRONT_NINE.map((h, idx) => (
+                      <div key={h} className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400">{h}</span>
+                        <input
+                          type="number"
+                          min={3}
+                          max={6}
+                          value={holePars[idx]}
+                          onChange={(e) => setHolePar(idx, e.target.value)}
+                          className="no-spinner !w-10 !p-1 text-center text-sm rounded border-gray-300 dark:border-night-600 dark:bg-night-800 dark:text-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-9 gap-2 mb-4">
+                    {BACK_NINE.map((h, idx) => (
+                      <div key={h} className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400">{h}</span>
+                        <input
+                          type="number"
+                          min={3}
+                          max={6}
+                          value={holePars[idx + 9]}
+                          onChange={(e) => setHolePar(idx + 9, e.target.value)}
+                          className="no-spinner !w-10 !p-1 text-center text-sm rounded border-gray-300 dark:border-night-600 dark:bg-night-800 dark:text-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Handicap (Stroke Index)</p>
+                  <div className="grid grid-cols-9 gap-2 mb-2">
+                    {FRONT_NINE.map((h, idx) => (
+                      <div key={h} className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400">{h}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={18}
+                          value={holeStrokeIndexes[idx]}
+                          onChange={(e) => setHoleStrokeIndex(idx, e.target.value)}
+                          className="no-spinner !w-10 !p-1 text-center text-sm rounded border-gray-300 dark:border-night-600 dark:bg-night-800 dark:text-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-9 gap-2 mb-3">
+                    {BACK_NINE.map((h, idx) => (
+                      <div key={h} className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400">{h}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={18}
+                          value={holeStrokeIndexes[idx + 9]}
+                          onChange={(e) => setHoleStrokeIndex(idx + 9, e.target.value)}
+                          className="no-spinner !w-10 !p-1 text-center text-sm rounded border-gray-300 dark:border-night-600 dark:bg-night-800 dark:text-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Total par: <strong>{totalHolePar}</strong>
+                      {holesSavedMessage && <span className="ml-3 text-green-600">Saved ✓</span>}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveHoles(tournament.id)}
+                      disabled={holesSaving}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50"
+                    >
+                      {holesSaving ? 'Saving...' : 'Save Course Layout'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

@@ -117,9 +117,15 @@ export default function Leaderboard() {
 
       // The round hasn't been played yet if its date is still ahead of today —
       // that's when standings are meaningless and pairings are what matters.
+      // But a score on the board beats the calendar: if a team has already
+      // posted, someone's out there playing (an early/test entry, whatever),
+      // so switch over to standings immediately rather than waiting on the
+      // date to catch up.
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const roundNotYetPlayed = golfEvent?.event_date && new Date(`${golfEvent.event_date}T00:00:00`) > today;
+      const anyScorePosted = (data || []).some((t) => t.total_score != null);
+      const roundNotYetPlayed =
+        golfEvent?.event_date && new Date(`${golfEvent.event_date}T00:00:00`) > today && !anyScorePosted;
       const showTeeTimes = Boolean(roundNotYetPlayed && teeTimeByTeam.size > 0);
       const format = golfEvent?.tee_time_format || 'standard';
       // A shotgun start is one shared time for the whole field — surface it once
@@ -173,6 +179,25 @@ export default function Leaderboard() {
     return scoreToPar.toString();
   };
 
+  // When a year scratches the field's lowest team to 0 (Admin → Rules), the
+  // handicap actually used for scoring differs from the raw formula number —
+  // show both, raw in gray leading into the adjusted number in black, so the
+  // adjustment is visible rather than just its result. Years without the
+  // adjustment (or a team with no handicap at all) just get the one number.
+  const renderHandicap = (team) => {
+    if (team.team_handicap == null) return '';
+    if (team.scratch_to_lowest && team.team_handicap_raw != null && team.team_handicap_raw !== team.team_handicap) {
+      return (
+        <>
+          <span className="text-gray-400 dark:text-gray-500">{team.team_handicap_raw}</span>
+          <span className="text-gray-400 dark:text-gray-500 mx-0.5">→</span>
+          <span className="text-gray-900 dark:text-gray-100 font-semibold">{team.team_handicap}</span>
+        </>
+      );
+    }
+    return team.team_handicap;
+  };
+
   const getScoreColor = (scoreToPar) => {
     if (scoreToPar == null) return 'text-gray-400 dark:text-gray-500';
     if (scoreToPar < 0) return 'text-red-600'; // Under par (red like Masters)
@@ -181,6 +206,8 @@ export default function Leaderboard() {
   };
 
   const formatPosition = (position, isTied) => {
+    // No score yet — the team's still out on the course, not ranked.
+    if (position == null) return 'TBD';
     return isTied ? `T${position}` : position;
   };
 
@@ -350,7 +377,7 @@ export default function Leaderboard() {
                                 <span className="text-xl leading-none">{getPlaceEmoji(team.position)}</span>
                               )}
                               <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
-                                {team.position != null ? formatPosition(team.position, team.is_tied) : ''}
+                                {formatPosition(team.position, team.is_tied)}
                               </span>
                             </>
                           )}
@@ -373,7 +400,7 @@ export default function Leaderboard() {
                         {usesHandicap && (
                           <div className="col-span-1 flex items-center justify-center">
                             <span className="text-sm text-gray-500 dark:text-gray-400 font-serif">
-                              {team.team_handicap ?? ''}
+                              {renderHandicap(team)}
                             </span>
                           </div>
                         )}
@@ -453,7 +480,7 @@ export default function Leaderboard() {
                               <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 font-serif">
                                 {usesHandicap ? (
                                   <>
-                                    {team.team_handicap != null && <>hcp {team.team_handicap} · </>}
+                                    {team.team_handicap != null && <>hcp {renderHandicap(team)} · </>}
                                     net {team.net_score ?? team.total_score} · gross {team.total_score}
                                   </>
                                 ) : (
