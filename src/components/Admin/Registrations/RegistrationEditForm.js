@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../../supabaseClient';
 import Select from '../Select';
 import { normalizePhone } from '../../../utils/phone';
@@ -1034,8 +1035,9 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
   // === Render ===
 
-  return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
+  // Portal: keeps `fixed inset-0` clear of the caller's space-y-* sibling margin.
+  return createPortal(
+    <div className="admin-content fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
       <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full modal-panel overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -1393,6 +1395,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

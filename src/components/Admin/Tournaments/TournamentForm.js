@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../../supabaseClient';
 import Select from '../Select';
 import { logAudit, diffFields } from '../../../utils/audit';
@@ -246,8 +247,13 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
+  // Rendered via a portal, not inline where the component was called — a plain
+  // inline render here would sit inside whatever spacing wrapper (e.g. a
+  // `space-y-*` list page) called it, and that wrapper's sibling margin lands
+  // on this backdrop despite `fixed inset-0`, leaving a gap of uncovered page
+  // at the top. A portal to document.body escapes that regardless of caller.
+  return createPortal(
+    <div className="admin-content fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
       <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-2xl w-full modal-panel overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -630,6 +636,7 @@ export default function TournamentForm({ tournament, onClose, onSave }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

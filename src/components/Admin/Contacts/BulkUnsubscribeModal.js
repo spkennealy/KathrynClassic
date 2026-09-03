@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../../supabaseClient';
 import Select from '../Select';
 import { logAuditBulk } from '../../../utils/audit';
@@ -148,8 +149,9 @@ export default function BulkUnsubscribeModal({ isOpen, onClose, onSaved, contact
 
   const skipped = contacts.length - affected.length;
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="bulk-unsub-title" role="dialog" aria-modal="true">
+  // Portal: keeps `fixed inset-0` clear of the caller's space-y-* sibling margin.
+  return createPortal(
+    <div className="admin-content fixed inset-0 z-50 overflow-y-auto" aria-labelledby="bulk-unsub-title" role="dialog" aria-modal="true">
       <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
 
@@ -229,6 +231,7 @@ export default function BulkUnsubscribeModal({ isOpen, onClose, onSaved, contact
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

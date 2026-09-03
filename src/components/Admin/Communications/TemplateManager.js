@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
 import ConfirmDialog from '../ConfirmDialog';
@@ -195,9 +196,11 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
       {message && <span className="text-sm text-green-600">{message}</span>}
       {error && !showSaveModal && <span className="text-sm text-red-600">{error}</span>}
 
-      {/* Save-as-new modal */}
-      {showSaveModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+      {/* Save-as-new modal — portalled for consistency with the app's other
+          modals (see TournamentForm), though this one's own parent isn't a
+          space-y-* container so it isn't actually subject to that bug. */}
+      {showSaveModal && createPortal(
+        <div className="admin-content fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
           <div className="flex min-h-screen items-center justify-center px-4">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowSaveModal(false)} />
             <div className="relative inline-block w-full max-w-md transform overflow-hidden rounded-lg bg-white dark:bg-night-800 text-left align-middle shadow-xl transition-all">
@@ -240,7 +243,8 @@ export default function TemplateManager({ subject, bodyHtml, onLoad, onTemplateC
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete confirmation */}

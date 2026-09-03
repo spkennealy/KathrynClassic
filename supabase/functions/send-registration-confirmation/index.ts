@@ -20,10 +20,16 @@
 //   FROM_EMAIL         - verified sender, e.g. "The Kathryn Classic <registration@yourdomain.com>"
 //   REPLY_TO_EMAIL     - where replies should land (your Namecheap forwarding address)
 //   ORGANIZER_BCC      - (optional) comma-separated addresses to BCC on every email
+//   EMAILS_ENABLED     - (optional) "false" to skip actually sending (see below). Defaults true.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 //
 // Deploy:  supabase functions deploy send-registration-confirmation --no-verify-jwt
 // Secrets: supabase secrets set RESEND_API_KEY=... FROM_EMAIL="..." REPLY_TO_EMAIL=... ORGANIZER_BCC=...
+//
+// To turn sending off for a project (e.g. dev, which is cloned from prod and
+// holds real people's addresses) without touching RESEND_API_KEY:
+//   supabase secrets set EMAILS_ENABLED=false --project-ref <dev-project-ref>
+// Flip it back with EMAILS_ENABLED=true (or unset it — the default is enabled).
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -45,6 +51,14 @@ const PAYMENT_LINKS = [
 ];
 // ------------------------------------------------------------------------------------
 
+// Per-project kill switch. Set `EMAILS_ENABLED=false` on a project's function
+// secrets (`supabase secrets set EMAILS_ENABLED=false --project-ref <ref>`) to
+// stop this function from actually calling Resend — sends are logged instead
+// and every caller still gets a normal success response. Defaults to enabled
+// so existing deployments (prod) need no new secret to keep working; this
+// exists mainly so dev — cloned from prod and holding real people's addresses —
+// can be switched off independently of prod.
+const EMAILS_ENABLED = (Deno.env.get("EMAILS_ENABLED") ?? "true").toLowerCase() !== "false";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "onboarding@resend.dev";
 const REPLY_TO_EMAIL = Deno.env.get("REPLY_TO_EMAIL") ?? "";
@@ -426,6 +440,11 @@ function groupSummaryVars(
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
+  if (!EMAILS_ENABLED) {
+    console.log(`[EMAILS_ENABLED=false] Skipped sending "${subject}" to ${to}`);
+    return { id: "skipped-emails-disabled" };
+  }
+
   const body: Record<string, unknown> = { from: FROM_EMAIL, to: [to], subject, html };
   if (REPLY_TO_EMAIL) body.reply_to = REPLY_TO_EMAIL;
   if (ORGANIZER_BCC.length > 0) body.bcc = ORGANIZER_BCC;
@@ -483,7 +502,7 @@ serve(async (req) => {
   }
 
   try {
-    if (!RESEND_API_KEY) {
+    if (EMAILS_ENABLED && !RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
@@ -596,7 +615,14 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ sent, failed, rulesSent, rulesFailed, rulesSkipped }),
+      JSON.stringify({
+        sent,
+        failed,
+        rulesSent,
+        rulesFailed,
+        rulesSkipped,
+        emailsDisabled: !EMAILS_ENABLED,
+      }),
       {
         status: failed.length > 0 && sent === 0 ? 502 : 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

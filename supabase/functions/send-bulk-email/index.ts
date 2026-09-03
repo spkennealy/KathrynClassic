@@ -18,14 +18,29 @@
 //   RESEND_API_KEY   - your Resend API key
 //   FROM_EMAIL       - verified sender, e.g. "The Kathryn Classic <info@kathrynclassic.com>"
 //   REPLY_TO_EMAIL   - where replies should land
+//   EMAILS_ENABLED   - (optional) "false" to skip actually sending. Defaults true.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 //
 // Deploy (note: NO --no-verify-jwt, so it stays admin-only):
 //   supabase functions deploy send-bulk-email
+//
+// To turn sending off for a project (e.g. dev, which is cloned from prod and
+// holds real people's addresses) without touching RESEND_API_KEY:
+//   supabase secrets set EMAILS_ENABLED=false --project-ref <dev-project-ref>
+// Flip it back with EMAILS_ENABLED=true (or unset it — the default is enabled).
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Per-project kill switch. Set `EMAILS_ENABLED=false` on a project's function
+// secrets (`supabase secrets set EMAILS_ENABLED=false --project-ref <ref>`) to
+// stop this function from actually calling Resend — sends are logged instead
+// and the campaign is still marked "sent" so admin flows keep working. Defaults
+// to enabled so existing deployments (prod) need no new secret; this exists
+// mainly so dev — cloned from prod and holding real people's addresses — can be
+// switched off independently of prod. See send-registration-confirmation for
+// the matching switch on that function.
+const EMAILS_ENABLED = (Deno.env.get("EMAILS_ENABLED") ?? "true").toLowerCase() !== "false";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "onboarding@resend.dev";
 const REPLY_TO_EMAIL = Deno.env.get("REPLY_TO_EMAIL") ?? "";
@@ -113,6 +128,11 @@ const cleanList = (list?: string[]) =>
   (list ?? []).map((s) => String(s).trim()).filter(Boolean);
 
 async function sendBatch(messages: Record<string, unknown>[]) {
+  if (!EMAILS_ENABLED) {
+    console.log(`[EMAILS_ENABLED=false] Skipped sending a batch of ${messages.length}`);
+    return messages.map(() => ({ id: "skipped-emails-disabled" }));
+  }
+
   const res = await fetch("https://api.resend.com/emails/batch", {
     method: "POST",
     headers: {
@@ -141,7 +161,7 @@ serve(async (req) => {
   let campaignId: string | undefined;
 
   try {
-    if (!RESEND_API_KEY) {
+    if (EMAILS_ENABLED && !RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
@@ -308,6 +328,12 @@ serve(async (req) => {
     // Any problem here is surfaced in `warnings` so the admin sees it in the UI
     // instead of the campaign silently staying "sending".
     const warnings: string[] = [];
+    if (!EMAILS_ENABLED) {
+      warnings.push(
+        "EMAILS_ENABLED=false on this project — no messages were actually sent " +
+          "(logged as sent for testing)."
+      );
+    }
     if (!admin) {
       warnings.push(
         "Service-role database access is not configured, so this send was not " +
