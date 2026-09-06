@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 
-const SITE_URL = 'https://kathrynclassic.com';
+const SITE_URL = 'https://www.kathrynclassic.com';
 const DEFAULT_TITLE = 'The Kathryn Classic | Annual Charity Golf Tournament';
 const DEFAULT_DESCRIPTION =
   'Join us for a weekend of family, golf & giving. The annual Kathryn Classic tournament supports CJD research through the CJD Foundation.';

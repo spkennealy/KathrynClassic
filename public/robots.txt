@@ -2,4 +2,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://kathrynclassic.com/sitemap.xml
+Sitemap: https://www.kathrynclassic.com/sitemap.xml

@@ -107,7 +107,7 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
         tournament_event_id: formData.tournament_event_id,
         team_id: formData.team_id || null,
         tee_time: teeTimeDateTime.toISOString(),
-        hole_number: parseInt(formData.hole_number),
+        hole_number: formData.hole_number.trim(),
         notes: formData.notes || null,
         updated_at: new Date().toISOString(),
       };
@@ -246,17 +246,18 @@ export default function TeeTimeForm({ teeTime, tournamentId, onClose, onSave }) 
                 <label htmlFor="hole_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Starting Hole <span className="text-red-500">*</span>
                 </label>
-                <Select
+                <input
+                  type="text"
                   id="hole_number"
                   required
+                  placeholder="e.g. 1, 1A, 1B"
                   value={formData.hole_number}
                   onChange={(e) => setFormData({ ...formData, hole_number: e.target.value })}
                   className="mt-1 block w-full"
-                >
-                  {Array.from({ length: 18 }, (_, i) => i + 1).map(hole => (
-                    <option key={hole} value={hole}>Hole {hole}</option>
-                  ))}
-                </Select>
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Use a plain number, or add a letter (1A, 1B) to split a hole across two groups.
+                </p>
               </div>
 
               <div>

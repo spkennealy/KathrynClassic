@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
+import { compareHoleNumbers } from '../../../utils/holeNumber';
 import Select from '../Select';
 import TeeTimeForm from './TeeTimeForm';
 
@@ -52,11 +53,16 @@ export default function TeeTimesManagement() {
         .from('tee_times_view')
         .select('*')
         .eq('tournament_id', selectedTournament)
-        .order('tee_time', { ascending: true })
-        .order('hole_number', { ascending: true });
+        .order('tee_time', { ascending: true });
 
       if (error) throw error;
-      setTeeTimes(data || []);
+      // hole_number is a free-text label ("1", "1A"/"1B"), so sort it in JS
+      // with a natural comparator rather than the DB's plain text ordering
+      // (which would put "10" before "2").
+      const sorted = [...(data || [])].sort(
+        (a, b) => new Date(a.tee_time) - new Date(b.tee_time) || compareHoleNumbers(a.hole_number, b.hole_number)
+      );
+      setTeeTimes(sorted);
     } catch (err) {
       console.error('Error fetching tee times:', err);
     } finally {

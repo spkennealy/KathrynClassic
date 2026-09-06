@@ -12,6 +12,7 @@ import TournamentRules from './components/TournamentRules/TournamentRules';
 import TournamentHistory from './components/TournamentHistory/TournamentHistory';
 import Unsubscribe from './components/Unsubscribe/Unsubscribe';
 import SEO from './components/SEO';
+import EventSchema from './components/EventSchema';
 
 // Admin imports
 import { AuthProvider } from './contexts/AuthContext';
@@ -92,9 +93,9 @@ function App() {
                   <Navbar />
                   <main className="flex-grow">
                     <Routes>
-                      <Route path="/" element={<><SEO path="/" /><Home /></>} />
+                      <Route path="/" element={<><SEO path="/" /><EventSchema /><Home /></>} />
                       <Route path="/schedule" element={<><SEO title="Schedule" path="/schedule" description="Weekend schedule for The Kathryn Classic charity golf tournament — events, tee times, and festivities." /><Schedule /></>} />
-                      <Route path="/registration" element={<><SEO title="Registration" path="/registration" description="Register to play in The Kathryn Classic charity golf tournament supporting CJD research through the CJD Foundation." /><Registration /></>} />
+                      <Route path="/registration" element={<><SEO title="Registration" path="/registration" description="Register to play in The Kathryn Classic charity golf tournament supporting CJD research through the CJD Foundation." /><EventSchema /><Registration /></>} />
                       <Route path="/leaderboard" element={<><SEO title="Leaderboard" path="/leaderboard" description="Live leaderboard and results for The Kathryn Classic charity golf tournament." /><Leaderboard /></>} />
                       <Route path="/about" element={<><SEO title="About" path="/about" description="Learn the story behind The Kathryn Classic — a charity golf tournament raising funds and awareness for CJD research." /><About /></>} />
                       <Route path="/rules" element={<><SEO title="Tournament Rules" path="/rules" description="Format, handicaps, award holes, and mulligans for The Kathryn Classic charity golf tournament." /><TournamentRules /></>} />

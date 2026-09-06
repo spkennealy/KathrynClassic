@@ -89,8 +89,10 @@ export default function Navbar() {
                 >
                   Donate
                 </a>
-                <Disclosure.Button className="inline-flex items-center justify-center rounded-lg bg-primary-600 p-2 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 transition-colors">
-                  <span className="sr-only">Open main menu</span>
+                <Disclosure.Button
+                  aria-label="Open main menu"
+                  className="inline-flex items-center justify-center rounded-lg bg-primary-600 p-2 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 transition-colors"
+                >
                   {open ? (
                     <XMarkIcon className="block h-6 w-6" aria-hidden="true" />
                   ) : (

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
 import { getLeaderboardYear, formatDateRange } from '../../utils/tournamentUtils';
+import { compareHoleNumbers } from '../../utils/holeNumber';
 import Select from '../Admin/Select';
 
 export default function Leaderboard() {
@@ -13,6 +14,9 @@ export default function Leaderboard() {
   // played yet, the "position" column doesn't mean anything — swap it for
   // when/where each team starts instead.
   const [teeTimeInfo, setTeeTimeInfo] = useState({ show: false, format: 'standard', shotgunTime: null });
+  // Manual column sort, pre-round only (see teeTimeInfo above) — null means
+  // "use the default order" (starting hole/tee time, ascending).
+  const [sortOverride, setSortOverride] = useState(null);
 
   useEffect(() => {
     loadAvailableYears();
@@ -58,6 +62,7 @@ export default function Leaderboard() {
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
+      setSortOverride(null);
 
       // Get tournament by year
       const { data: tournament, error: tournamentError } = await supabase
@@ -147,11 +152,15 @@ export default function Leaderboard() {
       if (showTeeTimes) {
         // Chronological for a standard round (everyone's on hole 1, so the
         // time is the only thing that varies); by starting hole for a shotgun
-        // (everyone starts at once, so the hole is what varies).
-        const sortKey = format === 'shotgun'
-          ? (t) => t.hole_number ?? Infinity
-          : (t) => (t.tee_time ? new Date(t.tee_time).getTime() : Infinity);
-        merged = [...merged].sort((a, b) => sortKey(a) - sortKey(b));
+        // (everyone starts at once, so the hole is what varies). Starting hole
+        // is a label like "1" or "1A"/"1B" (a hole split into two groups), not
+        // a plain number, so it needs a natural comparator rather than `-`.
+        merged = [...merged].sort((a, b) =>
+          format === 'shotgun'
+            ? compareHoleNumbers(a.hole_number, b.hole_number)
+            : (a.tee_time ? new Date(a.tee_time).getTime() : Infinity) -
+              (b.tee_time ? new Date(b.tee_time).getTime() : Infinity)
+        );
       }
 
       setLeaderboard(merged);
@@ -171,6 +180,60 @@ export default function Leaderboard() {
   // 12-column grid: Pos 1 + Team 3 + Players + score columns.
   const playersSpan = usesHandicap ? 'col-span-4' : 'col-span-5';
   const toParSpan = usesHandicap ? 'col-span-1' : 'col-span-2';
+
+  // Pre-round, the field isn't ranked yet — let the viewer pick what order to
+  // see it in (starting hole/tee time, team name, or handicap) instead of the
+  // fixed default. Once anyone's posted a score, teeTimeInfo.show goes false
+  // and this is moot — standings order takes over.
+  const displayedLeaderboard = useMemo(() => {
+    if (!teeTimeInfo.show || !sortOverride) return leaderboard;
+    const { key, direction } = sortOverride;
+    const dir = direction === 'asc' ? 1 : -1;
+    const compare = (a, b) => {
+      if (key === 'startCol') {
+        return teeTimeInfo.format === 'shotgun'
+          ? compareHoleNumbers(a.hole_number, b.hole_number)
+          : (a.tee_time ? new Date(a.tee_time).getTime() : Infinity) -
+            (b.tee_time ? new Date(b.tee_time).getTime() : Infinity);
+      }
+      if (key === 'team') {
+        return (a.team_name || '').localeCompare(b.team_name || '');
+      }
+      if (key === 'hcp') {
+        return (a.team_handicap ?? Infinity) - (b.team_handicap ?? Infinity);
+      }
+      return 0;
+    };
+    return [...leaderboard].sort((a, b) => dir * compare(a, b));
+  }, [leaderboard, sortOverride, teeTimeInfo.show, teeTimeInfo.format]);
+
+  // Sort arrows for a column header: hidden until the header is hovered or
+  // focused (the header cell carries the `group` class), and highlighted
+  // when they're the column currently driving the order.
+  const renderSortButtons = (key) => {
+    const isAsc = sortOverride?.key === key && sortOverride.direction === 'asc';
+    const isDesc = sortOverride?.key === key && sortOverride.direction === 'desc';
+    return (
+      <span className="inline-flex flex-col leading-none opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={() => setSortOverride({ key, direction: 'asc' })}
+          aria-label="Sort ascending"
+          className={`text-[9px] leading-[9px] ${isAsc ? 'text-white' : 'text-primary-200 hover:text-white'}`}
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          onClick={() => setSortOverride({ key, direction: 'desc' })}
+          aria-label="Sort descending"
+          className={`text-[9px] leading-[9px] ${isDesc ? 'text-white' : 'text-primary-200 hover:text-white'}`}
+        >
+          ▼
+        </button>
+      </span>
+    );
+  };
 
   const formatScore = (scoreToPar) => {
     if (scoreToPar == null) return '';
@@ -224,7 +287,7 @@ export default function Leaderboard() {
   // standard round cares about the time (the hole is 1 for everyone).
   const teeTimeDisplay = (team) => {
     if (teeTimeInfo.format === 'shotgun') {
-      return team.hole_number != null ? `Hole ${team.hole_number}` : null;
+      return team.hole_number != null ? team.hole_number : null;
     }
     return formatTeeClock(team.tee_time);
   };
@@ -338,15 +401,38 @@ export default function Leaderboard() {
               {/* Desktop Table Header - hidden on mobile */}
               <div className="bg-primary-600 dark:bg-primary-800 text-white hidden md:block">
                 <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-xs uppercase tracking-wider">
-                  <div className="col-span-1 text-center">
-                    {teeTimeInfo.show ? (teeTimeInfo.format === 'shotgun' ? 'Hole' : 'Tee Time') : 'Pos'}
+                  <div className="col-span-1 flex items-center justify-center group">
+                    {teeTimeInfo.show ? (
+                      <span className="relative inline-block text-center">
+                        {teeTimeInfo.format === 'shotgun' ? 'Starting Hole' : 'Tee Time'}
+                        <span className="absolute top-1/2 -translate-y-1/2 left-full ml-3">
+                          {renderSortButtons('startCol')}
+                        </span>
+                      </span>
+                    ) : (
+                      'Pos'
+                    )}
                   </div>
-                  <div className="col-span-3 text-center">Team</div>
-                  <div className={`${playersSpan} text-left`}>Players</div>
-                  {usesHandicap && <div className="col-span-1 text-center">Hcp</div>}
-                  <div className="col-span-1 text-center">{usesHandicap ? 'Gross' : 'Total'}</div>
-                  {usesHandicap && <div className="col-span-1 text-center">Net</div>}
-                  <div className={`${toParSpan} text-center`}>To Par</div>
+                  <div className="col-span-3 flex items-center justify-center gap-3 group">
+                    <span>Team</span>
+                    {teeTimeInfo.show && renderSortButtons('team')}
+                  </div>
+                  <div className={`${playersSpan} flex items-center text-left`}>Players</div>
+                  {usesHandicap && (
+                    <div className="col-span-1 flex items-center justify-center group">
+                      <span className="relative inline-block">
+                        Hcp
+                        {teeTimeInfo.show && (
+                          <span className="absolute top-1/2 -translate-y-1/2 left-full ml-3">
+                            {renderSortButtons('hcp')}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  <div className="col-span-1 flex items-center justify-center">{usesHandicap ? 'Gross' : 'Total'}</div>
+                  {usesHandicap && <div className="col-span-1 flex items-center justify-center">Net</div>}
+                  <div className={`${toParSpan} flex items-center justify-center`}>To Par</div>
                 </div>
               </div>
 
@@ -357,7 +443,7 @@ export default function Leaderboard() {
 
               {/* Table Body */}
               <div className="divide-y divide-gray-200 dark:divide-night-700">
-                {leaderboard.map((team, index) => (
+                {displayedLeaderboard.map((team, index) => (
                     <div key={team.team_id}>
                       {/* Desktop Row */}
                       <div

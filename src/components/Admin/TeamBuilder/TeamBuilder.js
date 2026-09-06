@@ -108,11 +108,20 @@ export default function TeamBuilder() {
   const editingMemberIds = new Set(
     (editingTeamData?.members || []).map(m => m.contact_id).filter(Boolean)
   );
+  // The editing team's roster as saved in the DB (before any local edits) — needed
+  // to tell "removed from the team I'm editing" apart from "on a different team".
+  // existingTeamContactIds is a flat set across every saved team, so without this
+  // a member dropped from the team being edited still reads as spoken-for (they're
+  // still in that flat set) and never reappears in the pool.
+  const editingTeamOriginalIds = new Set(
+    (existingTeams.find(t => t.id === editingTeamId)?.members || []).map(m => m.contact_id).filter(Boolean)
+  );
   const unassignedGolfers = golfers.filter(g => {
     if (pendingMemberIds.has(g.contact_id)) return false;
     if (editingTeamId) {
-      // Exclude members of OTHER saved teams; include if removed from editing team
-      const inOtherSavedTeam = existingTeamContactIds.has(g.contact_id) && !editingMemberIds.has(g.contact_id);
+      // Exclude members of OTHER saved teams — but not this team's own original
+      // roster, since a removed member of *this* team belongs back in the pool.
+      const inOtherSavedTeam = existingTeamContactIds.has(g.contact_id) && !editingTeamOriginalIds.has(g.contact_id);
       // Also exclude if still in the editing team's current member list (not removed)
       const stillInEditingTeam = editingMemberIds.has(g.contact_id);
       return !inOtherSavedTeam && !stillInEditingTeam;
