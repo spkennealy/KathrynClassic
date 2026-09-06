@@ -14,7 +14,7 @@
 # misc
 .DS_Store
 .env
-.env.*``
+.env.*
 !.env.example
 scripts/.deploy.env
 
@@ -22,14 +22,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# database dumps and backups
+# database dumps, backups, and migration/SQL scripts: never public.
+# Keep these local-only; they're applied to prod manually (see project notes).
 *.sql
+/backups/
 
-# supabase: track config, functions, and migrations.
-# Secrets and local CLI state are excluded by supabase/.gitignore
-# (.temp, .branches, .env*). Re-include migration SQL since *.sql is
-# ignored globally above.
-!supabase/migrations/*.sql
-
-# sql migration scripts (tracked separately)
+# sql migration scripts (also excluded by *.sql above; kept explicit
+# in case non-.sql notes are ever added here)
 /supabase_sql_scripts
