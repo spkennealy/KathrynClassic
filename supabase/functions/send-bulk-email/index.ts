@@ -64,12 +64,24 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+interface EventLine {
+  name: string;
+  amount: number | null; // null = TBD
+}
+
 interface Recipient {
   email: string;
   firstName?: string | null;
   lastName?: string | null;
   name?: string | null;
   unsubscribeToken?: string | null;
+  // Registration/payment details for the campaign's selected year, attached
+  // by RecipientSelector.js. Absent when the contact has no registration that
+  // year — the {{total_cost}}/{{amount_paid}}/{{balance_due}}/{{events}}/
+  // {{events_table}} tokens then render blank for them.
+  totalCost?: number | null;
+  amountPaid?: number | null;
+  events?: EventLine[] | null;
 }
 
 interface Payload {
@@ -107,6 +119,73 @@ const shell = (inner: string, unsubscribeUrl?: string) => `<!DOCTYPE html>
   </div>
 </body>
 </html>`;
+
+const fmt = (n: number) =>
+  `$${(Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const escapeHtml = (s: string) =>
+  String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+  );
+
+// {{events_table}} block: event/amount rows plus total/paid/balance. Mirrors
+// the equivalent helper in emailShell.js — keep the two in sync.
+function eventsTableHtml(r: Recipient): string {
+  if (!r.events || r.events.length === 0) return "";
+  const rows = r.events
+    .map(
+      (e) => `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${escapeHtml(e.name)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${e.amount == null ? "TBD" : fmt(e.amount)}</td>
+      </tr>`
+    )
+    .join("");
+  const totalCost = Number(r.totalCost) || 0;
+  const amountPaid = Number(r.amountPaid) || 0;
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead>
+          <tr style="background:#f0fdfa;">
+            <th style="padding:8px 12px;text-align:left;">Event</th>
+            <th style="padding:8px 12px;text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr>
+            <td style="padding:10px 12px;text-align:right;color:#666;">Total cost</td>
+            <td style="padding:10px 12px;text-align:right;color:#666;">${fmt(totalCost)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;text-align:right;color:#666;">Amount paid</td>
+            <td style="padding:10px 12px;text-align:right;color:#0d9488;">&minus;${fmt(amountPaid)}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px;text-align:right;font-weight:bold;border-top:2px solid #ddd;">Balance due</td>
+            <td style="padding:12px;text-align:right;font-weight:bold;color:#b91c1c;border-top:2px solid #ddd;">${fmt(totalCost - amountPaid)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+}
+
+// Build the {{variable}} map for one recipient. Mirrors recipientVars() in
+// emailShell.js — keep the two in sync.
+function recipientVars(r: Recipient): Record<string, string> {
+  const hasFinancials = r.totalCost != null || r.amountPaid != null;
+  const totalCost = Number(r.totalCost) || 0;
+  const amountPaid = Number(r.amountPaid) || 0;
+  return {
+    first_name: r.firstName ?? "",
+    last_name: r.lastName ?? "",
+    name: r.name ?? "",
+    full_name: r.name ?? "",
+    email: r.email,
+    total_cost: hasFinancials ? fmt(totalCost) : "",
+    amount_paid: hasFinancials ? fmt(amountPaid) : "",
+    balance_due: hasFinancials ? fmt(totalCost - amountPaid) : "",
+    events: r.events?.length ? r.events.map((e) => e.name).join(", ") : "",
+    events_table: eventsTableHtml(r),
+  };
+}
 
 // Replace {{variable}} tokens. Known variables resolve to the contact's value
 // (blank if empty); unknown tokens are left untouched so typos are visible.
@@ -192,6 +271,9 @@ serve(async (req) => {
           lastName: r?.lastName ?? "",
           name,
           unsubscribeToken: r?.unsubscribeToken ?? null,
+          totalCost: r?.totalCost ?? null,
+          amountPaid: r?.amountPaid ?? null,
+          events: r?.events ?? null,
         });
       }
     }
@@ -257,13 +339,7 @@ serve(async (req) => {
     // the first message only, so those addresses get a single copy (not one per
     // recipient).
     const messages = recipients.map((r, i) => {
-      const vars: Record<string, string> = {
-        first_name: r.firstName ?? "",
-        last_name: r.lastName ?? "",
-        name: r.name ?? "",
-        full_name: r.name ?? "",
-        email: r.email,
-      };
+      const vars = recipientVars(r);
       const msg: Record<string, unknown> = {
         from: FROM_EMAIL,
         to: [r.email],

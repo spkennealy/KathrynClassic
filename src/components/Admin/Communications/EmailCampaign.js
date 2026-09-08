@@ -191,6 +191,8 @@ export default function EmailCampaign() {
         <p className="text-xs text-gray-500 dark:text-gray-400">
           The unsubscribe link in this email lets recipients opt out of <strong>{campaignYear || 'this year'}</strong> emails
           or all emails. Contacts already unsubscribed (for {campaignYear || 'this year'} or entirely) are hidden below.
+          It's also the year used for the payment/event variables below (<code className="px-1 rounded bg-gray-100 dark:bg-night-700">{'{{balance_due}}'}</code>,{' '}
+          <code className="px-1 rounded bg-gray-100 dark:bg-night-700">{'{{events}}'}</code>, etc.) — those are blank for anyone without a {campaignYear || 'this year'} registration.
         </p>
         <RecipientSelector onChange={handleRecipientsChange} campaignYear={campaignYear} />
       </section>
@@ -215,14 +217,15 @@ export default function EmailCampaign() {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Body</label>
           <EmailEditor value={bodyHtml} onChange={setBodyHtml} />
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Personalize with variables (work in subject &amp; body):{' '}
-            {EMAIL_VARIABLES.map((v, i) => (
+            Personalize with variables — they work in the subject line too. In the body, type{' '}
+            <code className="px-1 rounded bg-gray-100 dark:bg-night-700 text-gray-700 dark:text-gray-300">/</code>{' '}
+            to see every option in a dropdown, e.g.{' '}
+            {EMAIL_VARIABLES.slice(0, 2).map((v, i) => (
               <React.Fragment key={v.token}>
-                {i > 0 && ', '}
+                {i > 0 && ' or '}
                 <code className="px-1 rounded bg-gray-100 dark:bg-night-700 text-gray-700 dark:text-gray-300">{v.token}</code>
-                <span className="text-gray-400"> ({v.label})</span>
               </React.Fragment>
-            ))}
+            ))}.
           </p>
         </div>
       </section>

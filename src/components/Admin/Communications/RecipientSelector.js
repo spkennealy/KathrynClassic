@@ -36,6 +36,10 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [truncated, setTruncated] = useState(false);
+  // Registration/payment details for the campaign year, keyed by contact_id —
+  // merged into reported recipients so the email can use {{balance_due}},
+  // {{events}}, etc. Empty when the year has no matching tournament.
+  const [yearDetailsByContact, setYearDetailsByContact] = useState(new Map());
 
   const { options, loading: optionsLoading } = useContactFilterOptions();
   const fields = useMemo(() => getContactFilterFields({ scope: 'recipients' }), []);
@@ -106,19 +110,99 @@ export default function RecipientSelector({ onChange, campaignYear }) {
     fetchRecipients();
   }, [fetchRecipients]);
 
+  // Load each contact's registration for the campaign year — their events
+  // (with price) and total_cost/amount_paid — so the email can be personalized
+  // with {{balance_due}}, {{events}}, {{events_table}}, etc. Keyed by
+  // contact_id; contacts with no registration that year simply have no entry,
+  // and those tokens render blank for them (same as an empty last_name).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const year = campaignYear ? parseInt(campaignYear, 10) : null;
+      if (!year) {
+        setYearDetailsByContact(new Map());
+        return;
+      }
+      try {
+        const { data: tournament } = await supabase
+          .from('tournaments')
+          .select('id')
+          .eq('year', year)
+          .maybeSingle();
+        if (!tournament) {
+          if (!cancelled) setYearDetailsByContact(new Map());
+          return;
+        }
+
+        const [{ data: eventsData }, { data: regs }] = await Promise.all([
+          supabase
+            .from('tournament_events')
+            .select('id, event_name, adult_price, price_tbd')
+            .eq('tournament_id', tournament.id),
+          supabase
+            .from('registrations')
+            .select('id, contact_id, total_cost, amount_paid')
+            .eq('tournament_id', tournament.id)
+            .is('deleted_at', null),
+        ]);
+        if (!regs || regs.length === 0) {
+          if (!cancelled) setYearDetailsByContact(new Map());
+          return;
+        }
+        const eventMap = new Map((eventsData || []).map((e) => [e.id, e]));
+
+        const { data: regEvents } = await supabase
+          .from('registration_events')
+          .select('registration_id, tournament_event_id')
+          .in('registration_id', regs.map((r) => r.id));
+        const eventsByReg = new Map();
+        (regEvents || []).forEach((re) => {
+          if (!eventsByReg.has(re.registration_id)) eventsByReg.set(re.registration_id, []);
+          eventsByReg.get(re.registration_id).push(re);
+        });
+
+        const map = new Map();
+        regs.forEach((reg) => {
+          const events = (eventsByReg.get(reg.id) || [])
+            .map((re) => eventMap.get(re.tournament_event_id))
+            .filter(Boolean)
+            .map((ev) => ({ name: ev.event_name, amount: ev.price_tbd ? null : parseFloat(ev.adult_price) || 0 }));
+          // A contact could have more than one registration for the same
+          // tournament only in edge cases (e.g. re-registered); last one wins.
+          map.set(reg.contact_id, {
+            totalCost: Number(reg.total_cost) || 0,
+            amountPaid: Number(reg.amount_paid) || 0,
+            events,
+          });
+        });
+        if (!cancelled) setYearDetailsByContact(map);
+      } catch (err) {
+        console.error('Failed to load registration details for campaign year:', err);
+        if (!cancelled) setYearDetailsByContact(new Map());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignYear]);
+
   // Report the accumulated selection upward (include the fields used for
   // {{variable}} personalization). Sourced from the persistent map so recipients
   // picked under earlier filters are still included.
   useEffect(() => {
-    const recipients = [...selectedMap.values()].map((r) => ({
-      email: r.email,
-      name: r.name,
-      firstName: r.firstName,
-      lastName: r.lastName,
-      unsubscribeToken: r.unsubscribeToken,
-    }));
+    const recipients = [...selectedMap.values()].map((r) => {
+      const details = yearDetailsByContact.get(r.contact_id);
+      return {
+        email: r.email,
+        name: r.name,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        unsubscribeToken: r.unsubscribeToken,
+        ...(details ? { totalCost: details.totalCost, amountPaid: details.amountPaid, events: details.events } : {}),
+      };
+    });
     onChange(recipients);
-  }, [selectedMap, onChange]);
+  }, [selectedMap, onChange, yearDetailsByContact]);
 
   const isSelected = (email) => selectedMap.has(email.toLowerCase());
 

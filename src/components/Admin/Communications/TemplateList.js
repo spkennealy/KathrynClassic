@@ -320,16 +320,21 @@ export default function TemplateList() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Body</label>
-                <EmailEditor value={draft.body_html} onChange={(html) => setDraft({ ...draft, body_html: html })} />
+                <EmailEditor
+                  value={draft.body_html}
+                  onChange={(html) => setDraft({ ...draft, body_html: html })}
+                  variables={systemMeta ? systemMeta.variables : EMAIL_VARIABLES}
+                />
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  Personalize with variables (work in subject &amp; body):{' '}
-                  {(systemMeta ? systemMeta.variables : EMAIL_VARIABLES).map((v, i) => (
+                  Personalize with variables — they work in the subject line too. In the body, type{' '}
+                  <code className="px-1 rounded bg-gray-100 dark:bg-night-700 text-gray-700 dark:text-gray-300">/</code>{' '}
+                  to see every option in a dropdown, e.g.{' '}
+                  {(systemMeta ? systemMeta.variables : EMAIL_VARIABLES).slice(0, 2).map((v, i) => (
                     <React.Fragment key={v.token}>
-                      {i > 0 && ', '}
+                      {i > 0 && ' or '}
                       <code className="px-1 rounded bg-gray-100 dark:bg-night-700 text-gray-700 dark:text-gray-300">{v.token}</code>
-                      <span className="text-gray-400"> ({v.label})</span>
                     </React.Fragment>
-                  ))}
+                  ))}.
                 </p>
               </div>
 
