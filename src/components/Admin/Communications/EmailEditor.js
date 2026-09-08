@@ -4,64 +4,13 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { EMAIL_VARIABLES } from './emailShell';
-
-const MAX_MENU_ITEMS = 8;
-
-// Filter the variable list by whatever's been typed after the "/". Matches
-// against both the token (bare word, no braces) and the human label.
-function filterVariables(variables, query) {
-  const q = query.trim().toLowerCase();
-  const matches = !q
-    ? variables
-    : variables.filter((v) => {
-        const bare = v.token.replace(/[{}]/g, '').toLowerCase();
-        return bare.includes(q) || v.label.toLowerCase().includes(q);
-      });
-  return matches.slice(0, MAX_MENU_ITEMS);
-}
-
-// Caret pixel position inside a <textarea>, via the standard "mirror div"
-// technique: an offscreen div styled identically to the textarea, holding the
-// same text up to the caret, whose end position we measure. Returns viewport
-// coordinates (matches getBoundingClientRect / position:fixed).
-function textareaCaretRect(textarea, caretIndex) {
-  const style = window.getComputedStyle(textarea);
-  const mirror = document.createElement('div');
-  const props = [
-    'boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-    'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-    'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize',
-  ];
-  props.forEach((p) => { mirror.style[p] = style[p]; });
-  mirror.style.position = 'absolute';
-  mirror.style.visibility = 'hidden';
-  mirror.style.whiteSpace = 'pre-wrap';
-  mirror.style.wordWrap = 'break-word';
-  mirror.style.top = '0';
-  mirror.style.left = '-9999px';
-
-  mirror.textContent = textarea.value.slice(0, caretIndex);
-  const marker = document.createElement('span');
-  marker.textContent = '​';
-  mirror.appendChild(marker);
-  document.body.appendChild(mirror);
-
-  const markerRect = marker.getBoundingClientRect();
-  const mirrorRect = mirror.getBoundingClientRect();
-  const taRect = textarea.getBoundingClientRect();
-  // Position relative to the mirror, then translate onto the real textarea,
-  // netting out its own scroll offset.
-  const top = taRect.top + (markerRect.top - mirrorRect.top) - textarea.scrollTop;
-  const left = taRect.left + (markerRect.left - mirrorRect.left) - textarea.scrollLeft;
-
-  document.body.removeChild(mirror);
-  return { top, left, lineHeight: parseFloat(style.lineHeight) || 20 };
-}
+import { filterVariables, matchSlash, caretRect, handleSlashKeyDown, SlashMenuList } from './slashMenu';
 
 // Rich HTML body editor: TipTap visual mode with a raw-HTML toggle (HTML is
 // the default — most senders here paste/write markup directly). Typing "/"
 // in either mode opens a filterable dropdown of merge-field variables
 // (arrow keys + Enter/Tab to pick, Escape to dismiss, click also works).
+// SubjectField.js reuses the same dropdown for the plain Subject input.
 export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABLES }) {
   const [mode, setMode] = useState('html'); // 'visual' | 'html'
   const textareaRef = useRef(null);
@@ -89,7 +38,11 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
         class:
           'prose prose-sm max-w-none focus:outline-none min-h-[16rem] p-4 dark:prose-invert',
       },
-      handleKeyDown: (_view, event) => handleSlashKeyDown(event),
+      handleKeyDown: (_view, event) => {
+        const handled = handleSlashKeyDown(slash, filtered, setSlash, closeSlash, event);
+        if (handled) event.preventDefault();
+        return handled;
+      },
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -118,10 +71,9 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
 
     const start = Math.max(0, from - 30);
     const textBefore = state.doc.textBetween(start, from, '\n', '\n');
-    const match = /(?:^|\s)\/(\w{0,24})$/.exec(textBefore);
-    if (!match) return closeSlash();
+    const query = matchSlash(textBefore);
+    if (query == null) return closeSlash();
 
-    const query = match[1];
     const slashFrom = from - query.length - 1;
     const coords = view.coordsAtPos(from);
 
@@ -143,15 +95,11 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
     if (caret !== el.selectionEnd) return closeSlash();
 
     const start = Math.max(0, caret - 30);
-    const textBefore = el.value.slice(start, caret);
-    // Require the slash to follow whitespace/start-of-text (not `<`, `/`, or a
-    // word char) so closing tags like `</p>` don't pop the menu open.
-    const match = /(?:^|\s)\/(\w{0,24})$/.exec(textBefore);
-    if (!match) return closeSlash();
+    const query = matchSlash(el.value.slice(start, caret));
+    if (query == null) return closeSlash();
 
-    const query = match[1];
     const slashStart = caret - query.length - 1;
-    const rect = textareaCaretRect(el, caret);
+    const rect = caretRect(el, caret, true);
 
     setSlash({
       top: rect.top + rect.lineHeight + 4,
@@ -175,35 +123,6 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
     () => (slash ? filterVariables(variables, slash.query) : []),
     [slash, variables]
   );
-
-  // Keyboard nav shared by both modes. Returns true when the key was consumed
-  // (caller should preventDefault / stop the editor's own handling).
-  const handleMenuKeyDown = (event) => {
-    if (!slash || filtered.length === 0) return false;
-    if (event.key === 'ArrowDown') {
-      setSlash((s) => ({ ...s, activeIndex: (s.activeIndex + 1) % filtered.length }));
-      return true;
-    }
-    if (event.key === 'ArrowUp') {
-      setSlash((s) => ({ ...s, activeIndex: (s.activeIndex - 1 + filtered.length) % filtered.length }));
-      return true;
-    }
-    if (event.key === 'Enter' || event.key === 'Tab') {
-      filtered[slash.activeIndex] && slash.apply(filtered[slash.activeIndex]);
-      return true;
-    }
-    if (event.key === 'Escape') {
-      closeSlash();
-      return true;
-    }
-    return false;
-  };
-
-  const handleSlashKeyDown = (event) => {
-    const handled = handleMenuKeyDown(event);
-    if (handled) event.preventDefault();
-    return handled;
-  };
 
   const Btn = ({ onClick, active, disabled, title, children }) => (
     <button
@@ -237,34 +156,6 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
     const url = window.prompt('Image URL');
     if (url) editor.chain().focus().setImage({ src: url }).run();
   };
-
-  // The dropdown itself — shared markup for both modes, positioned via fixed
-  // viewport coordinates computed by whichever mode opened it.
-  const SlashMenu = () =>
-    slash && filtered.length > 0
-      ? (
-        <div
-          style={{ position: 'fixed', top: slash.top, left: slash.left }}
-          className="z-50 w-72 max-h-64 overflow-y-auto rounded-md border border-gray-200 dark:border-night-600 bg-white dark:bg-night-800 shadow-lg py-1"
-        >
-          {filtered.map((item, i) => (
-            <button
-              key={item.token}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); slash.apply(item); }}
-              className={`block w-full text-left px-3 py-1.5 text-sm ${
-                i === slash.activeIndex
-                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-night-700'
-              }`}
-            >
-              <code className="font-mono text-xs">{item.token}</code>
-              <span className="block text-xs text-gray-400">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      )
-      : null;
 
   return (
     <div className="border border-gray-300 dark:border-night-600 rounded-lg overflow-hidden">
@@ -302,7 +193,7 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
       {mode === 'visual' ? (
         <div className="relative bg-white dark:bg-night-800 text-gray-900 dark:text-gray-100">
           <EditorContent editor={editor} />
-          <SlashMenu />
+          <SlashMenuList slash={slash} filtered={filtered} />
         </div>
       ) : (
         <div className="relative">
@@ -320,14 +211,14 @@ export default function EmailEditor({ value, onChange, variables = EMAIL_VARIABL
               }
             }}
             onKeyDown={(e) => {
-              if (handleMenuKeyDown(e)) e.preventDefault();
+              if (handleSlashKeyDown(slash, filtered, setSlash, closeSlash, e)) e.preventDefault();
             }}
             onBlur={closeSlash}
             spellCheck={false}
             className="block w-full min-h-[16rem] p-4 font-mono text-sm bg-white dark:bg-night-800 text-gray-900 dark:text-gray-100 border-0 focus:ring-0 resize-y"
             placeholder="<p>Write your HTML here…</p>"
           />
-          <SlashMenu />
+          <SlashMenuList slash={slash} filtered={filtered} />
         </div>
       )}
     </div>

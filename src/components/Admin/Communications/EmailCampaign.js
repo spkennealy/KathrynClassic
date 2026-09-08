@@ -7,6 +7,7 @@ import CommunicationsNav from './CommunicationsNav';
 import Select from '../Select';
 import RecipientSelector from './RecipientSelector';
 import EmailEditor from './EmailEditor';
+import SubjectField from './SubjectField';
 import TemplateManager from './TemplateManager';
 import EmailPreview from './EmailPreview';
 import ConfirmDialog from '../ConfirmDialog';
@@ -205,13 +206,7 @@ export default function EmailCampaign() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
-          <input
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Subject line"
-            className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-          />
+          <SubjectField value={subject} onChange={setSubject} placeholder="Subject line" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Body</label>

@@ -5,6 +5,7 @@ import { EMAIL_VARIABLES } from './emailShell';
 import { REGISTRATION_TEMPLATES, REGISTRATION_TEMPLATE_KEYS, registrationEmailShell } from './registrationTemplates';
 import CommunicationsNav from './CommunicationsNav';
 import EmailEditor from './EmailEditor';
+import SubjectField from './SubjectField';
 import EmailPreview from './EmailPreview';
 import ConfirmDialog from '../ConfirmDialog';
 
@@ -309,12 +310,11 @@ export default function TemplateList() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
-                <input
-                  type="text"
+                <SubjectField
                   value={draft.subject}
-                  onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
+                  onChange={(subject) => setDraft({ ...draft, subject })}
                   placeholder="Subject line"
-                  className="block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  variables={systemMeta ? systemMeta.variables : EMAIL_VARIABLES}
                 />
               </div>
 
