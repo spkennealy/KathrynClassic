@@ -38,8 +38,16 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   const [truncated, setTruncated] = useState(false);
   // Registration/payment details for the campaign year, keyed by contact_id —
   // merged into reported recipients so the email can use {{balance_due}},
-  // {{events}}, etc. Empty when the year has no matching tournament.
+  // {{events}}, etc. A group registration's organizer (earliest-created
+  // registration in the group, same convention as send-registration-
+  // confirmation) additionally gets a `.group` block for {{group_*}}.
+  // Empty when the year has no matching tournament.
   const [yearDetailsByContact, setYearDetailsByContact] = useState(new Map());
+  // contact_ids that registered as part of a group but are NOT that group's
+  // organizer — used by the "only group organizers" toggle below to skip
+  // them from the browsable/selectable list.
+  const [nonPrimaryGroupContactIds, setNonPrimaryGroupContactIds] = useState(new Set());
+  const [onlyOrganizers, setOnlyOrganizers] = useState(false);
 
   const { options, loading: optionsLoading } = useContactFilterOptions();
   const fields = useMemo(() => getContactFilterFields({ scope: 'recipients' }), []);
@@ -111,16 +119,19 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   }, [fetchRecipients]);
 
   // Load each contact's registration for the campaign year — their events
-  // (with price) and total_cost/amount_paid — so the email can be personalized
-  // with {{balance_due}}, {{events}}, {{events_table}}, etc. Keyed by
-  // contact_id; contacts with no registration that year simply have no entry,
-  // and those tokens render blank for them (same as an empty last_name).
+  // (with price), total_cost/amount_paid, and (for group registrations) the
+  // whole group's roster + totals — so the email can be personalized with
+  // {{balance_due}}, {{events}}, {{events_table}}, {{group_table}}, etc.
+  // Keyed by contact_id; contacts with no registration that year simply have
+  // no entry, and those tokens render blank for them (same as an empty
+  // last_name).
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const year = campaignYear ? parseInt(campaignYear, 10) : null;
       if (!year) {
         setYearDetailsByContact(new Map());
+        setNonPrimaryGroupContactIds(new Set());
         return;
       }
       try {
@@ -130,7 +141,10 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           .eq('year', year)
           .maybeSingle();
         if (!tournament) {
-          if (!cancelled) setYearDetailsByContact(new Map());
+          if (!cancelled) {
+            setYearDetailsByContact(new Map());
+            setNonPrimaryGroupContactIds(new Set());
+          }
           return;
         }
 
@@ -145,12 +159,15 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           // registrationEmail.js's sendConfirmationEmailsForIds).
           supabase
             .from('registrations')
-            .select('id, contact_id, amount_paid')
+            .select('id, contact_id, amount_paid, registration_group_id, created_at')
             .eq('tournament_id', tournament.id)
             .is('deleted_at', null),
         ]);
         if (!regs || regs.length === 0) {
-          if (!cancelled) setYearDetailsByContact(new Map());
+          if (!cancelled) {
+            setYearDetailsByContact(new Map());
+            setNonPrimaryGroupContactIds(new Set());
+          }
           return;
         }
         const eventMap = new Map((eventsData || []).map((e) => [e.id, e]));
@@ -165,8 +182,9 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           eventsByReg.get(re.registration_id).push(re);
         });
 
-        const map = new Map();
-        regs.forEach((reg) => {
+        // Per-registration math first (shared by both the individual map and
+        // the group rollups below).
+        const perReg = regs.map((reg) => {
           const events = (eventsByReg.get(reg.id) || [])
             .map((re) => eventMap.get(re.tournament_event_id))
             .filter(Boolean)
@@ -174,18 +192,72 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           // Sum confirmed (non-TBD) event prices — same math as
           // registrationEmail.js. Children attend free, so no separate count.
           const totalCost = events.reduce((sum, e) => sum + (e.amount || 0), 0);
+          return { ...reg, events, totalCost, amountPaid: Number(reg.amount_paid) || 0 };
+        });
+
+        // Names for group rosters — fetched separately from `rows` (which
+        // only reflects the current filter/search) so a group's full roster
+        // is always complete regardless of what's currently filtered.
+        const groupedContactIds = [
+          ...new Set(perReg.filter((r) => r.registration_group_id).map((r) => r.contact_id)),
+        ];
+        let nameByContact = new Map();
+        if (groupedContactIds.length > 0) {
+          const { data: contacts } = await supabase
+            .from('contacts')
+            .select('id, first_name, last_name')
+            .in('id', groupedContactIds);
+          nameByContact = new Map((contacts || []).map((c) => [c.id, fullName(c)]));
+        }
+
+        // Group registrations by registration_group_id; the earliest-created
+        // registration in the group is the organizer (mirrors
+        // send-registration-confirmation's convention).
+        const groups = new Map();
+        perReg.forEach((reg) => {
+          if (!reg.registration_group_id) return;
+          if (!groups.has(reg.registration_group_id)) groups.set(reg.registration_group_id, []);
+          groups.get(reg.registration_group_id).push(reg);
+        });
+
+        const nonPrimaryIds = new Set();
+        const groupByPrimaryContact = new Map(); // contact_id -> GroupInfo
+        groups.forEach((members) => {
+          const sorted = [...members].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          const [primary, ...rest] = sorted;
+          rest.forEach((m) => nonPrimaryIds.add(m.contact_id));
+          groupByPrimaryContact.set(primary.contact_id, {
+            totalCost: sorted.reduce((sum, m) => sum + m.totalCost, 0),
+            amountPaid: sorted.reduce((sum, m) => sum + m.amountPaid, 0),
+            members: sorted.map((m) => ({
+              name: nameByContact.get(m.contact_id) || '',
+              totalCost: m.totalCost,
+              events: m.events,
+            })),
+          });
+        });
+
+        const map = new Map();
+        perReg.forEach((reg) => {
           // A contact could have more than one registration for the same
           // tournament only in edge cases (e.g. re-registered); last one wins.
           map.set(reg.contact_id, {
-            totalCost,
-            amountPaid: Number(reg.amount_paid) || 0,
-            events,
+            totalCost: reg.totalCost,
+            amountPaid: reg.amountPaid,
+            events: reg.events,
+            group: groupByPrimaryContact.get(reg.contact_id) || null,
           });
         });
-        if (!cancelled) setYearDetailsByContact(map);
+        if (!cancelled) {
+          setYearDetailsByContact(map);
+          setNonPrimaryGroupContactIds(nonPrimaryIds);
+        }
       } catch (err) {
         console.error('Failed to load registration details for campaign year:', err);
-        if (!cancelled) setYearDetailsByContact(new Map());
+        if (!cancelled) {
+          setYearDetailsByContact(new Map());
+          setNonPrimaryGroupContactIds(new Set());
+        }
       }
     })();
     return () => {
@@ -205,7 +277,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
         firstName: r.firstName,
         lastName: r.lastName,
         unsubscribeToken: r.unsubscribeToken,
-        ...(details ? { totalCost: details.totalCost, amountPaid: details.amountPaid, events: details.events } : {}),
+        ...(details ? { totalCost: details.totalCost, amountPaid: details.amountPaid, events: details.events, group: details.group } : {}),
       };
     });
     onChange(recipients);
@@ -223,11 +295,11 @@ export default function RecipientSelector({ onChange, campaignYear }) {
     });
   };
 
-  // Client-side search over the loaded list (by name or email).
+  // Client-side search + "organizers only" over the loaded list.
   const term = search.trim().toLowerCase();
-  const visibleRows = term
-    ? rows.filter((r) => r.name.toLowerCase().includes(term) || r.email.toLowerCase().includes(term))
-    : rows;
+  const visibleRows = rows
+    .filter((r) => !onlyOrganizers || !nonPrimaryGroupContactIds.has(r.contact_id))
+    .filter((r) => !term || r.name.toLowerCase().includes(term) || r.email.toLowerCase().includes(term));
 
   // "Select all" acts on whatever is currently visible (so searching/filtering
   // then selecting only adds the matches, without dropping prior selections).
@@ -279,6 +351,25 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           Showing the first {MAX_RECIPIENTS.toLocaleString()} matches. Narrow the filters to see the rest.
         </p>
       )}
+
+      {/* Group registrations: send to just the organizer */}
+      <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={onlyOrganizers}
+          onChange={(e) => setOnlyOrganizers(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+        />
+        <span>
+          Only include group organizers
+          <span className="block text-xs text-gray-500 dark:text-gray-400">
+            For anyone who registered a group, skip everyone else in that group — the organizer's{' '}
+            <code className="px-1 rounded bg-gray-100 dark:bg-night-700">{'{{group_table}}'}</code>,{' '}
+            <code className="px-1 rounded bg-gray-100 dark:bg-night-700">{'{{group_balance_due}}'}</code>, etc.
+            cover the whole group.
+          </span>
+        </span>
+      </label>
 
       {/* Search */}
       <input

@@ -69,6 +69,18 @@ interface EventLine {
   amount: number | null; // null = TBD
 }
 
+interface GroupMember {
+  name: string;
+  totalCost: number;
+  events?: EventLine[] | null;
+}
+
+interface GroupInfo {
+  totalCost: number;
+  amountPaid: number;
+  members: GroupMember[];
+}
+
 interface Recipient {
   email: string;
   firstName?: string | null;
@@ -82,6 +94,10 @@ interface Recipient {
   totalCost?: number | null;
   amountPaid?: number | null;
   events?: EventLine[] | null;
+  // Present only when this recipient is the organizer/primary of a group
+  // registration for the campaign year — the {{group_*}} tokens then render
+  // group-wide figures; blank for solo registrants and non-primary members.
+  group?: GroupInfo | null;
 }
 
 interface Payload {
@@ -167,12 +183,56 @@ function eventsTableHtml(r: Recipient): string {
       </table>`;
 }
 
+// Full-roster table for the {{group_table}} block: one row per group member
+// (name + their own events, subtext-style) plus a group amount-paid/balance
+// row. Mirrors groupTableHtml() in emailShell.js — keep the two in sync.
+function groupTableHtml(g: GroupInfo): string {
+  if (!g.members || g.members.length === 0) return "";
+  const rows = g.members
+    .map((m) => {
+      const eventNames = m.events?.length ? m.events.map((e) => e.name).join(", ") : "—";
+      return `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">
+          ${escapeHtml(m.name)}
+          <div style="color:#888;font-size:12px;">${escapeHtml(eventNames)}</div>
+        </td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;">${fmt(m.totalCost)}</td>
+      </tr>`;
+    })
+    .join("");
+  const totalCost = Number(g.totalCost) || 0;
+  const amountPaid = Number(g.amountPaid) || 0;
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead>
+          <tr style="background:#f0fdfa;">
+            <th style="padding:8px 12px;text-align:left;">Registrant</th>
+            <th style="padding:8px 12px;text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr>
+            <td style="padding:10px 12px;text-align:right;color:#666;">Group amount paid</td>
+            <td style="padding:10px 12px;text-align:right;color:#0d9488;">&minus;${fmt(amountPaid)}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px;text-align:right;font-weight:bold;border-top:2px solid #ddd;">Group balance due</td>
+            <td style="padding:12px;text-align:right;font-weight:bold;color:#b91c1c;border-top:2px solid #ddd;">${fmt(totalCost - amountPaid)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+}
+
 // Build the {{variable}} map for one recipient. Mirrors recipientVars() in
 // emailShell.js — keep the two in sync.
 function recipientVars(r: Recipient): Record<string, string> {
   const hasFinancials = r.totalCost != null || r.amountPaid != null;
   const totalCost = Number(r.totalCost) || 0;
   const amountPaid = Number(r.amountPaid) || 0;
+  const g = r.group;
+  const hasGroup = !!g?.members?.length;
+  const groupTotalCost = Number(g?.totalCost) || 0;
+  const groupAmountPaid = Number(g?.amountPaid) || 0;
   return {
     first_name: r.firstName ?? "",
     last_name: r.lastName ?? "",
@@ -184,6 +244,11 @@ function recipientVars(r: Recipient): Record<string, string> {
     balance_due: hasFinancials ? fmt(totalCost - amountPaid) : "",
     events: r.events?.length ? r.events.map((e) => e.name).join(", ") : "",
     events_table: eventsTableHtml(r),
+    group_size: hasGroup ? String(g!.members.length) : "",
+    group_total_cost: hasGroup ? fmt(groupTotalCost) : "",
+    group_amount_paid: hasGroup ? fmt(groupAmountPaid) : "",
+    group_balance_due: hasGroup ? fmt(groupTotalCost - groupAmountPaid) : "",
+    group_table: hasGroup ? groupTableHtml(g!) : "",
   };
 }
 
@@ -274,6 +339,7 @@ serve(async (req) => {
           totalCost: r?.totalCost ?? null,
           amountPaid: r?.amountPaid ?? null,
           events: r?.events ?? null,
+          group: r?.group ?? null,
         });
       }
     }

@@ -47,6 +47,15 @@ export const EMAIL_VARIABLES = [
   { token: '{{balance_due}}', label: "Balance due, campaign year" },
   { token: '{{events}}', label: 'Registered events, campaign year (comma list)' },
   { token: '{{events_table}}', label: 'Itemized events + balance (HTML block)' },
+  // Group registrations only — blank for solo registrants and blank for
+  // non-organizer members too (only the organizer/primary gets these, so a
+  // "send to organizers only" audience can use group-wide figures instead of
+  // just their own share).
+  { token: '{{group_size}}', label: 'People in the group (organizer only)' },
+  { token: '{{group_total_cost}}', label: 'Group total cost (organizer only)' },
+  { token: '{{group_amount_paid}}', label: 'Group amount paid (organizer only)' },
+  { token: '{{group_balance_due}}', label: 'Group balance due (organizer only)' },
+  { token: '{{group_table}}', label: 'Full group roster + balance (HTML block, organizer only)' },
 ];
 
 const fmt = (n) =>
@@ -97,6 +106,47 @@ function eventsTableHtml(r) {
       </table>`;
 }
 
+// Full-roster table for the {{group_table}} block: one row per group member
+// (name + their own events, subtext-style) plus a group amount-paid/balance
+// row. Mirrors groupSummaryVars' table in send-registration-confirmation —
+// keep the two in sync. Only ever built for the group's organizer/primary.
+function groupTableHtml(g) {
+  if (!g?.members?.length) return '';
+  const rows = g.members
+    .map((m) => {
+      const eventNames = m.events?.length ? m.events.map((e) => e.name).join(', ') : '—';
+      return `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">
+          ${escapeHtml(m.name)}
+          <div style="color:#888;font-size:12px;">${escapeHtml(eventNames)}</div>
+        </td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;">${fmt(m.totalCost)}</td>
+      </tr>`;
+    })
+    .join('');
+  const totalCost = Number(g.totalCost) || 0;
+  const amountPaid = Number(g.amountPaid) || 0;
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead>
+          <tr style="background:#f0fdfa;">
+            <th style="padding:8px 12px;text-align:left;">Registrant</th>
+            <th style="padding:8px 12px;text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr>
+            <td style="padding:10px 12px;text-align:right;color:#666;">Group amount paid</td>
+            <td style="padding:10px 12px;text-align:right;color:#0d9488;">&minus;${fmt(amountPaid)}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px;text-align:right;font-weight:bold;border-top:2px solid #ddd;">Group balance due</td>
+            <td style="padding:12px;text-align:right;font-weight:bold;color:#b91c1c;border-top:2px solid #ddd;">${fmt(totalCost - amountPaid)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+}
+
 // Replace {{variable}} tokens. Known variables resolve to the contact's value
 // (blank if empty); unknown tokens are left untouched so typos stay visible.
 // Mirrors render() in the edge function.
@@ -108,8 +158,12 @@ export function renderTemplate(template, vars) {
 }
 
 // Build the variable map for a recipient ({ email, name, firstName, lastName,
-// totalCost?, amountPaid?, events? }). The payment/event fields are only
-// present when RecipientSelector found a registration for the campaign year.
+// totalCost?, amountPaid?, events?, group? }). The payment/event fields are
+// only present when RecipientSelector found a registration for the campaign
+// year; `group` is only present when the recipient is the organizer/primary
+// of a group registration that year (RecipientSelector figures out who's
+// primary — earliest-created registration in the group, same convention as
+// send-registration-confirmation).
 //
 // With no recipient at all (editing a template, or a campaign before anyone's
 // selected), this returns {} so every {{token}} is left literal in the
@@ -120,6 +174,10 @@ export function recipientVars(r) {
   const hasFinancials = r.totalCost != null || r.amountPaid != null;
   const totalCost = Number(r.totalCost) || 0;
   const amountPaid = Number(r.amountPaid) || 0;
+  const g = r.group;
+  const hasGroup = !!g?.members?.length;
+  const groupTotalCost = Number(g?.totalCost) || 0;
+  const groupAmountPaid = Number(g?.amountPaid) || 0;
   return {
     first_name: r.firstName || '',
     last_name: r.lastName || '',
@@ -131,6 +189,11 @@ export function recipientVars(r) {
     balance_due: hasFinancials ? fmt(totalCost - amountPaid) : '',
     events: r.events?.length ? r.events.map((e) => e.name).join(', ') : '',
     events_table: eventsTableHtml(r),
+    group_size: hasGroup ? String(g.members.length) : '',
+    group_total_cost: hasGroup ? fmt(groupTotalCost) : '',
+    group_amount_paid: hasGroup ? fmt(groupAmountPaid) : '',
+    group_balance_due: hasGroup ? fmt(groupTotalCost - groupAmountPaid) : '',
+    group_table: hasGroup ? groupTableHtml(g) : '',
   };
 }
 
@@ -153,6 +216,19 @@ export const EMAIL_VARIABLES_EXAMPLE = {
     events: [
       { name: 'Golf Tournament', amount: 150 },
       { name: 'Welcome Dinner', amount: 40 },
+    ],
+  }),
+  group_size: '3',
+  group_total_cost: fmt(570),
+  group_amount_paid: fmt(190),
+  group_balance_due: fmt(380),
+  group_table: groupTableHtml({
+    totalCost: 570,
+    amountPaid: 190,
+    members: [
+      { name: 'Alex Sample', totalCost: 190, events: [{ name: 'Golf Tournament', amount: 150 }, { name: 'Welcome Dinner', amount: 40 }] },
+      { name: 'Jamie Sample', totalCost: 190, events: [{ name: 'Golf Tournament', amount: 150 }, { name: 'Welcome Dinner', amount: 40 }] },
+      { name: 'Taylor Sample', totalCost: 190, events: [{ name: 'Golf Tournament', amount: 150 }, { name: 'Welcome Dinner', amount: 40 }] },
     ],
   }),
 };
