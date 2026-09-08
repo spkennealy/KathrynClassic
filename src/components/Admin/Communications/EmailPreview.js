@@ -1,13 +1,19 @@
 import React from 'react';
-import { emailShell, renderTemplate, recipientVars } from './emailShell';
+import { emailShell, renderTemplate, recipientVars, EMAIL_VARIABLES_EXAMPLE } from './emailShell';
 
 // Renders the email as a recipient will see it (variables substituted, wrapped
 // in the shared shell) inside a sandboxed iframe, plus a header summary.
 // `extraVars` layers additional token values (e.g. the registration templates'
 // sample blocks) over the recipient-derived ones; `shellFn` swaps the wrapper
 // when the email is sent by a function that uses a different shell.
+//
+// With no `sampleRecipient` (editing a template, or a campaign before anyone's
+// selected) and no `extraVars` supplied, variables fall back to
+// EMAIL_VARIABLES_EXAMPLE so the preview reads like a real email rather than
+// showing blanks or raw {{tokens}} — a real recipient's own data always wins.
 export default function EmailPreview({ subject, bodyHtml, recipientCount, cc, bcc, sampleRecipient, extraVars, shellFn }) {
-  const vars = { ...recipientVars(sampleRecipient || {}), ...(extraVars || {}) };
+  const usingExample = !sampleRecipient && !extraVars;
+  const vars = { ...recipientVars(sampleRecipient), ...(extraVars || (usingExample ? EMAIL_VARIABLES_EXAMPLE : {})) };
   const renderedSubject = renderTemplate(subject, vars);
   const renderedBody = renderTemplate(bodyHtml, vars);
 
@@ -22,6 +28,11 @@ export default function EmailPreview({ subject, bodyHtml, recipientCount, cc, bc
         {sampleRecipient && (
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Personalized preview for <span className="font-medium">{sampleRecipient.name || sampleRecipient.email}</span>.
+          </p>
+        )}
+        {usingExample && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            No recipient selected — showing example data (e.g. "Alex") in place of variables.
           </p>
         )}
       </div>

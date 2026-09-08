@@ -110,20 +110,49 @@ export function renderTemplate(template, vars) {
 // Build the variable map for a recipient ({ email, name, firstName, lastName,
 // totalCost?, amountPaid?, events? }). The payment/event fields are only
 // present when RecipientSelector found a registration for the campaign year.
+//
+// With no recipient at all (editing a template, or a campaign before anyone's
+// selected), this returns {} so every {{token}} is left literal in the
+// preview rather than rendering blank — EmailPreview then layers in
+// EMAIL_VARIABLES_EXAMPLE for a friendlier default instead.
 export function recipientVars(r) {
-  const hasFinancials = r && (r.totalCost != null || r.amountPaid != null);
-  const totalCost = Number(r?.totalCost) || 0;
-  const amountPaid = Number(r?.amountPaid) || 0;
+  if (!r) return {};
+  const hasFinancials = r.totalCost != null || r.amountPaid != null;
+  const totalCost = Number(r.totalCost) || 0;
+  const amountPaid = Number(r.amountPaid) || 0;
   return {
-    first_name: r?.firstName || '',
-    last_name: r?.lastName || '',
-    name: r?.name || '',
-    full_name: r?.name || '',
-    email: r?.email || '',
+    first_name: r.firstName || '',
+    last_name: r.lastName || '',
+    name: r.name || '',
+    full_name: r.name || '',
+    email: r.email || '',
     total_cost: hasFinancials ? fmt(totalCost) : '',
     amount_paid: hasFinancials ? fmt(amountPaid) : '',
     balance_due: hasFinancials ? fmt(totalCost - amountPaid) : '',
-    events: r?.events?.length ? r.events.map((e) => e.name).join(', ') : '',
+    events: r.events?.length ? r.events.map((e) => e.name).join(', ') : '',
     events_table: eventsTableHtml(r),
   };
 }
+
+// Fallback values EmailPreview uses when there's no real recipient to show —
+// makes an unpicked audience preview like a plausible email instead of a
+// blank or all-literal one. Real recipient data always takes precedence.
+export const EMAIL_VARIABLES_EXAMPLE = {
+  first_name: 'Alex',
+  last_name: 'Sample',
+  name: 'Alex Sample',
+  full_name: 'Alex Sample',
+  email: 'alex@example.com',
+  total_cost: fmt(190),
+  amount_paid: fmt(50),
+  balance_due: fmt(140),
+  events: 'Golf Tournament, Welcome Dinner',
+  events_table: eventsTableHtml({
+    totalCost: 190,
+    amountPaid: 50,
+    events: [
+      { name: 'Golf Tournament', amount: 150 },
+      { name: 'Welcome Dinner', amount: 40 },
+    ],
+  }),
+};

@@ -139,9 +139,13 @@ export default function RecipientSelector({ onChange, campaignYear }) {
             .from('tournament_events')
             .select('id, event_name, adult_price, price_tbd')
             .eq('tournament_id', tournament.id),
+          // `total_cost` is NOT a column on registrations — it's a computed
+          // value that only exists on the admin_financials_details view — so
+          // it's derived below from event prices instead (mirrors
+          // registrationEmail.js's sendConfirmationEmailsForIds).
           supabase
             .from('registrations')
-            .select('id, contact_id, total_cost, amount_paid')
+            .select('id, contact_id, amount_paid')
             .eq('tournament_id', tournament.id)
             .is('deleted_at', null),
         ]);
@@ -167,10 +171,13 @@ export default function RecipientSelector({ onChange, campaignYear }) {
             .map((re) => eventMap.get(re.tournament_event_id))
             .filter(Boolean)
             .map((ev) => ({ name: ev.event_name, amount: ev.price_tbd ? null : parseFloat(ev.adult_price) || 0 }));
+          // Sum confirmed (non-TBD) event prices — same math as
+          // registrationEmail.js. Children attend free, so no separate count.
+          const totalCost = events.reduce((sum, e) => sum + (e.amount || 0), 0);
           // A contact could have more than one registration for the same
           // tournament only in edge cases (e.g. re-registered); last one wins.
           map.set(reg.contact_id, {
-            totalCost: Number(reg.total_cost) || 0,
+            totalCost,
             amountPaid: Number(reg.amount_paid) || 0,
             events,
           });
