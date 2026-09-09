@@ -38,15 +38,18 @@ export default function RecipientSelector({ onChange, campaignYear }) {
   const [truncated, setTruncated] = useState(false);
   // Registration/payment details for the campaign year, keyed by contact_id —
   // merged into reported recipients so the email can use {{balance_due}},
-  // {{events}}, etc. A group registration's organizer (earliest-created
-  // registration in the group, same convention as send-registration-
-  // confirmation) additionally gets a `.group` block for {{group_*}}.
+  // {{events}}, etc. Everyone with a registration also gets a `.group` block
+  // for {{group_*}}: a solo registrant is their own one-person "group";
+  // someone who registered a group (earliest-created registration in it,
+  // same convention as send-registration-confirmation) gets the whole
+  // group's roster/totals; a non-organizer member of someone else's group
+  // has none (they're not who the group email should go to).
   // Empty when the year has no matching tournament.
   const [yearDetailsByContact, setYearDetailsByContact] = useState(new Map());
-  // contact_ids that registered as part of a group but are NOT that group's
-  // organizer — used by the "only group organizers" toggle below to skip
-  // them from the browsable/selectable list.
-  const [nonPrimaryGroupContactIds, setNonPrimaryGroupContactIds] = useState(new Set());
+  // When on, the browsable/selectable list keeps only contacts whose
+  // yearDetailsByContact entry has a `.group` — i.e. solo registrants (their
+  // own organizer) and actual group organizers. Only non-organizer group
+  // members (see visibleRows below) are excluded.
   const [onlyOrganizers, setOnlyOrganizers] = useState(false);
 
   const { options, loading: optionsLoading } = useContactFilterOptions();
@@ -131,7 +134,6 @@ export default function RecipientSelector({ onChange, campaignYear }) {
       const year = campaignYear ? parseInt(campaignYear, 10) : null;
       if (!year) {
         setYearDetailsByContact(new Map());
-        setNonPrimaryGroupContactIds(new Set());
         return;
       }
       try {
@@ -141,10 +143,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           .eq('year', year)
           .maybeSingle();
         if (!tournament) {
-          if (!cancelled) {
-            setYearDetailsByContact(new Map());
-            setNonPrimaryGroupContactIds(new Set());
-          }
+          if (!cancelled) setYearDetailsByContact(new Map());
           return;
         }
 
@@ -164,10 +163,7 @@ export default function RecipientSelector({ onChange, campaignYear }) {
             .is('deleted_at', null),
         ]);
         if (!regs || regs.length === 0) {
-          if (!cancelled) {
-            setYearDetailsByContact(new Map());
-            setNonPrimaryGroupContactIds(new Set());
-          }
+          if (!cancelled) setYearDetailsByContact(new Map());
           return;
         }
         const eventMap = new Map((eventsData || []).map((e) => [e.id, e]));
@@ -197,16 +193,15 @@ export default function RecipientSelector({ onChange, campaignYear }) {
 
         // Names for group rosters — fetched separately from `rows` (which
         // only reflects the current filter/search) so a group's full roster
-        // is always complete regardless of what's currently filtered.
-        const groupedContactIds = [
-          ...new Set(perReg.filter((r) => r.registration_group_id).map((r) => r.contact_id)),
-        ];
+        // is always complete regardless of what's currently filtered. Needed
+        // for solo registrants too — they get a one-person "group" below.
+        const allRegContactIds = [...new Set(perReg.map((r) => r.contact_id))];
         let nameByContact = new Map();
-        if (groupedContactIds.length > 0) {
+        if (allRegContactIds.length > 0) {
           const { data: contacts } = await supabase
             .from('contacts')
             .select('id, first_name, last_name')
-            .in('id', groupedContactIds);
+            .in('id', allRegContactIds);
           nameByContact = new Map((contacts || []).map((c) => [c.id, fullName(c)]));
         }
 
@@ -220,12 +215,10 @@ export default function RecipientSelector({ onChange, campaignYear }) {
           groups.get(reg.registration_group_id).push(reg);
         });
 
-        const nonPrimaryIds = new Set();
         const groupByPrimaryContact = new Map(); // contact_id -> GroupInfo
         groups.forEach((members) => {
           const sorted = [...members].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-          const [primary, ...rest] = sorted;
-          rest.forEach((m) => nonPrimaryIds.add(m.contact_id));
+          const [primary] = sorted;
           groupByPrimaryContact.set(primary.contact_id, {
             totalCost: sorted.reduce((sum, m) => sum + m.totalCost, 0),
             amountPaid: sorted.reduce((sum, m) => sum + m.amountPaid, 0),
@@ -239,25 +232,31 @@ export default function RecipientSelector({ onChange, campaignYear }) {
 
         const map = new Map();
         perReg.forEach((reg) => {
+          // A solo registrant is their own organizer — a "group" of one — so
+          // {{group_*}} works the same for everyone rather than only for
+          // people who happened to register with others. Only an actual
+          // non-primary group member (registered with others, isn't the
+          // organizer) has no group here.
+          const group = reg.registration_group_id
+            ? groupByPrimaryContact.get(reg.contact_id) || null
+            : {
+                totalCost: reg.totalCost,
+                amountPaid: reg.amountPaid,
+                members: [{ name: nameByContact.get(reg.contact_id) || '', totalCost: reg.totalCost, events: reg.events }],
+              };
           // A contact could have more than one registration for the same
           // tournament only in edge cases (e.g. re-registered); last one wins.
           map.set(reg.contact_id, {
             totalCost: reg.totalCost,
             amountPaid: reg.amountPaid,
             events: reg.events,
-            group: groupByPrimaryContact.get(reg.contact_id) || null,
+            group,
           });
         });
-        if (!cancelled) {
-          setYearDetailsByContact(map);
-          setNonPrimaryGroupContactIds(nonPrimaryIds);
-        }
+        if (!cancelled) setYearDetailsByContact(map);
       } catch (err) {
         console.error('Failed to load registration details for campaign year:', err);
-        if (!cancelled) {
-          setYearDetailsByContact(new Map());
-          setNonPrimaryGroupContactIds(new Set());
-        }
+        if (!cancelled) setYearDetailsByContact(new Map());
       }
     })();
     return () => {
@@ -295,10 +294,13 @@ export default function RecipientSelector({ onChange, campaignYear }) {
     });
   };
 
-  // Client-side search + "organizers only" over the loaded list.
+  // Client-side search + "organizers only" over the loaded list. "Organizer"
+  // means yearDetailsByContact has a `.group` for them — true for solo
+  // registrants (their own one-person group) and group organizers alike;
+  // only a non-organizer group member has none and gets excluded.
   const term = search.trim().toLowerCase();
   const visibleRows = rows
-    .filter((r) => !onlyOrganizers || !nonPrimaryGroupContactIds.has(r.contact_id))
+    .filter((r) => !onlyOrganizers || !!yearDetailsByContact.get(r.contact_id)?.group)
     .filter((r) => !term || r.name.toLowerCase().includes(term) || r.email.toLowerCase().includes(term));
 
   // "Select all" acts on whatever is currently visible (so searching/filtering
@@ -363,10 +365,11 @@ export default function RecipientSelector({ onChange, campaignYear }) {
         <span>
           Only include group organizers
           <span className="block text-xs text-gray-500 dark:text-gray-400">
-            For anyone who registered a group, skip everyone else in that group — the organizer's{' '}
+            Skips everyone else in a group registration, keeping just the person who signed it up — their{' '}
             <code className="px-1 rounded bg-gray-100 dark:bg-night-700">{'{{group_table}}'}</code>,{' '}
             <code className="px-1 rounded bg-gray-100 dark:bg-night-700">{'{{group_balance_due}}'}</code>, etc.
-            cover the whole group.
+            cover the whole group. Solo registrants count as their own organizer, so they're always included —
+            their group variables just reflect themselves.
           </span>
         </span>
       </label>

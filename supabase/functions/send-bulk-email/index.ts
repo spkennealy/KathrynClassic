@@ -94,9 +94,10 @@ interface Recipient {
   totalCost?: number | null;
   amountPaid?: number | null;
   events?: EventLine[] | null;
-  // Present only when this recipient is the organizer/primary of a group
-  // registration for the campaign year — the {{group_*}} tokens then render
-  // group-wide figures; blank for solo registrants and non-primary members.
+  // Present for everyone with a registration that year — a solo registrant's
+  // own one-person "group", or the whole group for whoever organized it —
+  // so {{group_*}} always works. Blank only for a non-organizer member of
+  // someone else's group.
   group?: GroupInfo | null;
 }
 

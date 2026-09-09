@@ -47,15 +47,15 @@ export const EMAIL_VARIABLES = [
   { token: '{{balance_due}}', label: "Balance due, campaign year" },
   { token: '{{events}}', label: 'Registered events, campaign year (comma list)' },
   { token: '{{events_table}}', label: 'Itemized events + balance (HTML block)' },
-  // Group registrations only — blank for solo registrants and blank for
-  // non-organizer members too (only the organizer/primary gets these, so a
-  // "send to organizers only" audience can use group-wide figures instead of
-  // just their own share).
-  { token: '{{group_size}}', label: 'People in the group (organizer only)' },
-  { token: '{{group_total_cost}}', label: 'Group total cost (organizer only)' },
-  { token: '{{group_amount_paid}}', label: 'Group amount paid (organizer only)' },
-  { token: '{{group_balance_due}}', label: 'Group balance due (organizer only)' },
-  { token: '{{group_table}}', label: 'Full group roster + balance (HTML block, organizer only)' },
+  // Solo registrants count as their own one-person "group", so these work for
+  // anyone with a registration this year — just like total_cost/balance_due
+  // above. They only go blank for a non-organizer member of someone else's
+  // group (their own total_cost/balance_due still work fine).
+  { token: '{{group_size}}', label: 'People in the group (1 if solo)' },
+  { token: '{{group_total_cost}}', label: 'Group total cost (yours, or whole group if organizer)' },
+  { token: '{{group_amount_paid}}', label: 'Group amount paid (yours, or whole group if organizer)' },
+  { token: '{{group_balance_due}}', label: 'Group balance due (yours, or whole group if organizer)' },
+  { token: '{{group_table}}', label: 'Roster + balance (HTML block; just you if solo)' },
 ];
 
 const fmt = (n) =>
@@ -109,7 +109,8 @@ function eventsTableHtml(r) {
 // Full-roster table for the {{group_table}} block: one row per group member
 // (name + their own events, subtext-style) plus a group amount-paid/balance
 // row. Mirrors groupSummaryVars' table in send-registration-confirmation —
-// keep the two in sync. Only ever built for the group's organizer/primary.
+// keep the two in sync. Built for the group's organizer, or for a solo
+// registrant's own one-person "group" — never for a non-organizer member.
 function groupTableHtml(g) {
   if (!g?.members?.length) return '';
   const rows = g.members
@@ -160,10 +161,11 @@ export function renderTemplate(template, vars) {
 // Build the variable map for a recipient ({ email, name, firstName, lastName,
 // totalCost?, amountPaid?, events?, group? }). The payment/event fields are
 // only present when RecipientSelector found a registration for the campaign
-// year; `group` is only present when the recipient is the organizer/primary
-// of a group registration that year (RecipientSelector figures out who's
-// primary — earliest-created registration in the group, same convention as
-// send-registration-confirmation).
+// year; `group` is present for everyone with one — a solo registrant's own
+// one-person "group", or the whole group for whoever organized it (earliest-
+// created registration in the group, same convention as send-registration-
+// confirmation) — but absent for a non-organizer member of someone else's
+// group.
 //
 // With no recipient at all (editing a template, or a campaign before anyone's
 // selected), this returns {} so every {{token}} is left literal in the
