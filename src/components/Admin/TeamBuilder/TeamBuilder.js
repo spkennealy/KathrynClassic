@@ -254,7 +254,8 @@ export default function TeamBuilder() {
       const { data: regEvents, error: regEventsError } = await supabase
         .from('registration_events')
         .select('registration_id')
-        .eq('tournament_event_id', golfEvent.id);
+        .eq('tournament_event_id', golfEvent.id)
+        .is('deleted_at', null);
       if (regEventsError) throw regEventsError;
 
       if (!regEvents || regEvents.length === 0) {
@@ -270,7 +271,8 @@ export default function TeamBuilder() {
         .from('registrations')
         .select('id, contact_id, golf_handicap, preferred_teammates, registration_group_id, contacts(id, first_name, last_name, email)')
         .in('id', registrationIds)
-        .not('contact_id', 'is', null);
+        .not('contact_id', 'is', null)
+        .is('deleted_at', null);
       if (regError) throw regError;
 
       const golferList = (registrations || []).map(reg => ({

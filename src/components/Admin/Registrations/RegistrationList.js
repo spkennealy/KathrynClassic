@@ -235,10 +235,12 @@ export default function RegistrationList() {
     try {
       setError(null);
 
-      // Delete associated registration_events first
+      // Soft delete the event selections alongside the registration (rather
+      // than hard-deleting them) so restoring from the Recycle Bin brings
+      // the whole registration back, not an empty shell with no events.
       const { error: eventsDeleteError } = await supabase
         .from('registration_events')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('registration_id', registrationToDelete.registration_id);
 
       if (eventsDeleteError) throw eventsDeleteError;

@@ -398,56 +398,56 @@ export default function Leaderboard() {
             </div>
           ) : leaderboard.length > 0 ? (
             <div className="bg-white dark:bg-night-800 rounded-2xl shadow-lg overflow-hidden">
-              {/* Desktop Table Header - hidden on mobile */}
-              <div className="bg-primary-600 dark:bg-primary-800 text-white hidden md:block">
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-xs uppercase tracking-wider">
-                  <div className="col-span-1 flex items-center justify-center group">
-                    {teeTimeInfo.show ? (
-                      <span className="relative inline-block text-center">
-                        {teeTimeInfo.format === 'shotgun' ? 'Starting Hole' : 'Tee Time'}
-                        <span className="absolute top-1/2 -translate-y-1/2 left-full ml-3">
-                          {renderSortButtons('startCol')}
-                        </span>
-                      </span>
-                    ) : (
-                      'Pos'
-                    )}
-                  </div>
-                  <div className="col-span-3 flex items-center justify-center gap-3 group">
-                    <span>Team</span>
-                    {teeTimeInfo.show && renderSortButtons('team')}
-                  </div>
-                  <div className={`${playersSpan} flex items-center text-left`}>Players</div>
-                  {usesHandicap && (
-                    <div className="col-span-1 flex items-center justify-center group">
-                      <span className="relative inline-block">
-                        Hcp
-                        {teeTimeInfo.show && (
-                          <span className="absolute top-1/2 -translate-y-1/2 left-full ml-3">
-                            {renderSortButtons('hcp')}
+              {/* Same table on every screen size now — narrower viewports get a
+                  horizontal scrollbar (via the wrapper below) instead of a
+                  separate condensed card layout, so every column (including
+                  Hcp) is always reachable, headers included. */}
+              <div className="overflow-x-auto">
+                <div className="min-w-[900px]">
+                  {/* Table Header */}
+                  <div className="bg-primary-600 dark:bg-primary-800 text-white">
+                    <div className="grid grid-cols-12 gap-4 px-6 py-4 font-semibold text-xs uppercase tracking-wider">
+                      <div className="col-span-1 flex items-center justify-center group">
+                        {teeTimeInfo.show ? (
+                          <span className="relative inline-block text-center">
+                            {teeTimeInfo.format === 'shotgun' ? 'Starting Hole' : 'Tee Time'}
+                            <span className="absolute top-1/2 -translate-y-1/2 left-full ml-3">
+                              {renderSortButtons('startCol')}
+                            </span>
                           </span>
+                        ) : (
+                          'Pos'
                         )}
-                      </span>
+                      </div>
+                      <div className="col-span-3 flex items-center justify-center gap-3 group">
+                        <span>Team</span>
+                        {teeTimeInfo.show && renderSortButtons('team')}
+                      </div>
+                      <div className={`${playersSpan} flex items-center text-left`}>Players</div>
+                      {usesHandicap && (
+                        <div className="col-span-1 flex items-center justify-center group">
+                          <span className="relative inline-block">
+                            Hcp
+                            {teeTimeInfo.show && (
+                              <span className="absolute top-1/2 -translate-y-1/2 left-full ml-3">
+                                {renderSortButtons('hcp')}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      <div className="col-span-1 flex items-center justify-center">{usesHandicap ? 'Gross' : 'Total'}</div>
+                      {usesHandicap && <div className="col-span-1 flex items-center justify-center">Net</div>}
+                      <div className={`${toParSpan} flex items-center justify-center`}>To Par</div>
                     </div>
-                  )}
-                  <div className="col-span-1 flex items-center justify-center">{usesHandicap ? 'Gross' : 'Total'}</div>
-                  {usesHandicap && <div className="col-span-1 flex items-center justify-center">Net</div>}
-                  <div className={`${toParSpan} flex items-center justify-center`}>To Par</div>
-                </div>
-              </div>
+                  </div>
 
-              {/* Mobile Header */}
-              <div className="bg-primary-600 dark:bg-primary-800 text-white md:hidden px-4 py-3">
-                <p className="font-semibold text-sm uppercase tracking-wide text-center">Tournament Standings</p>
-              </div>
-
-              {/* Table Body */}
-              <div className="divide-y divide-gray-200 dark:divide-night-700">
-                {displayedLeaderboard.map((team, index) => (
-                    <div key={team.team_id}>
-                      {/* Desktop Row */}
+                  {/* Table Body */}
+                  <div className="divide-y divide-gray-200 dark:divide-night-700">
+                    {displayedLeaderboard.map((team, index) => (
                       <div
-                        className={`hidden md:grid grid-cols-12 gap-4 px-6 py-4 hover:bg-primary-50 dark:hover:bg-night-700 transition-colors ${
+                        key={team.team_id}
+                        className={`grid grid-cols-12 gap-4 px-6 py-4 hover:bg-primary-50 dark:hover:bg-night-700 transition-colors ${
                           index === 0 && !teeTimeInfo.show ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
                         }`}
                       >
@@ -521,69 +521,9 @@ export default function Leaderboard() {
                           )}
                         </div>
                       </div>
-
-                      {/* Mobile Card */}
-                      <div
-                        className={`md:hidden px-4 py-4 ${
-                          index === 0 && !teeTimeInfo.show ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Fixed-width position column for alignment */}
-                          <div className="w-14 flex-shrink-0 flex items-center justify-center gap-1 pt-0.5">
-                            {teeTimeInfo.show ? (
-                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-serif text-center">
-                                {teeTimeDisplay(team) || '—'}
-                              </span>
-                            ) : (
-                              <>
-                                {getPlaceEmoji(team.position) && (
-                                  <span className="text-lg">{getPlaceEmoji(team.position)}</span>
-                                )}
-                                <span className="text-lg font-bold text-gray-900 dark:text-gray-100 font-serif">
-                                  {formatPosition(team.position, team.is_tied)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Center: Team + Players */}
-                          <div className="flex-1 min-w-0 text-left">
-                            {team.team_name && (
-                              <div className="text-xs font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wide">
-                                {team.team_name}
-                              </div>
-                            )}
-                            <div className="mt-1">{renderPlayers(team.players, { size: 'xs' })}</div>
-                          </div>
-
-                          {/* Right: Score */}
-                          <div className="flex flex-col items-end flex-shrink-0 text-right">
-                            <span className={`text-2xl font-bold font-serif ${getScoreColor(standingsToPar(team))}`}>
-                              {formatScore(standingsToPar(team))}
-                            </span>
-                            {team.total_score != null && (
-                              <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 font-serif">
-                                {usesHandicap ? (
-                                  <>
-                                    {team.team_handicap != null && <>hcp {renderHandicap(team)} · </>}
-                                    net {team.net_score ?? team.total_score} · gross {team.total_score}
-                                  </>
-                                ) : (
-                                  team.total_score
-                                )}
-                              </span>
-                            )}
-                            {team.status && team.status !== 'F' && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400 font-serif">
-                                thru {team.status}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Footer Note */}

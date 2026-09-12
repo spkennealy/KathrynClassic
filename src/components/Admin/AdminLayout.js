@@ -25,6 +25,30 @@ export default function AdminLayout() {
     navigate('/admin/login');
   };
 
+  // The public site lives on a different subdomain (www vs admin), so this
+  // is a real cross-origin link, not an in-app route — swap the hostname the
+  // same way App.js's admin->public redirect already does, so it resolves
+  // correctly on both admin.kathrynclassic.com and local dev (admin.localhost).
+  // Keep the port too (App.js's version drops it, which is only harmless
+  // because prod has none — locally that turns into a dead link without it).
+  const port = window.location.port ? `:${window.location.port}` : '';
+  const publicSiteUrl = `${window.location.protocol}//${window.location.hostname.replace('admin.', '').replace(/^(?!www\.)/, 'www.')}${port}/`;
+
+  const HomeLink = ({ className }) => (
+    <a
+      href={publicSiteUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Visit the public site"
+      aria-label="Visit the public site"
+      className={className}
+    >
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    </a>
+  );
+
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: '📊' },
     { name: 'Tournaments', href: '/admin/tournaments', icon: '🏆' },
@@ -68,6 +92,7 @@ export default function AdminLayout() {
                 <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400 truncate">Kathryn Classic</h1>
               )}
               <div className={`flex items-center gap-1 ${collapsed ? 'flex-col' : ''}`}>
+                <HomeLink className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-400 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-600 dark:hover:text-white" />
                 <ThemeToggle />
                 <button
                   type="button"
@@ -184,6 +209,7 @@ export default function AdminLayout() {
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between bg-white dark:bg-night-800 border-b border-gray-200 dark:border-night-700 px-4 py-3">
         <h1 className="text-lg font-bold text-primary-600 dark:text-primary-400">Kathryn Classic</h1>
         <div className="flex items-center gap-1">
+        <HomeLink className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-500" />
         <ThemeToggle />
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -210,8 +236,9 @@ export default function AdminLayout() {
               </button>
             </div>
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-              <div className="flex-shrink-0 flex items-center px-4">
+              <div className="flex-shrink-0 flex items-center justify-between px-4">
                 <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">Kathryn Classic</h1>
+                <HomeLink className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-night-700 hover:text-gray-500" />
               </div>
               <nav className="mt-8 px-2 space-y-1">
                 {navigation.map((item) => (

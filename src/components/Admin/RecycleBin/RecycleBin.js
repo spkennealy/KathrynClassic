@@ -198,6 +198,17 @@ export default function RecycleBin() {
 
       if (restoreError) throw restoreError;
 
+      // A registration's event selections are soft-deleted alongside it (see
+      // RegistrationList's delete flow), so restore those together with it
+      // rather than bringing back an empty shell with no events.
+      if (recordToRestore.type === 'registrations') {
+        const { error: eventsRestoreError } = await supabase
+          .from('registration_events')
+          .update({ deleted_at: null })
+          .eq('registration_id', recordToRestore.id);
+        if (eventsRestoreError) throw eventsRestoreError;
+      }
+
       const restoreEntity = RECYCLE_ENTITY_TYPE[recordToRestore.type];
       await logAudit({
         action: `${restoreEntity}.restored`,
