@@ -28,10 +28,12 @@ const formatDate = (value) =>
 
 // How a donation is attributed: an anonymous gift hides the donor even when a
 // contact is linked, otherwise prefer the contact's name and fall back to company.
+// Some donations have no donor at all (e.g. 50/50 raffle proceeds).
+const hasDonor = (d) => !!(d.is_anonymous || d.contacts || d.company);
 const donorName = (d) => {
   if (d.is_anonymous) return 'Anonymous';
   if (d.contacts) return `${d.contacts.first_name} ${d.contacts.last_name}`;
-  return d.company || '—';
+  return d.company || 'No donor';
 };
 
 // Sortable columns → how to extract a comparable value from a registrant row.
@@ -303,7 +305,7 @@ export default function FinancialsList() {
         action: 'donation.deleted',
         entityType: 'donation',
         entityId: donationToDelete.id,
-        entityLabel: donorName(donationToDelete),
+        entityLabel: hasDonor(donationToDelete) ? donorName(donationToDelete) : donationToDelete.donation_type || 'Donation',
         changes: {
           donor: donorName(donationToDelete),
           donation_type: donationToDelete.donation_type,
@@ -747,7 +749,7 @@ export default function FinancialsList() {
                     {d.donation_date ? new Date(d.donation_date).toLocaleDateString() : '—'}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
-                    {donorName(d)}
+                    {hasDonor(d) ? donorName(d) : <span className="italic text-gray-400">No donor</span>}
                     {d.company && !d.is_anonymous && d.contacts && (
                       <div className="text-xs text-gray-500 dark:text-gray-400">{d.company}</div>
                     )}
@@ -848,7 +850,7 @@ export default function FinancialsList() {
         onConfirm={handleDeleteDonation}
         title="Delete Donation"
         message={donationToDelete
-          ? `Are you sure you want to delete the ${formatCurrency(donationToDelete.amount)} donation from ${donorName(donationToDelete)}? This action cannot be undone.`
+          ? `Are you sure you want to delete the ${formatCurrency(donationToDelete.amount)} ${hasDonor(donationToDelete) ? `donation from ${donorName(donationToDelete)}` : `${(donationToDelete.donation_type || '').toLowerCase()} donation with no donor`}? This action cannot be undone.`
           : ''}
         confirmText="Delete"
         cancelText="Cancel"

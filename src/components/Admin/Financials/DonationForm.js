@@ -13,6 +13,10 @@ const DONATION_FIELDS = [
 // What kind of gift it was.
 const DONATION_TYPE_OPTIONS = ['Monetary', 'Sponsorship', 'Auction', 'Raffle', 'Other'];
 
+// Types where the money isn't from a person or company (e.g. 50/50 raffle
+// proceeds), so a donor isn't required.
+export const DONOR_OPTIONAL_TYPES = ['Raffle'];
+
 // How the money arrived.
 const PAYMENT_METHOD_OPTIONS = ['Cash', 'Check', 'Card', 'Venmo', 'Zelle', 'Other'];
 
@@ -38,6 +42,7 @@ export default function DonationForm({ donation, tournamentId, onClose, onSave }
   const [error, setError] = useState(null);
 
   const [contacts, setContacts] = useState([]);
+  const donorOptional = DONOR_OPTIONAL_TYPES.includes(formData.donation_type);
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -73,10 +78,15 @@ export default function DonationForm({ donation, tournamentId, onClose, onSave }
       setLoading(false);
       return;
     }
-    // A donation with no donor at all is unusable in reporting — require at least
-    // one of contact / company / explicitly anonymous.
-    if (!formData.contact_id && !formData.company.trim() && !formData.is_anonymous) {
-      setError('Pick a contact, enter a company, or mark the donation anonymous');
+    // Otherwise a donation with no donor at all is unusable in reporting — require
+    // at least one of contact / company / explicitly anonymous.
+    if (
+      !donorOptional &&
+      !formData.contact_id &&
+      !formData.company.trim() &&
+      !formData.is_anonymous
+    ) {
+      setError('Pick a contact, enter a company, or mark the donation anonymous. (Raffle donations don\'t need a donor.)');
       setLoading(false);
       return;
     }
@@ -100,7 +110,7 @@ export default function DonationForm({ donation, tournamentId, onClose, onSave }
       ? 'Anonymous'
       : contact
         ? `${contact.first_name} ${contact.last_name}`
-        : payload.company || 'Donation';
+        : payload.company || payload.donation_type || 'Donation';
 
     try {
       if (isEditMode) {
@@ -190,7 +200,12 @@ export default function DonationForm({ donation, tournamentId, onClose, onSave }
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Donor</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Donor
+              {donorOptional && (
+                <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">(optional for {formData.donation_type.toLowerCase()} proceeds)</span>
+              )}
+            </label>
             <Select
               value={formData.contact_id}
               onChange={(e) => setFormData({ ...formData, contact_id: e.target.value })}
