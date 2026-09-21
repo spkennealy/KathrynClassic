@@ -12,6 +12,9 @@ import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
 import RowActionsMenu from '../RowActionsMenu';
+import PaymentModal from '../Financials/PaymentModal';
+import CreditMemoModal from '../Financials/CreditMemoModal';
+import { paymentStatusLabel, paymentStatusClasses } from '../../../utils/paymentStatus';
 
 const PAGE_SIZE = 50;
 
@@ -87,6 +90,9 @@ export default function RegistrationList() {
   const [registrationToDelete, setRegistrationToDelete] = useState(null);
   const [showContactForm, setShowContactForm] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
+  // Registrant (an admin_financials_details row) whose payment / credit memo is being edited.
+  const [paymentRegistrant, setPaymentRegistrant] = useState(null);
+  const [creditRegistrant, setCreditRegistrant] = useState(null);
   const [tournaments, setTournaments] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [registrations, setRegistrations] = useState([]);
@@ -246,6 +252,49 @@ export default function RegistrationList() {
         return next;
       });
     }
+  };
+
+  // The payment and credit memo modals work off the financials view (it has
+  // total cost, amount paid, credit memo, etc.), which the list's own view
+  // doesn't carry.
+  const openFinancialsModal = async (registration, openModal) => {
+    setNotice(null);
+    try {
+      const { data, error: loadError } = await supabase
+        .from('admin_financials_details')
+        .select('*')
+        .eq('registration_id', registration.registration_id)
+        .maybeSingle();
+      if (loadError) throw loadError;
+      if (!data) throw new Error('Could not load the payment details for this registration.');
+      openModal(data);
+    } catch (err) {
+      console.error('Error loading payment details:', err);
+      setNotice({ type: 'error', text: err.message || 'Failed to load payment details' });
+    }
+  };
+
+  const handleRecordPaymentClick = (registration) => openFinancialsModal(registration, setPaymentRegistrant);
+  const handleCreditMemoClick = (registration) => openFinancialsModal(registration, setCreditRegistrant);
+
+  const handleCreditMemoSaved = () => {
+    if (creditRegistrant) {
+      setNotice({
+        type: 'success',
+        text: `Saved the credit memo for ${creditRegistrant.first_name} ${creditRegistrant.last_name}.`,
+      });
+    }
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handlePaymentSaved = () => {
+    if (paymentRegistrant) {
+      setNotice({
+        type: 'success',
+        text: `Saved the payment for ${paymentRegistrant.first_name} ${paymentRegistrant.last_name}.`,
+      });
+    }
+    setRefreshKey((k) => k + 1);
   };
 
   const handleCancelClick = (registration) => {
@@ -703,6 +752,7 @@ export default function RegistrationList() {
             >
               <option value="all">All Statuses</option>
               <option value="paid">Paid</option>
+              <option value="partially_paid">Partially paid</option>
               <option value="pending">Pending</option>
             </Select>
           </div>
@@ -866,12 +916,8 @@ export default function RegistrationList() {
                       )}
                     </td>
                     <td className={`whitespace-nowrap px-3 py-4 text-sm${bBottom}`}>
-                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                        reg.payment_status === 'paid'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {reg.payment_status}
+                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${paymentStatusClasses(reg.payment_status)}`}>
+                        {paymentStatusLabel(reg.payment_status)}
                       </span>
                     </td>
                     <td className={`whitespace-nowrap px-3 py-4 text-sm text-right${bRight}${bBottom}`}>
@@ -891,6 +937,8 @@ export default function RegistrationList() {
                                   disabled: resendStatus[reg.registration_id] === 'sending',
                                   onClick: () => handleResendEmail(reg),
                                 },
+                                { label: 'Record payment', onClick: () => handleRecordPaymentClick(reg) },
+                                { label: 'Credit memo', onClick: () => handleCreditMemoClick(reg) },
                                 { label: 'Cancel registration', tone: 'warning', onClick: () => handleCancelClick(reg) },
                                 { label: 'Delete', tone: 'danger', onClick: () => handleDeleteClick(reg) },
                               ]
@@ -1009,6 +1057,24 @@ export default function RegistrationList() {
           contact={selectedContact}
           onClose={() => { setShowContactForm(false); setSelectedContact(null); }}
           onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Record Payment Modal */}
+      {paymentRegistrant && (
+        <PaymentModal
+          registrant={paymentRegistrant}
+          onClose={() => setPaymentRegistrant(null)}
+          onSave={handlePaymentSaved}
+        />
+      )}
+
+      {/* Credit Memo Modal */}
+      {creditRegistrant && (
+        <CreditMemoModal
+          registrant={creditRegistrant}
+          onClose={() => setCreditRegistrant(null)}
+          onSave={handleCreditMemoSaved}
         />
       )}
 

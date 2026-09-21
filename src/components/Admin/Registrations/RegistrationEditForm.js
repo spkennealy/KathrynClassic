@@ -10,8 +10,9 @@ import {
   sendConfirmationEmailsForRegistration,
 } from '../../../utils/registrationEmail';
 import { syncTeamPlayerHandicap } from '../../../utils/golfTeams';
+import { paymentStatusLabel, paymentStatusClasses } from '../../../utils/paymentStatus';
 
-const REGISTRATION_FIELDS = ['contact_id', 'payment_status', 'golf_handicap', 'preferred_teammates'];
+const REGISTRATION_FIELDS = ['contact_id', 'golf_handicap', 'preferred_teammates'];
 
 // Log a contact.created audit entry for a contact inserted from the registration form.
 const logContactCreated = (contact) =>
@@ -34,14 +35,13 @@ const createBlankAttendee = () => ({
   showContactDropdown: false,
   showNewContactForm: false,
   newContactData: { first_name: '', last_name: '', email: '', phone: '' },
-  payment_status: 'pending',
   golf_handicap: '',
   preferred_teammates: '',
   selectedEvents: {},
   childCounts: {},
 });
 
-// A single attendee card (contact select/create, payment status, handicap,
+// A single attendee card (contact select/create, handicap,
 // preferred teammates, event selection, child counts). Shared between create mode
 // (registering several people at once) and the edit-mode "add to this group"
 // section. All state lives in the parent; this is purely presentational.
@@ -207,21 +207,6 @@ function AttendeeCard({
             )}
           </div>
         )}
-      </div>
-
-      {/* Payment Status */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Payment Status <span className="text-red-500">*</span>
-        </label>
-        <Select
-          value={attendee.payment_status}
-          onChange={(e) => onUpdate(index, { payment_status: e.target.value })}
-          className="mt-1 block w-full"
-        >
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-        </Select>
       </div>
 
       {/* Golf Handicap */}
@@ -747,7 +732,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             .insert({
               contact_id: att.contact_id,
               tournament_id: formData.tournament_id,
-              payment_status: att.payment_status,
+              payment_status: 'pending',
               golf_handicap: att.golf_handicap || null,
               preferred_teammates: att.preferred_teammates || null,
               registration_group_id: groupId,
@@ -781,7 +766,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
             entityId: newReg.id,
             entityLabel: att.contactSearchTerm || 'Registration',
             changes: {
-              payment_status: att.payment_status,
+              payment_status: 'pending',
               golf_handicap: att.golf_handicap || null,
               events: attEventNames.join(', ') || null,
             },
@@ -832,7 +817,6 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
         const registrationUpdate = {
           contact_id: formData.contact_id,
-          payment_status: formData.payment_status,
           golf_handicap: formData.golf_handicap || null,
           preferred_teammates: formData.preferred_teammates || null,
         };
@@ -855,7 +839,6 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
         const registrationChanges = diffFields(
           {
             contact_id: registration.contact_id,
-            payment_status: registration.payment_status,
             golf_handicap: registration.golf_handicap,
             preferred_teammates: registration.preferred_teammates,
           },
@@ -974,7 +957,7 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               .insert({
                 contact_id: att.contact_id,
                 tournament_id: registration.tournament_id,
-                payment_status: att.payment_status,
+                payment_status: 'pending',
                 golf_handicap: att.golf_handicap || null,
                 preferred_teammates: att.preferred_teammates || null,
                 registration_group_id: groupId,
@@ -1116,6 +1099,10 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
                 + Add Another Attendee
               </button>
 
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                New registrations start with a pending payment status. It updates when you record a payment.
+              </p>
+
               {/* Email confirmation opt-out */}
               <div className="flex items-start">
                 <input
@@ -1256,19 +1243,15 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               </div>
 
               <div>
-                <label htmlFor="payment_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Payment Status <span className="text-red-500">*</span>
-                </label>
-                <Select
-                  id="payment_status"
-                  required
-                  value={formData.payment_status}
-                  onChange={(e) => setFormData({ ...formData, payment_status: e.target.value })}
-                  className="mt-1 block w-full"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="paid">Paid</option>
-                </Select>
+                <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Status</span>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${paymentStatusClasses(formData.payment_status)}`}>
+                    {paymentStatusLabel(formData.payment_status)}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Updates automatically when a payment is recorded (Registrations &rarr; &#8942; &rarr; Record payment, or Financials).
+                  </span>
+                </div>
               </div>
 
               <div>

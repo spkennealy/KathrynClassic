@@ -1,29 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
-import { logAudit, diffFields } from '../../../utils/audit';
+import { logAudit } from '../../../utils/audit';
+import { formatCurrency } from '../../../utils/currency';
 import ExpenseForm from './ExpenseForm';
 import DonationForm from './DonationForm';
+import PaymentModal from './PaymentModal';
+import CreditMemoModal from './CreditMemoModal';
+import RowActionsMenu from '../RowActionsMenu';
+import { amountDue as computeAmountDue } from '../../../utils/paymentStatus';
 import ConfirmDialog from '../ConfirmDialog';
-import DatePicker from '../DatePicker';
 import MultiSelect from '../MultiSelect';
 import Select from '../Select';
 
-const formatCurrency = (value) =>
-  (Number(value) || 0).toLocaleString('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  });
-
-const todayStr = () => new Date().toISOString().split('T')[0];
-
-// Derive a display status from amount_paid vs total cost.
-const getPaymentDisplay = (amountPaid, totalCost) => {
+// Derive a display status from amount_paid vs what's owed (total cost less any
+// credit memo).
+const getPaymentDisplay = (amountPaid, totalCost, creditMemo = 0) => {
   const paid = Number(amountPaid) || 0;
   const total = Number(totalCost) || 0;
-  if (paid >= total && total > 0) return { label: 'Paid', classes: 'bg-green-100 text-green-800', rank: 2 };
+  if (total > 0 && paid >= computeAmountDue(total, creditMemo)) return { label: 'Paid', classes: 'bg-green-100 text-green-800', rank: 2 };
   if (paid > 0) return { label: 'Partial', classes: 'bg-amber-100 text-amber-800', rank: 1 };
   return { label: 'Unpaid', classes: 'bg-yellow-100 text-yellow-800', rank: 0 };
 };
@@ -47,9 +42,11 @@ const getSortValue = (r, key) => {
     case 'registration_date':
       return r.registration_date ? new Date(r.registration_date).getTime() : 0;
     case 'status':
-      return getPaymentDisplay(r.amount_paid, r.total_cost).rank;
+      return getPaymentDisplay(r.amount_paid, r.total_cost, r.credit_memo_amount).rank;
     case 'balance':
-      return (Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0);
+      return computeAmountDue(r.total_cost, r.credit_memo_amount) - (Number(r.amount_paid) || 0);
+    case 'credit_memo':
+      return Number(r.credit_memo_amount) || 0;
     case 'total_cost':
       return Number(r.total_cost) || 0;
     case 'amount_paid':
@@ -79,162 +76,6 @@ function SortHeader({ label, columnKey, sortKey, sortDir, onSort, align = 'left'
   );
 }
 
-// --- Record Payment modal ---
-function PaymentModal({ registrant, onClose, onSave }) {
-  const totalCost = Number(registrant.total_cost) || 0;
-  const isEdit = (Number(registrant.amount_paid) || 0) > 0;
-  const [amountPaid, setAmountPaid] = useState(
-    registrant.amount_paid != null ? String(registrant.amount_paid) : ''
-  );
-  const [paymentDate, setPaymentDate] = useState(registrant.payment_date || todayStr());
-  const [notes, setNotes] = useState(registrant.notes || '');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const save = async (overrideAmount) => {
-    setLoading(true);
-    setError(null);
-    const paid = overrideAmount != null ? overrideAmount : parseFloat(amountPaid || '0');
-    if (isNaN(paid) || paid < 0) {
-      setError('Please enter a valid amount');
-      setLoading(false);
-      return;
-    }
-    const payment_status = paid >= totalCost && totalCost > 0
-      ? 'paid'
-      : paid > 0
-        ? 'partially_paid'
-        : 'pending';
-    try {
-      const newValues = {
-        amount_paid: paid,
-        payment_date: paid > 0 ? paymentDate : null,
-        notes: notes.trim() || null,
-        payment_status,
-      };
-      const { error: updateError } = await supabase
-        .from('registrations')
-        .update(newValues)
-        .eq('id', registrant.registration_id);
-      if (updateError) throw updateError;
-
-      const changes = diffFields(
-        {
-          amount_paid: registrant.amount_paid,
-          payment_date: registrant.payment_date,
-          notes: registrant.notes,
-          payment_status: registrant.payment_status,
-        },
-        newValues,
-        ['amount_paid', 'payment_date', 'notes', 'payment_status']
-      );
-      if (changes) {
-        await logAudit({
-          action: 'registration.payment_recorded',
-          entityType: 'registration',
-          entityId: registrant.registration_id,
-          entityLabel: `${registrant.first_name} ${registrant.last_name}`,
-          changes,
-        });
-      }
-      onSave();
-      onClose();
-    } catch (err) {
-      console.error('Error recording payment:', err);
-      setError(err.message || 'Failed to record payment');
-      setLoading(false);
-    }
-  };
-
-  // Portal: keeps `fixed inset-0` clear of the caller's space-y-* sibling margin.
-  return createPortal(
-    <div className="admin-content fixed inset-0 bg-gray-500 bg-opacity-75 flex items-start sm:items-center justify-center p-4 overflow-y-auto z-50">
-      <div className="bg-white dark:bg-night-800 rounded-lg shadow-xl max-w-md w-full modal-panel overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-night-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Payment' : 'Record Payment'}</h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {registrant.first_name} {registrant.last_name} &middot; Total {formatCurrency(totalCost)}
-          </p>
-        </div>
-
-        <div className="px-6 py-4 space-y-4">
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount Paid</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
-              placeholder="0.00"
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => setAmountPaid(String(totalCost))}
-              className="mt-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:text-primary-300"
-            >
-              Set to total ({formatCurrency(totalCost)})
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Date</label>
-            <div className="mt-1">
-              <DatePicker value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-night-700 flex justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => save(totalCost)}
-            disabled={loading || totalCost <= 0}
-            className="px-4 py-2 text-sm font-medium text-primary-700 dark:text-primary-300 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 dark:bg-primary-900/40 disabled:opacity-50"
-          >
-            Mark Fully Paid
-          </button>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 border border-gray-300 dark:border-night-600 rounded-md shadow-sm hover:bg-gray-50 dark:bg-night-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => save()}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 export default function FinancialsList() {
   const [tournaments, setTournaments] = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
@@ -245,6 +86,7 @@ export default function FinancialsList() {
   const [error, setError] = useState(null);
 
   const [paymentRegistrant, setPaymentRegistrant] = useState(null);
+  const [creditRegistrant, setCreditRegistrant] = useState(null);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
@@ -347,7 +189,9 @@ export default function FinancialsList() {
 
   // Summary cards always reflect the whole year, independent of filters/search.
   const totals = useMemo(() => {
-    const totalDue = registrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0);
+    // Amount due is net of credit memos: credited amounts are written off, not owed.
+    const totalDue = registrants.reduce((s, r) => s + computeAmountDue(r.total_cost, r.credit_memo_amount), 0);
+    const totalCredits = registrants.reduce((s, r) => s + (Number(r.credit_memo_amount) || 0), 0);
     const totalPaid = registrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
     const totalDonations = donations.reduce((s, d) => s + (Number(d.amount) || 0), 0);
     const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -355,6 +199,7 @@ export default function FinancialsList() {
     return {
       registrations: registrants.length,
       totalDue,
+      totalCredits,
       totalPaid,
       totalDonations,
       totalExpenses,
@@ -378,7 +223,7 @@ export default function FinancialsList() {
   const filteredRegistrants = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return registrants.filter((r) => {
-      const status = getPaymentDisplay(r.amount_paid, r.total_cost).label.toLowerCase();
+      const status = getPaymentDisplay(r.amount_paid, r.total_cost, r.credit_memo_amount).label.toLowerCase();
       if (statuses.length > 0 && !statuses.includes(status)) return false;
       if (term) {
         const haystack = `${r.first_name || ''} ${r.last_name || ''} ${r.email || ''}`.toLowerCase();
@@ -532,6 +377,7 @@ export default function FinancialsList() {
           </dd>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {formatCurrency(totals.outstanding)} outstanding
+            {totals.totalCredits > 0 && <> &middot; {formatCurrency(totals.totalCredits)} credited</>}
           </p>
         </div>
         <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
@@ -636,6 +482,7 @@ export default function FinancialsList() {
                 <SortHeader label="Name" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="pl-4 pr-3" />
                 <SortHeader label="Registered" columnKey="registration_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
                 <SortHeader label="Total Cost" columnKey="total_cost" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+                <SortHeader label="Credit Memo" columnKey="credit_memo" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
                 <SortHeader label="Amount Paid" columnKey="amount_paid" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
                 <SortHeader label="Balance" columnKey="balance" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
                 <SortHeader label="Status" columnKey="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
@@ -646,8 +493,9 @@ export default function FinancialsList() {
               {pagedRegistrants.map((r) => {
                 const totalCost = Number(r.total_cost) || 0;
                 const paid = Number(r.amount_paid) || 0;
-                const balance = totalCost - paid;
-                const status = getPaymentDisplay(paid, totalCost);
+                const credit = Number(r.credit_memo_amount) || 0;
+                const balance = computeAmountDue(totalCost, credit) - paid;
+                const status = getPaymentDisplay(paid, totalCost, credit);
                 return (
                   <tr key={r.registration_id} className="hover:bg-gray-50 dark:bg-night-700">
                     <td className="py-4 pl-4 pr-3 text-sm">
@@ -674,6 +522,12 @@ export default function FinancialsList() {
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                       {formatCurrency(totalCost)}
                     </td>
+                    <td
+                      className={`whitespace-nowrap px-3 py-4 text-sm text-right ${credit > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-400'}`}
+                      title={credit > 0 ? [r.credit_memo_reason, r.credit_memo_date && formatDate(r.credit_memo_date)].filter(Boolean).join(' · ') : undefined}
+                    >
+                      {credit > 0 ? `\u2212${formatCurrency(credit)}` : '\u2014'}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
                       {formatCurrency(paid)}
                     </td>
@@ -686,12 +540,13 @@ export default function FinancialsList() {
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
-                      <button
-                        onClick={() => setPaymentRegistrant(r)}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
-                      >
-                        {paid > 0 ? 'Edit Payment' : 'Record Payment'}
-                      </button>
+                      <RowActionsMenu
+                        label={`Actions for ${r.first_name} ${r.last_name}`}
+                        items={[
+                          { label: paid > 0 ? 'Edit payment' : 'Record payment', onClick: () => setPaymentRegistrant(r) },
+                          { label: credit > 0 ? 'Edit credit memo' : 'Add credit memo', onClick: () => setCreditRegistrant(r) },
+                        ]}
+                      />
                     </td>
                   </tr>
                 );
@@ -708,10 +563,16 @@ export default function FinancialsList() {
                     {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0))}
                   </td>
                   <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
+                    {(() => {
+                      const credits = filteredRegistrants.reduce((s, r) => s + (Number(r.credit_memo_amount) || 0), 0);
+                      return credits > 0 ? `\u2212${formatCurrency(credits)}` : '\u2014';
+                    })()}
+                  </td>
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
                     {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0))}
                   </td>
                   <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
-                    {formatCurrency(filteredRegistrants.reduce((s, r) => s + ((Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0)), 0))}
+                    {formatCurrency(filteredRegistrants.reduce((s, r) => s + (computeAmountDue(r.total_cost, r.credit_memo_amount) - (Number(r.amount_paid) || 0)), 0))}
                   </td>
                   <td colSpan={2}></td>
                 </tr>
@@ -941,6 +802,14 @@ export default function FinancialsList() {
         <PaymentModal
           registrant={paymentRegistrant}
           onClose={() => setPaymentRegistrant(null)}
+          onSave={fetchData}
+        />
+      )}
+
+      {creditRegistrant && (
+        <CreditMemoModal
+          registrant={creditRegistrant}
+          onClose={() => setCreditRegistrant(null)}
           onSave={fetchData}
         />
       )}
