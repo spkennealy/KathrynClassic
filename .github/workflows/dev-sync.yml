@@ -1,0 +1,56 @@
+name: Weekly Dev DB Sync
+
+# Refreshes the dev database from prod every week, so dev has real, current
+# data to test against instead of drifting stale. Runs scripts/clone-prod-to-dev.sh
+# --yes, which wipes and replaces dev's public schema — see that script's header
+# for exactly what it does and doesn't touch, and its own backup-before-wipe safety
+# net (kept only for the life of this job's runner, since backups/ isn't uploaded
+# anywhere here).
+#
+# Separate from db-backup.yml (daily prod -> S3 backup) on purpose: different
+# cadence, and this one is a destructive write to dev rather than a read-only
+# backup of prod, so a failure/success in one shouldn't gate the other.
+#
+# One-time setup: this needs PROD_DB_URL and DEV_DB_URL repo secrets, already in
+# pooler-URL form (postgresql://postgres.<ref>:<password>@<pooler-host>:5432/postgres)
+# — see the "Set the GitHub secrets" step in the PR/commit that added this file for
+# the exact commands to derive and set them from your local scripts/.deploy.env.
+
+on:
+  schedule:
+    # 11:00 UTC every Monday (~4am PT / 3am PT during standard time) — after the
+    # daily backup's 10:00 UTC run, on a slower weekly cadence since this is a
+    # full refresh, not a backup.
+    - cron: '0 11 * * 1'
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+concurrency:
+  group: dev-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL 17 client tools
+        # ubuntu-latest ships an older client by default; pin to 17 to match the
+        # remote Postgres major version (mirrors db-backup.yml's pg_dump pin).
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Clone prod into dev
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+          DEV_DB_URL: ${{ secrets.DEV_DB_URL }}
+        run: bash scripts/clone-prod-to-dev.sh --yes

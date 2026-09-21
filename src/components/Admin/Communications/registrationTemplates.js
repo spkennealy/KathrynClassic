@@ -175,6 +175,21 @@ export const REGISTRATION_TEMPLATES = {
       rules_body: SAMPLE_RULES_BODY,
     },
   },
+  registration_cancelled: {
+    label: 'Registration cancelled',
+    description:
+      'Sent to a golfer when an admin cancels their registration (Admin → Registrations → Cancel), unless the admin unchecks the email box.',
+    variables: [
+      { token: '{{first_name}}', label: 'First name' },
+      { token: '{{last_name}}', label: 'Last name' },
+      { token: '{{year}}', label: 'Tournament year' },
+    ],
+    sampleVars: {
+      first_name: 'Alex',
+      last_name: 'Sample',
+      year: '2026',
+    },
+  },
 };
 
 // Display order for the pinned "Registration emails" section.

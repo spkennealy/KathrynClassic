@@ -272,7 +272,8 @@ export default function TeamBuilder() {
         .select('id, contact_id, golf_handicap, preferred_teammates, registration_group_id, contacts(id, first_name, last_name, email)')
         .in('id', registrationIds)
         .not('contact_id', 'is', null)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .is('cancellation_date', null);
       if (regError) throw regError;
 
       const golferList = (registrations || []).map(reg => ({

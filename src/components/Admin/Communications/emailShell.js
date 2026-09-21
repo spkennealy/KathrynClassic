@@ -56,6 +56,16 @@ export const EMAIL_VARIABLES = [
   { token: '{{group_amount_paid}}', label: 'Group amount paid (yours, or whole group if organizer)' },
   { token: '{{group_balance_due}}', label: 'Group balance due (yours, or whole group if organizer)' },
   { token: '{{group_table}}', label: 'Roster + balance (HTML block; just you if solo)' },
+  // For a mixed audience (organizers + solo people + the occasional stray
+  // non-organizer). These never double up: they use the group figure when
+  // there is one (solo or organizer), and only fall back to the individual
+  // figure for a non-organizer member — never both at once, unlike stacking
+  // {{group_balance_due}}{{balance_due}} yourself, which renders both
+  // side by side whenever the recipient has group data.
+  { token: '{{balance_due_combined}}', label: 'Balance due — group if you have one, else your own (safe for mixed audiences)' },
+  { token: '{{total_cost_combined}}', label: 'Total cost — group if you have one, else your own' },
+  { token: '{{amount_paid_combined}}', label: 'Amount paid — group if you have one, else your own' },
+  { token: '{{events_table_combined}}', label: 'Breakdown table — group roster if you have one, else your own events' },
 ];
 
 const fmt = (n) =>
@@ -196,6 +206,17 @@ export function recipientVars(r) {
     group_amount_paid: hasGroup ? fmt(groupAmountPaid) : '',
     group_balance_due: hasGroup ? fmt(groupTotalCost - groupAmountPaid) : '',
     group_table: hasGroup ? groupTableHtml(g) : '',
+    // Real fallbacks (never both at once) — group figure when there is one,
+    // otherwise the individual figure. Blank only when neither applies (no
+    // registration this year at all).
+    total_cost_combined: hasGroup ? fmt(groupTotalCost) : hasFinancials ? fmt(totalCost) : '',
+    amount_paid_combined: hasGroup ? fmt(groupAmountPaid) : hasFinancials ? fmt(amountPaid) : '',
+    balance_due_combined: hasGroup
+      ? fmt(groupTotalCost - groupAmountPaid)
+      : hasFinancials
+        ? fmt(totalCost - amountPaid)
+        : '',
+    events_table_combined: hasGroup ? groupTableHtml(g) : eventsTableHtml(r),
   };
 }
 
@@ -225,6 +246,20 @@ export const EMAIL_VARIABLES_EXAMPLE = {
   group_amount_paid: fmt(190),
   group_balance_due: fmt(380),
   group_table: groupTableHtml({
+    totalCost: 570,
+    amountPaid: 190,
+    members: [
+      { name: 'Alex Sample', totalCost: 190, events: [{ name: 'Golf Tournament', amount: 150 }, { name: 'Welcome Dinner', amount: 40 }] },
+      { name: 'Jamie Sample', totalCost: 190, events: [{ name: 'Golf Tournament', amount: 150 }, { name: 'Welcome Dinner', amount: 40 }] },
+      { name: 'Taylor Sample', totalCost: 190, events: [{ name: 'Golf Tournament', amount: 150 }, { name: 'Welcome Dinner', amount: 40 }] },
+    ],
+  }),
+  // Example recipient is a group organizer, so _combined mirrors the group_*
+  // figures — for a solo person they'd match total_cost/balance_due instead.
+  total_cost_combined: fmt(570),
+  amount_paid_combined: fmt(190),
+  balance_due_combined: fmt(380),
+  events_table_combined: groupTableHtml({
     totalCost: 570,
     amountPaid: 190,
     members: [

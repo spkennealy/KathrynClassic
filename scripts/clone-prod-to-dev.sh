@@ -14,19 +14,26 @@
 # What it does NOT: `auth` (dev keeps its own logins) and `storage` (copying object
 #                   metadata without the underlying files would leave dead links).
 #
-# Dev currently runs AHEAD of prod: the handicap-formula column and the net-score
-# leaderboard view were applied to dev by hand and don't exist in prod yet. Copying
-# prod over dev would drop them, so they are re-applied at the end — see
-# DEV_AHEAD_MIGRATIONS below, and move a file out of that list once prod has it too.
+# DEV_AHEAD_MIGRATIONS below is for migrations applied to dev by hand that prod
+# doesn't have yet — copying prod over dev would otherwise drop them, so they're
+# re-applied at the end. Confirmed empty as of 2026-09-16: both
+# 20260830000000_add_handicap_formula.sql and 20260830000001_leaderboard_net_scores.sql
+# are already on prod too (checked tournament_rules.handicap_formula and
+# leaderboard_view's net_score/net_to_par directly against prod). If you hand-apply
+# something to dev ahead of prod again, add its filename back to the list below.
 #
 # DEV IS WIPED. Its public schema is dropped and rebuilt from prod. A backup of
 # dev's public schema is written to backups/ first, so a bad run is recoverable:
 #   psql "$DEV_URL" -c 'drop schema public cascade' && psql "$DEV_URL" -f backups/<file>
 #
 # Connection strings come from scripts/.deploy.env (gitignored). Those are direct
-# `db.<ref>.supabase.co` URLs, which only resolve over IPv6 — this script rewrites
-# them to the IPv4 pooler host taken from SUPABASE_DB_URL in .env. Session mode
-# (port 5432) is required: pg_dump does not work through transaction mode (6543).
+# `db.<ref>.supabase.co` URLs, which only resolve over IPv6 — locally, this script
+# rewrites them to the IPv4 pooler host taken from SUPABASE_DB_URL in .env. Session
+# mode (port 5432) is required: pg_dump does not work through transaction mode (6543).
+#
+# In CI (GitHub Actions' weekly dev-sync workflow), there's no .deploy.env/.env to
+# source — DEV_DB_URL / PROD_DB_URL instead come in as already-pooler-formatted
+# secrets (see .github/workflows/dev-sync.yml), so the rewrite step is skipped.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,25 +42,31 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEV_REF="${DEV_PROJECT_REF:-zknpsrphbfdbzsjilzpg}"
 PROD_REF="${PROD_PROJECT_REF:-wgdjjpimubqbplzrdqpg}"
 
-[[ -f "$SCRIPT_DIR/.deploy.env" ]] || { echo "✗ scripts/.deploy.env not found"; exit 1; }
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/.deploy.env"
-# shellcheck disable=SC1091
-set -a; source "$ROOT_DIR/.env"; set +a
+if [[ -f "$SCRIPT_DIR/.deploy.env" ]]; then
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/.deploy.env"
+  # shellcheck disable=SC1091
+  set -a; source "$ROOT_DIR/.env"; set +a
 
-: "${DEV_DB_URL:?DEV_DB_URL not set in scripts/.deploy.env}"
-: "${PROD_DB_URL:?PROD_DB_URL not set in scripts/.deploy.env}"
-: "${SUPABASE_DB_URL:?SUPABASE_DB_URL not set in .env (used for the pooler host)}"
+  : "${DEV_DB_URL:?DEV_DB_URL not set in scripts/.deploy.env}"
+  : "${PROD_DB_URL:?PROD_DB_URL not set in scripts/.deploy.env}"
+  : "${SUPABASE_DB_URL:?SUPABASE_DB_URL not set in .env (used for the pooler host)}"
 
-POOL_HOST="$(sed -E 's#.*@([^:/]+):.*#\1#' <<<"$SUPABASE_DB_URL")"
-pooler_url() { # $1 = direct db URL, $2 = project ref
-  local pw
-  pw="$(sed -E 's#postgresql://[^:]+:([^@]+)@.*#\1#' <<<"$1")"
-  printf 'postgresql://postgres.%s:%s@%s:5432/postgres' "$2" "$pw" "$POOL_HOST"
-}
+  POOL_HOST="$(sed -E 's#.*@([^:/]+):.*#\1#' <<<"$SUPABASE_DB_URL")"
+  pooler_url() { # $1 = direct db URL, $2 = project ref
+    local pw
+    pw="$(sed -E 's#postgresql://[^:]+:([^@]+)@.*#\1#' <<<"$1")"
+    printf 'postgresql://postgres.%s:%s@%s:5432/postgres' "$2" "$pw" "$POOL_HOST"
+  }
 
-PROD_URL="$(pooler_url "$PROD_DB_URL" "$PROD_REF")"   # read from, never written to
-DEV_URL="$(pooler_url "$DEV_DB_URL" "$DEV_REF")"      # the only URL anything destructive touches
+  PROD_URL="$(pooler_url "$PROD_DB_URL" "$PROD_REF")"   # read from, never written to
+  DEV_URL="$(pooler_url "$DEV_DB_URL" "$DEV_REF")"      # the only URL anything destructive touches
+else
+  : "${DEV_DB_URL:?DEV_DB_URL not set (expected as a pooler URL, e.g. from a CI secret)}"
+  : "${PROD_DB_URL:?PROD_DB_URL not set (expected as a pooler URL, e.g. from a CI secret)}"
+  PROD_URL="$PROD_DB_URL"   # read from, never written to
+  DEV_URL="$DEV_DB_URL"     # the only URL anything destructive touches
+fi
 
 # --- Direction guards -------------------------------------------------------
 # The pooler puts the project ref in the username, so the ref in each URL decides
@@ -176,11 +189,12 @@ echo "▶ Re-applying migrations that dev has but prod doesn't"
 # neither project records these in supabase_migrations, so a push would also re-run
 # 20260711000000, whose upsert would overwrite the 2026 rules text with the version
 # baked into that file, discarding any admin edits since.
-DEV_AHEAD_MIGRATIONS=(
-  "20260830000000_add_handicap_formula.sql"
-  "20260830000001_leaderboard_net_scores.sql"
-)
-for migration in "${DEV_AHEAD_MIGRATIONS[@]}"; do
+DEV_AHEAD_MIGRATIONS=()
+# The default macOS bash (3.2) treats "${arr[@]}" on an empty array as an unbound
+# variable under `set -u` — the `+` guard below makes an empty list expand to
+# nothing instead of erroring, so this loop is a silent no-op until something's
+# added back to the list.
+for migration in ${DEV_AHEAD_MIGRATIONS[@]+"${DEV_AHEAD_MIGRATIONS[@]}"}; do
   path="$ROOT_DIR/supabase/migrations/$migration"
   if [[ -f "$path" ]]; then
     echo "   • $migration"

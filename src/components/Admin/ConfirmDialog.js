@@ -10,6 +10,7 @@ export default function ConfirmDialog({
   confirmText = 'Delete',
   cancelText = 'Cancel',
   confirmButtonClass = 'bg-red-600 hover:bg-red-700',
+  children,
 }) {
   if (!isOpen) return null;
 
@@ -54,6 +55,7 @@ export default function ConfirmDialog({
                 </h3>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
+                  {children}
                 </div>
               </div>
             </div>

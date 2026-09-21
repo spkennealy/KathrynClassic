@@ -250,6 +250,16 @@ function recipientVars(r: Recipient): Record<string, string> {
     group_amount_paid: hasGroup ? fmt(groupAmountPaid) : "",
     group_balance_due: hasGroup ? fmt(groupTotalCost - groupAmountPaid) : "",
     group_table: hasGroup ? groupTableHtml(g!) : "",
+    // Real fallbacks (never both at once) — group figure when there is one,
+    // otherwise the individual figure. Mirrors emailShell.js — keep in sync.
+    total_cost_combined: hasGroup ? fmt(groupTotalCost) : hasFinancials ? fmt(totalCost) : "",
+    amount_paid_combined: hasGroup ? fmt(groupAmountPaid) : hasFinancials ? fmt(amountPaid) : "",
+    balance_due_combined: hasGroup
+      ? fmt(groupTotalCost - groupAmountPaid)
+      : hasFinancials
+        ? fmt(totalCost - amountPaid)
+        : "",
+    events_table_combined: hasGroup ? groupTableHtml(g!) : eventsTableHtml(r),
   };
 }
 

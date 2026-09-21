@@ -2,13 +2,26 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import { logAudit } from '../../../utils/audit';
-import { sendConfirmationEmailsForRegistration } from '../../../utils/registrationEmail';
+import {
+  sendConfirmationEmailsForIds,
+  sendConfirmationEmailsForRegistration,
+  sendCancellationEmail,
+} from '../../../utils/registrationEmail';
 import Select from '../Select';
 import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
 
 const PAGE_SIZE = 50;
+
+// Registration status filter: cancelled registrations are hidden unless asked for.
+// A registration is cancelled when cancellation_date is set (see the
+// 20260920000000_add_registration_cancellation migration).
+const applyStatusFilter = (query, status) => {
+  if (status === 'active') return query.is('cancellation_date', null);
+  if (status === 'cancelled') return query.not('cancellation_date', 'is', null);
+  return query;
+};
 
 // Build the PostgREST `.or()` filter for a search term. A primary contact match
 // (name/email/phone) is preferred; preferred_teammates is matched secondarily.
@@ -63,6 +76,7 @@ export default function RegistrationList() {
   const [filter, setFilter] = useState({
     tournamentYear: 'all',
     paymentStatus: 'all',
+    status: 'active',
   });
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
@@ -80,6 +94,16 @@ export default function RegistrationList() {
   const [error, setError] = useState(null);
   // Per-row "Resend email" state: registration_id -> 'sending' | 'sent' | 'error'.
   const [resendStatus, setResendStatus] = useState({});
+  // Cancel flow: the registration awaiting confirmation, whether to email the
+  // contact about it, and a transient banner reporting the outcome.
+  const [registrationToCancel, setRegistrationToCancel] = useState(null);
+  const [emailOnCancel, setEmailOnCancel] = useState(true);
+  // Reinstate flow, mirroring the cancel flow above.
+  const [registrationToReinstate, setRegistrationToReinstate] = useState(null);
+  const [emailOnReinstate, setEmailOnReinstate] = useState(true);
+  const [notice, setNotice] = useState(null); // { type: 'success' | 'warning' | 'error', text }
+  // Bumped after a cancel/reinstate to re-run the main fetch effect.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Debounce the search box so we don't refetch on every keystroke (which caused
   // the input to lose focus when results briefly emptied during a fetch).
@@ -141,6 +165,9 @@ export default function RegistrationList() {
           dataQuery = dataQuery.eq('payment_status', filter.paymentStatus);
         }
 
+        countQuery = applyStatusFilter(countQuery, filter.status);
+        dataQuery = applyStatusFilter(dataQuery, filter.status);
+
         // Apply search filter if present
         if (searchTerm) {
           const searchFilter = buildSearchConditions(searchTerm);
@@ -174,7 +201,7 @@ export default function RegistrationList() {
     };
 
     fetchData();
-  }, [filter, currentPage, searchTerm]);
+  }, [filter, currentPage, searchTerm, refreshKey]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -218,6 +245,137 @@ export default function RegistrationList() {
           return next;
         });
       }, 4000);
+    }
+  };
+
+  const handleCancelClick = (registration) => {
+    setRegistrationToCancel(registration);
+    // Default to emailing the contact, but only when there's an address to send to.
+    setEmailOnCancel(!!registration.email);
+  };
+
+  const handleCancelDismiss = () => setRegistrationToCancel(null);
+
+  const handleCancelConfirm = async () => {
+    const reg = registrationToCancel;
+    if (!reg) return;
+    const name = `${reg.first_name} ${reg.last_name}`;
+    const shouldEmail = emailOnCancel && !!reg.email;
+    setRegistrationToCancel(null);
+    setNotice(null);
+
+    try {
+      const { error: cancelError } = await supabase
+        .from('registrations')
+        .update({ cancellation_date: new Date().toISOString() })
+        .eq('id', reg.registration_id);
+      if (cancelError) throw cancelError;
+
+      await logAudit({
+        action: 'registration.cancelled',
+        entityType: 'registration',
+        entityId: reg.registration_id,
+        entityLabel: name,
+        changes: {
+          contact: name,
+          email: reg.email,
+          tournament_year: reg.tournament_year,
+          payment_status: reg.payment_status,
+        },
+      });
+
+      // The cancellation stands even if the email fails; just tell the admin.
+      let notice = { type: 'success', text: `Cancelled the registration for ${name}.` };
+      if (shouldEmail) {
+        try {
+          await sendCancellationEmail({
+            firstName: reg.first_name,
+            lastName: reg.last_name,
+            email: reg.email,
+            tournamentYear: reg.tournament_year,
+          });
+          await logAudit({
+            action: 'registration.cancellation_email_sent',
+            entityType: 'registration',
+            entityId: reg.registration_id,
+            entityLabel: name,
+          });
+          notice = { type: 'success', text: `Cancelled the registration for ${name} and emailed ${reg.email}.` };
+        } catch (emailErr) {
+          console.error('Failed to send cancellation email:', emailErr);
+          notice = {
+            type: 'warning',
+            text: `Cancelled the registration for ${name}, but the cancellation email to ${reg.email} could not be sent.`,
+          };
+        }
+      }
+      setNotice(notice);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error('Error cancelling registration:', err);
+      setNotice({ type: 'error', text: err.message || 'Failed to cancel registration' });
+    }
+  };
+
+  const handleReinstateClick = (registration) => {
+    setRegistrationToReinstate(registration);
+    // Default to emailing the contact, but only when there's an address to send to.
+    setEmailOnReinstate(!!registration.email);
+  };
+
+  const handleReinstateDismiss = () => setRegistrationToReinstate(null);
+
+  const handleReinstateConfirm = async () => {
+    const reg = registrationToReinstate;
+    if (!reg) return;
+    const name = `${reg.first_name} ${reg.last_name}`;
+    const shouldEmail = emailOnReinstate && !!reg.email;
+    setRegistrationToReinstate(null);
+    setNotice(null);
+
+    try {
+      // Clear the cancellation before emailing: the confirmation sender skips
+      // cancelled registrations.
+      const { error: reinstateError } = await supabase
+        .from('registrations')
+        .update({ cancellation_date: null })
+        .eq('id', reg.registration_id);
+      if (reinstateError) throw reinstateError;
+
+      await logAudit({
+        action: 'registration.reinstated',
+        entityType: 'registration',
+        entityId: reg.registration_id,
+        entityLabel: name,
+      });
+
+      // The reinstatement stands even if the email fails; just tell the admin.
+      let notice = { type: 'success', text: `Reinstated the registration for ${name}.` };
+      if (shouldEmail) {
+        try {
+          // Just this registrant, not their whole group (same as an event change).
+          await sendConfirmationEmailsForIds([reg.registration_id], reg.tournament_id);
+          await logAudit({
+            action: 'registration.email_resent',
+            entityType: 'registration',
+            entityId: reg.registration_id,
+            entityLabel: name,
+            metadata: { reason: 'reinstated' },
+          });
+          notice = { type: 'success', text: `Reinstated the registration for ${name} and emailed ${reg.email}.` };
+        } catch (emailErr) {
+          console.error('Failed to send confirmation email on reinstate:', emailErr);
+          notice = {
+            type: 'warning',
+            text: `Reinstated the registration for ${name}, but the confirmation email to ${reg.email} could not be sent. You can use "Resend email".`,
+          };
+        }
+      }
+      setNotice(notice);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error('Error reinstating registration:', err);
+      setNotice({ type: 'error', text: err.message || 'Failed to reinstate registration' });
     }
   };
 
@@ -295,6 +453,9 @@ export default function RegistrationList() {
             dataQuery = dataQuery.eq('payment_status', filter.paymentStatus);
           }
 
+          countQuery = applyStatusFilter(countQuery, filter.status);
+          dataQuery = applyStatusFilter(dataQuery, filter.status);
+
           if (searchTerm) {
             const searchFilter = buildSearchConditions(searchTerm);
             dataQuery = dataQuery.or(searchFilter);
@@ -358,6 +519,9 @@ export default function RegistrationList() {
         countQuery = countQuery.eq('payment_status', filter.paymentStatus);
         dataQuery = dataQuery.eq('payment_status', filter.paymentStatus);
       }
+
+      countQuery = applyStatusFilter(countQuery, filter.status);
+      dataQuery = applyStatusFilter(dataQuery, filter.status);
 
       // Apply search filter if present
       if (searchTerm) {
@@ -469,6 +633,29 @@ export default function RegistrationList() {
         </button>
       </div>
 
+      {notice && (
+        <div
+          role="status"
+          className={`rounded-md p-4 flex items-start justify-between gap-4 ${
+            notice.type === 'success'
+              ? 'bg-green-50 text-green-800'
+              : notice.type === 'warning'
+              ? 'bg-amber-50 text-amber-800'
+              : 'bg-red-50 text-red-800'
+          }`}
+        >
+          <p className="text-sm">{notice.text}</p>
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            aria-label="Dismiss"
+            className="text-lg leading-none opacity-60 hover:opacity-100"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Search and Filters */}
       <div className="bg-white dark:bg-night-800 p-4 rounded-lg shadow space-y-4">
         <div className="flex-1">
@@ -517,6 +704,21 @@ export default function RegistrationList() {
               <option value="all">All Statuses</option>
               <option value="paid">Paid</option>
               <option value="pending">Pending</option>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Registration Status
+            </label>
+            <Select
+              value={filter.status}
+              onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+              className="block w-full"
+            >
+              <option value="active">Active</option>
+              <option value="cancelled">Cancelled only</option>
+              <option value="all">Active + cancelled</option>
             </Select>
           </div>
 
@@ -588,8 +790,9 @@ export default function RegistrationList() {
                 const bBottom = groupColor && isLastInGroup ? ` border-b-2 ${gb}` : '';
                 const bLeft = groupColor ? ` border-l-2 ${gb}` : '';
                 const bRight = groupColor ? ` border-r-2 ${gb}` : '';
+                const isCancelled = !!reg.cancellation_date;
                 rows.push(
-                  <tr key={reg.registration_id} className="hover:bg-gray-50 dark:bg-night-700">
+                  <tr key={reg.registration_id} className={`hover:bg-gray-50 dark:bg-night-700${isCancelled ? ' opacity-70' : ''}`}>
                     <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400${bLeft}${bBottom}`}>
                       {new Date(reg.registration_date).toLocaleDateString()}
                     </td>
@@ -603,6 +806,16 @@ export default function RegistrationList() {
                       >
                         {reg.first_name} {reg.last_name}
                       </button>
+                      {isCancelled && (
+                        <div className="mt-0.5">
+                          <span
+                            className="inline-flex rounded-full bg-red-100 px-2 text-xs font-semibold leading-5 text-red-800"
+                            title={`Cancelled ${new Date(reg.cancellation_date).toLocaleDateString()}`}
+                          >
+                            Cancelled
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className={`whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400${bBottom}`}>
                       {reg.tournament_year}
@@ -668,19 +881,36 @@ export default function RegistrationList() {
                       >
                         Edit
                       </button>
-                      <button
-                        onClick={() => handleResendEmail(reg)}
-                        disabled={resendStatus[reg.registration_id] === 'sending'}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {resendStatus[reg.registration_id] === 'sending'
-                          ? 'Sending…'
-                          : resendStatus[reg.registration_id] === 'sent'
-                          ? 'Sent!'
-                          : resendStatus[reg.registration_id] === 'error'
-                          ? 'Failed'
-                          : 'Resend email'}
-                      </button>
+                      {isCancelled ? (
+                        <button
+                          onClick={() => handleReinstateClick(reg)}
+                          className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
+                        >
+                          Reinstate
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleResendEmail(reg)}
+                            disabled={resendStatus[reg.registration_id] === 'sending'}
+                            className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {resendStatus[reg.registration_id] === 'sending'
+                              ? 'Sending…'
+                              : resendStatus[reg.registration_id] === 'sent'
+                              ? 'Sent!'
+                              : resendStatus[reg.registration_id] === 'error'
+                              ? 'Failed'
+                              : 'Resend email'}
+                          </button>
+                          <button
+                            onClick={() => handleCancelClick(reg)}
+                            className="text-amber-600 hover:text-amber-800 font-medium"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => handleDeleteClick(reg)}
                         className="text-red-600 hover:text-red-900 font-medium"
@@ -802,6 +1032,69 @@ export default function RegistrationList() {
           onSave={handleSaveEdit}
         />
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!registrationToCancel}
+        onClose={handleCancelDismiss}
+        onConfirm={handleCancelConfirm}
+        title="Cancel Registration"
+        message={
+          `Cancel the registration for ${registrationToCancel?.first_name} ${registrationToCancel?.last_name}? ` +
+          'It will be hidden from this list (use the Registration Status filter to see it) and left out of financials, ' +
+          'team building, and email recipients. You can reinstate it later.' +
+          (registrationToCancel && registrationToCancel.payment_status !== 'pending'
+            ? ` Their payment status is "${registrationToCancel.payment_status}"; cancelling does not refund or change any payment records.`
+            : '')
+        }
+        confirmText="Cancel registration"
+        cancelText="Keep registration"
+      >
+        <label className="mt-4 flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={emailOnCancel}
+            disabled={!registrationToCancel?.email}
+            onChange={(e) => setEmailOnCancel(e.target.checked)}
+            className="mt-0.5 h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
+          />
+          <span>
+            {registrationToCancel?.email
+              ? `Email ${registrationToCancel.email} to let them know it was cancelled`
+              : 'No email address on file, so no cancellation email will be sent'}
+          </span>
+        </label>
+      </ConfirmDialog>
+
+      {/* Reinstate Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!registrationToReinstate}
+        onClose={handleReinstateDismiss}
+        onConfirm={handleReinstateConfirm}
+        title="Reinstate Registration"
+        message={
+          `Reinstate the registration for ${registrationToReinstate?.first_name} ${registrationToReinstate?.last_name}? ` +
+          'It will show up in the active list again and count toward financials, team building, and email recipients.'
+        }
+        confirmText="Reinstate"
+        cancelText="Keep cancelled"
+        confirmButtonClass="bg-primary-600 hover:bg-primary-700"
+      >
+        <label className="mt-4 flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={emailOnReinstate}
+            disabled={!registrationToReinstate?.email}
+            onChange={(e) => setEmailOnReinstate(e.target.checked)}
+            className="mt-0.5 h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
+          />
+          <span>
+            {registrationToReinstate?.email
+              ? `Email ${registrationToReinstate.email} the registration confirmation`
+              : 'No email address on file, so no confirmation email will be sent'}
+          </span>
+        </label>
+      </ConfirmDialog>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

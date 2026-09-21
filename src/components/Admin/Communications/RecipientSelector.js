@@ -160,7 +160,8 @@ export default function RecipientSelector({ onChange, campaignYear }) {
             .from('registrations')
             .select('id, contact_id, amount_paid, registration_group_id, created_at')
             .eq('tournament_id', tournament.id)
-            .is('deleted_at', null),
+            .is('deleted_at', null)
+            .is('cancellation_date', null),
         ]);
         if (!regs || regs.length === 0) {
           if (!cancelled) setYearDetailsByContact(new Map());

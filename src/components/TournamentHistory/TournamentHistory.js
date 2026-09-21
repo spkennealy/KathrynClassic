@@ -94,7 +94,8 @@ export default function TournamentHistory() {
               )
             `)
             .eq('tournament_id', tournament.id)
-            .is('deleted_at', null);
+            .is('deleted_at', null)
+            .is('cancellation_date', null);
 
           // Count unique golfers (those who registered for golf_tournament event)
           const golfers = registrations?.filter(reg =>

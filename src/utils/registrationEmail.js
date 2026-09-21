@@ -31,13 +31,15 @@ export async function sendConfirmationEmailsForIds(registrationIds, tournamentId
   if (eventsErr) throw eventsErr;
   const eventMap = new Map((eventsData || []).map((e) => [e.id, e]));
 
-  // The requested registrations, oldest first. Excludes soft-deleted rows so a
-  // deleted group member never gets emailed as part of a group send.
+  // The requested registrations, oldest first. Excludes soft-deleted and
+  // cancelled rows so a deleted/cancelled group member never gets emailed as
+  // part of a group send.
   const { data: regs, error: regsErr } = await supabase
     .from('registrations')
     .select('id, contact_id, created_at')
     .in('id', registrationIds)
     .is('deleted_at', null)
+    .is('cancellation_date', null)
     .order('created_at', { ascending: true });
   if (regsErr) throw regsErr;
   if (!regs || regs.length === 0) return;
@@ -124,11 +126,28 @@ export async function sendConfirmationEmailsForRegistration(registration, tourna
       .from('registrations')
       .select('id')
       .eq('registration_group_id', groupId)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .is('cancellation_date', null);
     if (error) throw error;
     ids = (data || []).map((r) => r.id);
   } else {
     ids = registration?.id ? [registration.id] : [];
   }
   await sendConfirmationEmailsForIds(ids, tournamentId);
+}
+
+// Tell a registrant their registration was cancelled, via the same edge
+// function as the confirmation emails (see its header for why the payload key
+// is `cancellations`). Throws when nothing was actually sent — including the
+// case where the deployed function predates cancellation support and quietly
+// reports sent: 0 — so the caller can warn the admin.
+export async function sendCancellationEmail({ firstName, lastName, email, tournamentYear }) {
+  if (!email) throw new Error('This contact has no email address.');
+  const { data, error } = await supabase.functions.invoke('send-registration-confirmation', {
+    body: { tournamentYear, cancellations: [{ firstName, lastName, email }] },
+  });
+  if (error) throw error;
+  if (!data || !(data.sent > 0)) {
+    throw new Error(data?.message || 'The email function did not send the message.');
+  }
 }

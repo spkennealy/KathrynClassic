@@ -360,6 +360,9 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
 
   // --- Create mode multi-attendee state ---
   const [attendees, setAttendees] = useState([createBlankAttendee()]);
+  // Create mode: whether to send the confirmation email(s) on save. On by
+  // default, matching the previous always-send behavior.
+  const [emailContacts, setEmailContacts] = useState(true);
 
   // --- Edit mode: registrants being added to this registration's group ---
   const [groupAttendees, setGroupAttendees] = useState([]);
@@ -786,12 +789,15 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
           });
         }
 
-        // Send confirmation emails, same as a public registration. A failure
-        // here shouldn't fail the registration that was just created.
-        try {
-          await sendConfirmationEmailsForIds(insertedIds, formData.tournament_id);
-        } catch (emailErr) {
-          console.error('Failed to send registration confirmation email:', emailErr);
+        // Send confirmation emails, same as a public registration, unless the
+        // admin unchecked the box. A failure here shouldn't fail the
+        // registration that was just created.
+        if (emailContacts) {
+          try {
+            await sendConfirmationEmailsForIds(insertedIds, formData.tournament_id);
+          } catch (emailErr) {
+            console.error('Failed to send registration confirmation email:', emailErr);
+          }
         }
 
         onSave();
@@ -1109,6 +1115,23 @@ export default function RegistrationEditForm({ registration, onClose, onSave }) 
               >
                 + Add Another Attendee
               </button>
+
+              {/* Email confirmation opt-out */}
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  id="email_contacts"
+                  checked={emailContacts}
+                  onChange={(e) => setEmailContacts(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-primary-600 dark:text-primary-400 focus:ring-primary-500 border-gray-300 dark:border-night-600 rounded"
+                />
+                <label htmlFor="email_contacts" className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                  Email the registration confirmation to {attendees.length > 1 ? 'each contact' : 'the contact'}
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">
+                    Uncheck to add the registration without sending any email.
+                  </span>
+                </label>
+              </div>
             </div>
           ) : (
             /* ========== EDIT MODE: Single registration (unchanged) ========== */

@@ -15,6 +15,12 @@
 // Invoked from the public registration form after a successful submission, and
 // from the admin portal after group edits (src/utils/registrationEmail.js).
 //
+// The same function also sends the "registration cancelled" email when the
+// payload carries `cancellations` instead of `registrants` (admin portal ->
+// Registrations -> Cancel). It uses its own key so an older deployment that
+// doesn't know about cancellations sees no `registrants`, sends nothing, and
+// reports sent: 0 rather than mailing a bogus confirmation.
+//
 // Required secrets (set with `supabase secrets set ...`):
 //   RESEND_API_KEY     - your Resend API key
 //   FROM_EMAIL         - verified sender, e.g. "The Kathryn Classic <registration@yourdomain.com>"
@@ -99,9 +105,16 @@ interface Registrant {
   estimatedMax?: number;
 }
 
+interface Cancellation {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 interface Payload {
   tournamentYear?: number | string;
-  registrants: Registrant[];
+  registrants?: Registrant[];
+  cancellations?: Cancellation[];
 }
 
 const fmt = (n: number) =>
@@ -117,17 +130,19 @@ const escapeHtml = (s: string) =>
 type TemplateKey =
   | "registration_confirmation"
   | "registration_group_summary"
-  | "registration_rules";
+  | "registration_rules"
+  | "registration_cancelled";
 
 const TEMPLATE_KEYS: TemplateKey[] = [
   "registration_confirmation",
   "registration_group_summary",
   "registration_rules",
+  "registration_cancelled",
 ];
 
 // Fallbacks when the email_templates row is missing or blanked. These are the
-// same strings seeded by migration 20260713000000_add_registration_email_templates.sql —
-// keep them in sync.
+// same strings seeded by migrations 20260713000000_add_registration_email_templates.sql
+// and 20260920000000_add_registration_cancellation.sql — keep them in sync.
 const DEFAULT_TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   registration_confirmation: {
     subject: "Your Kathryn Classic {{year}} registration — {{total}} due",
@@ -177,6 +192,20 @@ const DEFAULT_TEMPLATES: Record<TemplateKey, { subject: string; body: string }> 
 {{rules_body}}
 <p style="font-size:13px;color:#777;margin:24px 0 0;">
   Questions? Just reply to this email. See you out there!
+</p>`,
+  },
+  registration_cancelled: {
+    subject: "Your Kathryn Classic {{year}} registration has been cancelled",
+    body: `<h1 style="color:#0d9488;font-size:24px;margin:0 0 8px;">Registration cancelled</h1>
+<p style="font-size:16px;margin:0 0 20px;">
+  Hi {{first_name}}, your registration for
+  <strong>The Kathryn Classic {{year}}</strong> has been cancelled.
+</p>
+<p style="font-size:14px;color:#444;margin:0 0 8px;">
+  If you weren't expecting this, or you'd like to register again, just reply to this email and we'll help.
+</p>
+<p style="font-size:13px;color:#777;margin:24px 0 0;">
+  Thank you for your support of The Kathryn Classic.
 </p>`,
   },
 };
@@ -496,6 +525,59 @@ async function fetchRulesHtml(
   return body || null;
 }
 
+// Cancellation email ----------------------------------------------------------
+
+async function sendCancellations(
+  admin: ReturnType<typeof createClient> | null,
+  cancellations: Cancellation[],
+  year: number | string
+): Promise<Response> {
+  const headers = { ...corsHeaders, "Content-Type": "application/json" };
+
+  // One email per address, even if several cancelled rows share a contact.
+  const unique = new Map<string, Cancellation>();
+  for (const c of cancellations) {
+    const key = (c?.email ?? "").trim().toLowerCase();
+    if (key && !unique.has(key)) unique.set(key, c);
+  }
+  const recipients = [...unique.values()];
+
+  if (recipients.length === 0) {
+    return new Response(
+      JSON.stringify({ sent: 0, message: "No cancellations with an email address." }),
+      { headers }
+    );
+  }
+
+  const tpl = pickTemplate(await fetchTemplates(admin), "registration_cancelled");
+  const results = await Promise.allSettled(
+    recipients.map((c) => {
+      const rendered = renderEmail(
+        tpl,
+        year,
+        { first_name: c.firstName ?? "", last_name: c.lastName ?? "", year: String(year) },
+        {}
+      );
+      return sendEmail(c.email, rendered.subject, rendered.html);
+    })
+  );
+
+  const sent = results.filter((x) => x.status === "fulfilled").length;
+  const failed = results
+    .map((x, i) => ({ x, email: recipients[i].email }))
+    .filter(({ x }) => x.status === "rejected")
+    .map(({ x, email }) => ({
+      email,
+      error: (x as PromiseRejectedResult).reason?.message ?? "unknown",
+    }));
+  if (failed.length > 0) console.error("Some cancellation emails failed:", failed);
+
+  return new Response(JSON.stringify({ sent, failed, emailsDisabled: !EMAILS_ENABLED }), {
+    status: failed.length > 0 && sent === 0 ? 502 : 200,
+    headers,
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -512,6 +594,9 @@ serve(async (req) => {
         : null;
 
     const payload = (await req.json()) as Payload;
+    if (payload.cancellations) {
+      return await sendCancellations(admin, payload.cancellations, payload.tournamentYear ?? "");
+    }
     const registrants = (payload.registrants || []).filter((r) => r && r.email);
     const year = payload.tournamentYear ?? "";
 
