@@ -11,6 +11,7 @@ import Select from '../Select';
 import RegistrationEditForm from './RegistrationEditForm';
 import ContactEditForm from '../Contacts/ContactEditForm';
 import ConfirmDialog from '../ConfirmDialog';
+import RowActionsMenu from '../RowActionsMenu';
 
 const PAGE_SIZE = 50;
 
@@ -92,7 +93,7 @@ export default function RegistrationList() {
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState(null);
-  // Per-row "Resend email" state: registration_id -> 'sending' | 'sent' | 'error'.
+  // Registrations currently mid-"Resend email": registration_id -> 'sending'.
   const [resendStatus, setResendStatus] = useState({});
   // Cancel flow: the registration awaiting confirmation, whether to email the
   // contact about it, and a transient banner reporting the outcome.
@@ -220,7 +221,9 @@ export default function RegistrationList() {
 
   const handleResendEmail = async (registration) => {
     const id = registration.registration_id;
+    const name = `${registration.first_name} ${registration.last_name}`;
     setResendStatus((prev) => ({ ...prev, [id]: 'sending' }));
+    setNotice(null);
     try {
       await sendConfirmationEmailsForRegistration(
         { id, registration_group_id: registration.registration_group_id },
@@ -230,21 +233,18 @@ export default function RegistrationList() {
         action: 'registration.email_resent',
         entityType: 'registration',
         entityId: id,
-        entityLabel: `${registration.first_name} ${registration.last_name}`,
+        entityLabel: name,
       });
-      setResendStatus((prev) => ({ ...prev, [id]: 'sent' }));
+      setNotice({ type: 'success', text: `Resent the registration confirmation for ${name}.` });
     } catch (err) {
       console.error('Failed to resend confirmation email:', err);
-      setResendStatus((prev) => ({ ...prev, [id]: 'error' }));
+      setNotice({ type: 'error', text: `Could not resend the registration confirmation for ${name}.` });
     } finally {
-      // Clear the transient status a few seconds later so the button resets.
-      setTimeout(() => {
-        setResendStatus((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      }, 4000);
+      setResendStatus((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
   };
 
@@ -874,49 +874,28 @@ export default function RegistrationList() {
                         {reg.payment_status}
                       </span>
                     </td>
-                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-right space-x-3${bRight}${bBottom}`}>
-                      <button
-                        onClick={() => handleEdit(reg)}
-                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
-                      >
-                        Edit
-                      </button>
-                      {isCancelled ? (
-                        <button
-                          onClick={() => handleReinstateClick(reg)}
-                          className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
-                        >
-                          Reinstate
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleResendEmail(reg)}
-                            disabled={resendStatus[reg.registration_id] === 'sending'}
-                            className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {resendStatus[reg.registration_id] === 'sending'
-                              ? 'Sending…'
-                              : resendStatus[reg.registration_id] === 'sent'
-                              ? 'Sent!'
-                              : resendStatus[reg.registration_id] === 'error'
-                              ? 'Failed'
-                              : 'Resend email'}
-                          </button>
-                          <button
-                            onClick={() => handleCancelClick(reg)}
-                            className="text-amber-600 hover:text-amber-800 font-medium"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => handleDeleteClick(reg)}
-                        className="text-red-600 hover:text-red-900 font-medium"
-                      >
-                        Delete
-                      </button>
+                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-right${bRight}${bBottom}`}>
+                      <RowActionsMenu
+                        label={`Actions for ${reg.first_name} ${reg.last_name}`}
+                        items={
+                          isCancelled
+                            ? [
+                                { label: 'Edit', onClick: () => handleEdit(reg) },
+                                { label: 'Reinstate', onClick: () => handleReinstateClick(reg) },
+                                { label: 'Delete', tone: 'danger', onClick: () => handleDeleteClick(reg) },
+                              ]
+                            : [
+                                { label: 'Edit', onClick: () => handleEdit(reg) },
+                                {
+                                  label: resendStatus[reg.registration_id] === 'sending' ? 'Sending…' : 'Resend email',
+                                  disabled: resendStatus[reg.registration_id] === 'sending',
+                                  onClick: () => handleResendEmail(reg),
+                                },
+                                { label: 'Cancel registration', tone: 'warning', onClick: () => handleCancelClick(reg) },
+                                { label: 'Delete', tone: 'danger', onClick: () => handleDeleteClick(reg) },
+                              ]
+                        }
+                      />
                     </td>
                   </tr>
                 );

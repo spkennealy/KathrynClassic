@@ -15,6 +15,7 @@ export const ENTITY_TYPES = [
   'tournament',
   'tournament_event',
   'expense',
+  'donation',
   'vendor',
   'team',
   'award',

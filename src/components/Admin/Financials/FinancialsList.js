@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../../supabaseClient';
 import { logAudit, diffFields } from '../../../utils/audit';
 import ExpenseForm from './ExpenseForm';
+import DonationForm from './DonationForm';
 import ConfirmDialog from '../ConfirmDialog';
 import DatePicker from '../DatePicker';
 import MultiSelect from '../MultiSelect';
@@ -29,6 +30,14 @@ const getPaymentDisplay = (amountPaid, totalCost) => {
 
 const formatDate = (value) =>
   value ? new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+
+// How a donation is attributed: an anonymous gift hides the donor even when a
+// contact is linked, otherwise prefer the contact's name and fall back to company.
+const donorName = (d) => {
+  if (d.is_anonymous) return 'Anonymous';
+  if (d.contacts) return `${d.contacts.first_name} ${d.contacts.last_name}`;
+  return d.company || '—';
+};
 
 // Sortable columns → how to extract a comparable value from a registrant row.
 const getSortValue = (r, key) => {
@@ -239,6 +248,11 @@ export default function FinancialsList() {
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [showDonationForm, setShowDonationForm] = useState(false);
+  const [selectedDonation, setSelectedDonation] = useState(null);
+  const [donationToDelete, setDonationToDelete] = useState(null);
+
+  const [activeTab, setActiveTab] = useState('registrants');
 
   const [statuses, setStatuses] = useState([]); // subset of ['unpaid','partial','paid']; empty = all
   const [searchTerm, setSearchTerm] = useState('');
@@ -306,7 +320,10 @@ export default function FinancialsList() {
           .order('expense_date', { ascending: false }),
         supabase
           .from('donations')
-          .select('id, amount, created_at, tournament_id'),
+          .select('*, contacts ( first_name, last_name )')
+          .eq('tournament_id', selectedTournament.id)
+          .is('deleted_at', null)
+          .order('donation_date', { ascending: false }),
       ]);
 
       if (regRes.error) throw regRes.error;
@@ -315,15 +332,7 @@ export default function FinancialsList() {
 
       setRegistrants(regRes.data || []);
       setExpenses(expRes.data || []);
-
-      // Attribute donations to the year: by tournament_id, or by created_at year for legacy rows.
-      const yearNum = parseInt(selectedYear, 10);
-      const filteredDonations = (donRes.data || []).filter((d) =>
-        d.tournament_id
-          ? d.tournament_id === selectedTournament.id
-          : new Date(d.created_at).getFullYear() === yearNum
-      );
-      setDonations(filteredDonations);
+      setDonations(donRes.data || []);
     } catch (err) {
       console.error('Error fetching financials:', err);
       setError(err.message || 'Failed to load financials');
@@ -355,6 +364,15 @@ export default function FinancialsList() {
       net: totalPaid + totalDonations - totalExpenses,
     };
   }, [registrants, donations, expenses]);
+
+  const tabs = useMemo(
+    () => [
+      { id: 'registrants', name: 'Registrants', count: registrants.length },
+      { id: 'expenses', name: 'Expenses', count: expenses.length },
+      { id: 'donations', name: 'Donations', count: donations.length },
+    ],
+    [registrants, expenses, donations]
+  );
 
   // Apply status filter + search to the registrant table (not the cards).
   const filteredRegistrants = useMemo(() => {
@@ -428,6 +446,36 @@ export default function FinancialsList() {
     }
   };
 
+  const handleDeleteDonation = async () => {
+    if (!donationToDelete) return;
+    try {
+      const { error: delErr } = await supabase
+        .from('donations')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', donationToDelete.id);
+      if (delErr) throw delErr;
+      await logAudit({
+        action: 'donation.deleted',
+        entityType: 'donation',
+        entityId: donationToDelete.id,
+        entityLabel: donorName(donationToDelete),
+        changes: {
+          donor: donorName(donationToDelete),
+          donation_type: donationToDelete.donation_type,
+          amount: donationToDelete.amount,
+          donation_date: donationToDelete.donation_date,
+          source: donationToDelete.source,
+        },
+      });
+      setDonationToDelete(null);
+      await fetchData();
+    } catch (err) {
+      console.error('Error deleting donation:', err);
+      setError(err.message || 'Failed to delete donation');
+      setDonationToDelete(null);
+    }
+  };
+
   if (loading && registrants.length === 0 && expenses.length === 0) {
     return (
       <div className="text-center py-12">
@@ -444,7 +492,7 @@ export default function FinancialsList() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Financials</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Registration revenue, payments, and expenses by tournament year
+            Registration revenue, payments, donations, and expenses by tournament year
           </p>
         </div>
         <div>
@@ -470,7 +518,7 @@ export default function FinancialsList() {
       )}
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
           <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Registrations</dt>
           <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
@@ -493,12 +541,12 @@ export default function FinancialsList() {
           </dd>
         </div>
         <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Net (income &minus; expenses)</dt>
-          <dd className={`mt-1 text-3xl font-semibold tracking-tight ${totals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(totals.net)}
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Total Donations</dt>
+          <dd className="mt-1 text-3xl font-semibold tracking-tight text-green-600">
+            {formatCurrency(totals.totalDonations)}
           </dd>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            incl. {formatCurrency(totals.totalDonations)} donations &middot; {formatCurrency(totals.totalExpenses)} expenses
+            {donations.length} {donations.length === 1 ? 'donation' : 'donations'}
           </p>
         </div>
         <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
@@ -513,259 +561,380 @@ export default function FinancialsList() {
             </span>
           </p>
         </div>
+        <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Net (income &minus; expenses)</dt>
+          <dd className={`mt-1 text-3xl font-semibold tracking-tight ${totals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatCurrency(totals.net)}
+          </dd>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            incl. {formatCurrency(totals.totalDonations)} donations &middot; {formatCurrency(totals.totalExpenses)} expenses
+          </p>
+        </div>
       </div>
 
-      {/* Registrants table */}
-      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
-        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Registrants</h2>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
-              <input
-                type="text"
-                spellCheck={false}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Name or email..."
-                className="block w-full sm:w-56 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-              />
-            </div>
-            <div className="sm:w-48">
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Payment status</label>
-              <MultiSelect
-                options={[
-                  { value: 'unpaid', label: 'Unpaid' },
-                  { value: 'partial', label: 'Partially paid' },
-                  { value: 'paid', label: 'Fully paid' },
-                ]}
-                selected={statuses}
-                onChange={setStatuses}
-                allLabel="All"
-              />
+      {/* Section tabs: the cards above always show the whole year; these switch
+          which detail table is shown underneath. */}
+      <div className="border-b border-gray-200 dark:border-night-700">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium
+                ${activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:border-night-600 hover:text-gray-700 dark:text-gray-300'
+                }
+              `}
+            >
+              {tab.name}
+              <span className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                activeTab === tab.id ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-night-900 text-gray-900 dark:text-gray-100'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {activeTab === 'registrants' && (
+        <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
+          <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Registrants</h2>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
+                <input
+                  type="text"
+                  spellCheck={false}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Name or email..."
+                  className="block w-full sm:w-56 rounded-md border-gray-300 dark:border-night-600 shadow-sm dark:bg-night-700 dark:text-gray-100 dark:placeholder-gray-400 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                />
+              </div>
+              <div className="sm:w-48">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Payment status</label>
+                <MultiSelect
+                  options={[
+                    { value: 'unpaid', label: 'Unpaid' },
+                    { value: 'partial', label: 'Partially paid' },
+                    { value: 'paid', label: 'Fully paid' },
+                  ]}
+                  selected={statuses}
+                  onChange={setStatuses}
+                  allLabel="All"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50 dark:bg-night-700">
-            <tr>
-              <SortHeader label="Name" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="pl-4 pr-3" />
-              <SortHeader label="Registered" columnKey="registration_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
-              <SortHeader label="Total Cost" columnKey="total_cost" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
-              <SortHeader label="Amount Paid" columnKey="amount_paid" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
-              <SortHeader label="Balance" columnKey="balance" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
-              <SortHeader label="Status" columnKey="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
-            {pagedRegistrants.map((r) => {
-              const totalCost = Number(r.total_cost) || 0;
-              const paid = Number(r.amount_paid) || 0;
-              const balance = totalCost - paid;
-              const status = getPaymentDisplay(paid, totalCost);
-              return (
-                <tr key={r.registration_id} className="hover:bg-gray-50 dark:bg-night-700">
-                  <td className="py-4 pl-4 pr-3 text-sm">
-                    <Link
-                      to={`/admin/registrations?search=${encodeURIComponent(`${r.first_name} ${r.last_name}`)}`}
-                      className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 hover:underline"
-                    >
-                      {r.first_name} {r.last_name}
-                    </Link>
-                    {r.has_tbd_event && (
-                      <span className="ml-2 inline-flex rounded px-1.5 text-xs font-medium bg-gray-100 dark:bg-night-900 text-gray-600 dark:text-gray-400">
-                        TBD
+          <table className="min-w-full divide-y divide-gray-300">
+            <thead className="bg-gray-50 dark:bg-night-700">
+              <tr>
+                <SortHeader label="Name" columnKey="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="pl-4 pr-3" />
+                <SortHeader label="Registered" columnKey="registration_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
+                <SortHeader label="Total Cost" columnKey="total_cost" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+                <SortHeader label="Amount Paid" columnKey="amount_paid" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+                <SortHeader label="Balance" columnKey="balance" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} align="right" thClass="px-3" />
+                <SortHeader label="Status" columnKey="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} thClass="px-3" />
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
+              {pagedRegistrants.map((r) => {
+                const totalCost = Number(r.total_cost) || 0;
+                const paid = Number(r.amount_paid) || 0;
+                const balance = totalCost - paid;
+                const status = getPaymentDisplay(paid, totalCost);
+                return (
+                  <tr key={r.registration_id} className="hover:bg-gray-50 dark:bg-night-700">
+                    <td className="py-4 pl-4 pr-3 text-sm">
+                      <Link
+                        to={`/admin/registrations?search=${encodeURIComponent(`${r.first_name} ${r.last_name}`)}`}
+                        className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 hover:underline"
+                      >
+                        {r.first_name} {r.last_name}
+                      </Link>
+                      {r.has_tbd_event && (
+                        <span className="ml-2 inline-flex rounded px-1.5 text-xs font-medium bg-gray-100 dark:bg-night-900 text-gray-600 dark:text-gray-400">
+                          TBD
+                        </span>
+                      )}
+                      {r.events && r.events.length > 0 && (
+                        <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                          {r.events.join(', ')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {formatDate(r.registration_date)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
+                      {formatCurrency(totalCost)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
+                      {formatCurrency(paid)}
+                    </td>
+                    <td className={`whitespace-nowrap px-3 py-4 text-sm text-right ${balance > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {formatCurrency(balance)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm">
+                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${status.classes}`}>
+                        {status.label}
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                      <button
+                        onClick={() => setPaymentRegistrant(r)}
+                        className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
+                      >
+                        {paid > 0 ? 'Edit Payment' : 'Record Payment'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {filteredRegistrants.length > 0 && (
+              <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
+                <tr>
+                  <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {statuses.length === 0 && !searchTerm ? 'Totals' : 'Filtered totals'}
+                  </td>
+                  <td className="px-3 py-3"></td>
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
+                    {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0))}
+                  </td>
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
+                    {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0))}
+                  </td>
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
+                    {formatCurrency(filteredRegistrants.reduce((s, r) => s + ((Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0)), 0))}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+          {filteredRegistrants.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">
+                {registrants.length === 0
+                  ? `No registrations for ${selectedYear}`
+                  : 'No registrants match your filters'}
+              </p>
+            </div>
+          )}
+          {filteredRegistrants.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between border-t border-gray-200 dark:border-night-700 px-4 py-3 sm:px-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredRegistrants.length)} of {filteredRegistrants.length}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="inline-flex items-center px-2 text-sm text-gray-600 dark:text-gray-400">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'expenses' && (
+        <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
+          <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex items-center justify-between">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Expenses</h2>
+            <button
+              onClick={() => { setSelectedExpense(null); setShowExpenseForm(true); }}
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Expense
+            </button>
+          </div>
+          <table className="min-w-full divide-y divide-gray-300">
+            <thead className="bg-gray-50 dark:bg-night-700">
+              <tr>
+                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Description</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Category</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Vendor</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Paid By</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Method</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount</th>
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
+              {expenses.map((e) => (
+                <tr key={e.id} className="hover:bg-gray-50 dark:bg-night-700">
+                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400">
+                    {e.expense_date ? new Date(e.expense_date).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
+                    {e.description}
+                    {e.tournament_events?.event_name && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{e.tournament_events.event_name}</div>
                     )}
-                    {r.events && r.events.length > 0 && (
-                      <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        {r.events.join(', ')}
-                      </div>
-                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.category || '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {e.vendors?.name || '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {formatDate(r.registration_date)}
+                    {e.paid_by ? `${e.paid_by.first_name} ${e.paid_by.last_name}` : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
-                    {formatCurrency(totalCost)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
-                    {formatCurrency(paid)}
-                  </td>
-                  <td className={`whitespace-nowrap px-3 py-4 text-sm text-right ${balance > 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {formatCurrency(balance)}
-                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.payment_method || '—'}</td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm">
-                    <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${status.classes}`}>
-                      {status.label}
+                    <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                      e.is_paid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {e.is_paid ? 'Paid' : 'Unpaid'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
+                    {formatCurrency(e.amount)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
                     <button
-                      onClick={() => setPaymentRegistrant(r)}
+                      onClick={() => { setSelectedExpense(e); setShowExpenseForm(true); }}
                       className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
                     >
-                      {paid > 0 ? 'Edit Payment' : 'Record Payment'}
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setExpenseToDelete(e)}
+                      className="text-red-600 hover:text-red-900 font-medium"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-          {filteredRegistrants.length > 0 && (
-            <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
-              <tr>
-                <td className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  {statuses.length === 0 && !searchTerm ? 'Totals' : 'Filtered totals'}
-                </td>
-                <td className="px-3 py-3"></td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
-                  {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.total_cost) || 0), 0))}
-                </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
-                  {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0))}
-                </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
-                  {formatCurrency(filteredRegistrants.reduce((s, r) => s + ((Number(r.total_cost) || 0) - (Number(r.amount_paid) || 0)), 0))}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-        {filteredRegistrants.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">
-              {registrants.length === 0
-                ? `No registrations for ${selectedYear}`
-                : 'No registrants match your filters'}
-            </p>
-          </div>
-        )}
-        {filteredRegistrants.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-night-700 px-4 py-3 sm:px-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredRegistrants.length)} of {filteredRegistrants.length}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <span className="inline-flex items-center px-2 text-sm text-gray-600 dark:text-gray-400">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-night-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-night-800 hover:bg-gray-50 dark:bg-night-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+              ))}
+            </tbody>
+            {expenses.length > 0 && (
+              <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
+                <tr>
+                  <td colSpan={7} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Total Expenses
+                  </td>
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
+                    {formatCurrency(totals.totalExpenses)}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+          {expenses.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">No expenses recorded for {selectedYear}</p>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Expenses */}
-      <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
-        <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Expenses</h2>
-          <button
-            onClick={() => { setSelectedExpense(null); setShowExpenseForm(true); }}
-            className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          >
-            <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Expense
-          </button>
-        </div>
-        <table className="min-w-full divide-y divide-gray-300">
-          <thead className="bg-gray-50 dark:bg-night-700">
-            <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Description</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Category</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Vendor</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Paid By</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Method</th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount</th>
-              <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
-            {expenses.map((e) => (
-              <tr key={e.id} className="hover:bg-gray-50 dark:bg-night-700">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400">
-                  {e.expense_date ? new Date(e.expense_date).toLocaleDateString() : '—'}
-                </td>
-                <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
-                  {e.description}
-                  {e.tournament_events?.event_name && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{e.tournament_events.event_name}</div>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.category || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {e.vendors?.name || '—'}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {e.paid_by ? `${e.paid_by.first_name} ${e.paid_by.last_name}` : '—'}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{e.payment_method || '—'}</td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm">
-                  <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                    e.is_paid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {e.is_paid ? 'Paid' : 'Unpaid'}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
-                  {formatCurrency(e.amount)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
-                  <button
-                    onClick={() => { setSelectedExpense(e); setShowExpenseForm(true); }}
-                    className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => setExpenseToDelete(e)}
-                    className="text-red-600 hover:text-red-900 font-medium"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {expenses.length > 0 && (
-            <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
-              <tr>
-                <td colSpan={7} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Total Expenses
-                </td>
-                <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
-                  {formatCurrency(totals.totalExpenses)}
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
           )}
-        </table>
-        {expenses.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">No expenses recorded for {selectedYear}</p>
+        </div>
+      )}
+
+      {activeTab === 'donations' && (
+        <div className="bg-white dark:bg-night-800 shadow rounded-lg overflow-x-auto">
+          <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-night-700 flex items-center justify-between">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Donations</h2>
+            <button
+              onClick={() => { setSelectedDonation(null); setShowDonationForm(true); }}
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Donation
+            </button>
           </div>
-        )}
-      </div>
+          <table className="min-w-full divide-y divide-gray-300">
+            <thead className="bg-gray-50 dark:bg-night-700">
+              <tr>
+                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Donor</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Type</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Method</th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Source</th>
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount</th>
+                <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-night-700 bg-white dark:bg-night-800">
+              {donations.map((d) => (
+                <tr key={d.id} className="hover:bg-gray-50 dark:bg-night-700">
+                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400">
+                    {d.donation_date ? new Date(d.donation_date).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-gray-100">
+                    {donorName(d)}
+                    {d.company && !d.is_anonymous && d.contacts && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{d.company}</div>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{d.donation_type || '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{d.payment_method || '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{d.source || '—'}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700 dark:text-gray-300 text-right">
+                    {formatCurrency(d.amount)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-right space-x-3">
+                    <button
+                      onClick={() => { setSelectedDonation(d); setShowDonationForm(true); }}
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:text-primary-300 font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setDonationToDelete(d)}
+                      className="text-red-600 hover:text-red-900 font-medium"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {donations.length > 0 && (
+              <tfoot className="bg-gray-50 dark:bg-night-700 border-t border-gray-200 dark:border-night-700">
+                <tr>
+                  <td colSpan={5} className="py-3 pl-4 pr-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Total Donations
+                  </td>
+                  <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
+                    {formatCurrency(totals.totalDonations)}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+          {donations.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">No donations recorded for {selectedYear}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       {paymentRegistrant && (
@@ -791,6 +960,27 @@ export default function FinancialsList() {
         onConfirm={handleDeleteExpense}
         title="Delete Expense"
         message={`Are you sure you want to delete "${expenseToDelete?.description}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      {showDonationForm && (
+        <DonationForm
+          donation={selectedDonation}
+          tournamentId={selectedTournament?.id}
+          onClose={() => { setShowDonationForm(false); setSelectedDonation(null); }}
+          onSave={fetchData}
+        />
+      )}
+
+      <ConfirmDialog
+        isOpen={!!donationToDelete}
+        onClose={() => setDonationToDelete(null)}
+        onConfirm={handleDeleteDonation}
+        title="Delete Donation"
+        message={donationToDelete
+          ? `Are you sure you want to delete the ${formatCurrency(donationToDelete.amount)} donation from ${donorName(donationToDelete)}? This action cannot be undone.`
+          : ''}
         confirmText="Delete"
         cancelText="Cancel"
       />
