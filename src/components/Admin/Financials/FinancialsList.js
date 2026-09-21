@@ -194,6 +194,14 @@ export default function FinancialsList() {
     // Amount due is net of credit memos: credited amounts are written off, not owed.
     const totalDue = registrants.reduce((s, r) => s + computeAmountDue(r.total_cost, r.credit_memo_amount), 0);
     const totalCredits = registrants.reduce((s, r) => s + (Number(r.credit_memo_amount) || 0), 0);
+    // Outstanding is what's still left to collect: each registration's positive
+    // balance. A registration that has paid more than it now owes (e.g. after a
+    // credit memo) doesn't reduce what anyone else owes; it's reported separately.
+    const balances = registrants.map(
+      (r) => computeAmountDue(r.total_cost, r.credit_memo_amount) - (Number(r.amount_paid) || 0)
+    );
+    const outstanding = balances.reduce((s, b) => s + Math.max(b, 0), 0);
+    const overpaid = balances.reduce((s, b) => s + Math.max(-b, 0), 0);
     const totalPaid = registrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
     const totalDonations = donations.reduce((s, d) => s + (Number(d.amount) || 0), 0);
     const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
@@ -207,7 +215,8 @@ export default function FinancialsList() {
       totalExpenses,
       expensesPaid,
       expensesUnpaid: totalExpenses - expensesPaid,
-      outstanding: totalDue - totalPaid,
+      outstanding,
+      overpaid,
       net: totalPaid + totalDonations - totalExpenses,
     };
   }, [registrants, donations, expenses]);
@@ -380,6 +389,7 @@ export default function FinancialsList() {
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {formatCurrency(totals.outstanding)} outstanding
             {totals.totalCredits > 0 && <> &middot; {formatCurrency(totals.totalCredits)} credited</>}
+            {totals.overpaid > 0 && <> &middot; {formatCurrency(totals.overpaid)} overpaid</>}
           </p>
         </div>
         <div className="overflow-hidden rounded-lg bg-white dark:bg-night-800 px-4 py-5 shadow sm:p-6">
@@ -574,7 +584,23 @@ export default function FinancialsList() {
                     {formatCurrency(filteredRegistrants.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0))}
                   </td>
                   <td className="px-3 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 text-right">
-                    {formatCurrency(filteredRegistrants.reduce((s, r) => s + (computeAmountDue(r.total_cost, r.credit_memo_amount) - (Number(r.amount_paid) || 0)), 0))}
+                    {(() => {
+                      const balances = filteredRegistrants.map(
+                        (r) => computeAmountDue(r.total_cost, r.credit_memo_amount) - (Number(r.amount_paid) || 0)
+                      );
+                      const owed = balances.reduce((s, b) => s + Math.max(b, 0), 0);
+                      const over = balances.reduce((s, b) => s + Math.max(-b, 0), 0);
+                      return (
+                        <>
+                          {formatCurrency(owed)}
+                          {over > 0 && (
+                            <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                              {formatCurrency(over)} overpaid
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
                   <td colSpan={2}></td>
                 </tr>
